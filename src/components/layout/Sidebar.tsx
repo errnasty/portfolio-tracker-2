@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, Briefcase, TrendingUp, Sliders, LogOut, Settings } from 'lucide-react'
+import { LayoutDashboard, Briefcase, TrendingUp, Sliders, LogOut, Settings, PieChart } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
@@ -11,6 +11,7 @@ const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/holdings', label: 'Holdings', icon: Briefcase },
   { href: '/performance', label: 'Performance', icon: TrendingUp },
+  { href: '/analytics', label: 'Analytics', icon: PieChart },
   { href: '/rebalancer', label: 'Rebalancer', icon: Sliders },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
