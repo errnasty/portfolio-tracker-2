@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { BreakdownChart } from '@/components/analytics/BreakdownChart'
 import { ConcentrationCard } from '@/components/analytics/ConcentrationCard'
+import { LookThroughStocksCard } from '@/components/analytics/LookThroughStocksCard'
 import {
   geographicBreakdown,
   sectorBreakdown,
@@ -13,6 +14,7 @@ import {
   assetTypeBreakdown,
   concentrationMetrics,
   topHoldingsList,
+  lookThroughStocks,
 } from '@/lib/analytics'
 import type { TickerAnalytics } from '@/app/api/analytics/route'
 import type { Currency } from '@/types'
@@ -57,10 +59,11 @@ export default function AnalyticsPage() {
 
   const geo = geographicBreakdown(enriched, analytics)
   const sectors = sectorBreakdown(enriched, analytics)
-  const currencies = currencyBreakdown(enriched)
+  const currencies = currencyBreakdown(enriched, analytics)
   const assetTypes = assetTypeBreakdown(enriched, analytics)
   const concentration = concentrationMetrics(enriched)
   const topHoldings = topHoldingsList(enriched, 10)
+  const lookThrough = lookThroughStocks(enriched, analytics)
 
   return (
     <div className="space-y-6">
@@ -97,30 +100,36 @@ export default function AnalyticsPage() {
 
           <div className="grid gap-4 md:grid-cols-2">
             <BreakdownChart
-              title="Geographic Allocation"
-              description="By country/region — ETFs use category, stocks use country of origin"
+              title="Geographic Allocation (look-through)"
+              description="ETFs decomposed into their underlying countries × ETF weight in portfolio"
               data={geo}
               baseCurrency={baseCurrency}
             />
             <BreakdownChart
-              title="Sector Allocation"
-              description="ETF sector weightings are distributed proportionally"
+              title="Sector Allocation (look-through)"
+              description="ETFs decomposed by sector weightings × ETF weight in portfolio"
               data={sectors}
               baseCurrency={baseCurrency}
             />
             <BreakdownChart
-              title="Currency Exposure"
-              description="By trading currency of each holding"
+              title="Currency Exposure (look-through)"
+              description="Underlying currency of assets, derived from each ETF's country mix"
               data={currencies}
               baseCurrency={baseCurrency}
             />
             <BreakdownChart
               title="Asset Type"
-              description="Stocks vs ETFs vs other instruments"
+              description="Direct holding structure — stocks vs ETFs vs other instruments"
               data={assetTypes}
               baseCurrency={baseCurrency}
             />
           </div>
+
+          <LookThroughStocksCard
+            stocks={lookThrough.stocks}
+            coveragePct={lookThrough.coveragePct}
+            baseCurrency={baseCurrency}
+          />
 
           <Card>
             <CardHeader>
