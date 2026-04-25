@@ -52,3 +52,28 @@ alter table user_settings enable row level security;
 create policy "Users manage own settings"
   on user_settings for all
   using (auth.uid() = user_id);
+
+-- ETF / ticker composition cache (public reference data — no per-user rows)
+-- Holds dynamically-fetched country/sector breakdowns + top holdings so we
+-- don't hammer Yahoo on every page load. TTL is enforced in the API route.
+create table if not exists etf_composition_cache (
+  ticker      text primary key,
+  data        jsonb not null,
+  fetched_at  timestamptz not null default now()
+);
+
+alter table etf_composition_cache enable row level security;
+
+-- Public reference data — any authenticated user can read, and any user
+-- can populate the cache (data is non-sensitive market metadata).
+create policy "Anyone can read composition cache"
+  on etf_composition_cache for select
+  using (true);
+
+create policy "Anyone can insert composition cache"
+  on etf_composition_cache for insert
+  with check (true);
+
+create policy "Anyone can update composition cache"
+  on etf_composition_cache for update
+  using (true);
