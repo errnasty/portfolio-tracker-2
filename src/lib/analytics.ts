@@ -54,6 +54,12 @@ function isFund(quoteType?: string): boolean {
   return quoteType === 'ETF' || quoteType === 'MUTUALFUND'
 }
 
+// True when we should treat an unknown ticker as a fund: any ticker present
+// in our curated ETF map, regardless of what the API said.
+function isCuratedFund(ticker: string): boolean {
+  return getEtfComposition(ticker) !== undefined
+}
+
 // ── Geographic breakdown (LOOK-THROUGH) ───────────────────────────────────
 // For each ETF holding, distribute its market value across the underlying
 // countries using the curated composition map. Stocks contribute their full
@@ -72,27 +78,30 @@ export function geographicBreakdown(
     const a = analytics[h.ticker]
     const value = h.currentValueBase
 
-    if (a?.quoteType === 'EQUITY') {
-      add(a.country ?? regionFromSuffix(h.ticker), value)
-      continue
-    }
-
-    if (isFund(a?.quoteType) || !a) {
-      // Try curated look-through composition first
-      const comp = getEtfComposition(h.ticker)
-      if (comp) {
-        for (const [country, weight] of Object.entries(comp.countries)) {
-          add(country, value * weight)
-        }
-        continue
+    // 1. Curated ETF composition wins when available (look-through)
+    const comp = getEtfComposition(h.ticker)
+    if (comp) {
+      for (const [country, weight] of Object.entries(comp.countries)) {
+        add(country, value * weight)
       }
-      // Fall back to category-derived region or suffix
-      const region = regionFromCategory(a?.category) ?? regionFromSuffix(h.ticker)
-      add(region ?? 'Unknown', value)
       continue
     }
 
-    add('Unknown', value)
+    // 2. Equities with known country
+    if (a?.quoteType === 'EQUITY' && a.country) {
+      add(a.country, value)
+      continue
+    }
+
+    // 3. Funds without curated data — use category or suffix
+    if (isFund(a?.quoteType)) {
+      const region = regionFromCategory(a?.category) ?? regionFromSuffix(h.ticker)
+      add(region, value)
+      continue
+    }
+
+    // 4. Anything else — infer from ticker suffix as best effort
+    add(regionFromSuffix(h.ticker), value)
   }
   return aggregate(map)
 }
@@ -105,18 +114,38 @@ export function sectorBreakdown(
   analytics: Record<string, TickerAnalytics>,
 ): BreakdownSlice[] {
   const map = new Map<string, number>()
+  const add = (sector: string, v: number) => {
+    if (v <= 0) return
+    map.set(sector, (map.get(sector) ?? 0) + v)
+  }
   for (const h of enriched) {
     const a = analytics[h.ticker]
-    if (a?.quoteType === 'EQUITY' && a.sector) {
-      map.set(a.sector, (map.get(a.sector) ?? 0) + h.currentValueBase)
-    } else if (a?.sectorWeightings && Object.keys(a.sectorWeightings).length > 0) {
+    const value = h.currentValueBase
+
+    // 1. Yahoo sectorWeightings (look-through ETF data) wins when available
+    if (a?.sectorWeightings && Object.keys(a.sectorWeightings).length > 0) {
       for (const [sector, weight] of Object.entries(a.sectorWeightings)) {
-        const label = humanizeSector(sector)
-        map.set(label, (map.get(label) ?? 0) + h.currentValueBase * weight)
+        add(humanizeSector(sector), value * weight)
       }
-    } else {
-      map.set('Unclassified', (map.get('Unclassified') ?? 0) + h.currentValueBase)
+      continue
     }
+
+    // 2. Curated ETF sector weightings as fallback when API is unavailable
+    const comp = getEtfComposition(h.ticker)
+    if (comp?.sectors) {
+      for (const [sector, weight] of Object.entries(comp.sectors)) {
+        add(sector, value * weight)
+      }
+      continue
+    }
+
+    // 3. Single equity sector
+    if (a?.quoteType === 'EQUITY' && a.sector) {
+      add(a.sector, value)
+      continue
+    }
+
+    add('Unclassified', value)
   }
   return aggregate(map)
 }
@@ -153,18 +182,16 @@ export function currencyBreakdown(
   }
 
   for (const h of enriched) {
-    const a = analytics[h.ticker]
     const value = h.currentValueBase
 
-    if (isFund(a?.quoteType)) {
-      const comp = getEtfComposition(h.ticker)
-      if (comp) {
-        for (const [country, weight] of Object.entries(comp.countries)) {
-          const cur = COUNTRY_TO_CURRENCY[country] ?? 'USD'
-          add(cur, value * weight)
-        }
-        continue
+    // Curated composition wins regardless of quoteType detection
+    const comp = getEtfComposition(h.ticker)
+    if (comp) {
+      for (const [country, weight] of Object.entries(comp.countries)) {
+        const cur = COUNTRY_TO_CURRENCY[country] ?? 'USD'
+        add(cur, value * weight)
       }
+      continue
     }
     // Stocks (and ETFs without curated data) — use trading currency
     const cur = (h.priceCurrency || 'USD').toUpperCase()
@@ -180,7 +207,10 @@ export function assetTypeBreakdown(
 ): BreakdownSlice[] {
   const map = new Map<string, number>()
   for (const h of enriched) {
-    const t = analytics[h.ticker]?.quoteType ?? 'UNKNOWN'
+    let t = analytics[h.ticker]?.quoteType ?? 'UNKNOWN'
+    // If the API returned UNKNOWN but we have it in the curated ETF map,
+    // treat it as an ETF.
+    if ((t === 'UNKNOWN' || !t) && isCuratedFund(h.ticker)) t = 'ETF'
     const label =
       t === 'EQUITY' ? 'Stock'
         : t === 'ETF' ? 'ETF'
@@ -229,16 +259,19 @@ export function lookThroughStocks(
 
   for (const h of enriched) {
     const a = analytics[h.ticker]
-    if (a?.quoteType === 'EQUITY') {
-      add(h.ticker, h.name ?? a.longName ?? h.ticker, h.currentValueBase, { ticker: h.ticker, weight: 1 })
-    } else if (isFund(a?.quoteType) && a?.topHoldings && a.topHoldings.length > 0) {
+    const treatAsFund = isFund(a?.quoteType) || isCuratedFund(h.ticker)
+
+    if (treatAsFund && a?.topHoldings && a.topHoldings.length > 0) {
       for (const th of a.topHoldings) {
         add(th.symbol || th.name, th.name, h.currentValueBase * th.weight, {
           ticker: h.ticker,
           weight: th.weight,
         })
       }
+    } else if (a?.quoteType === 'EQUITY' || (!treatAsFund && a?.quoteType !== 'UNKNOWN')) {
+      add(h.ticker, h.name ?? a?.longName ?? h.ticker, h.currentValueBase, { ticker: h.ticker, weight: 1 })
     }
+    // funds without top-holdings data contribute nothing — coverage % will reflect the gap
   }
 
   const stocks = Array.from(map.values())

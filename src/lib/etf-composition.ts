@@ -5,11 +5,51 @@
 // gets credited proportionally.
 
 export type CountryWeights = Record<string, number>
+export type SectorWeights = Record<string, number>
 
 interface EtfComposition {
   countries: CountryWeights
+  sectors?: SectorWeights
   // Optional human-readable summary, used in tooltips.
   description?: string
+}
+
+// Common sector profiles — sums to ~1
+const SECTORS_SP500: SectorWeights = {
+  Technology: 0.30, 'Financial Services': 0.13, Healthcare: 0.12,
+  'Consumer Cyclical': 0.10, 'Communication Services': 0.09, Industrials: 0.08,
+  'Consumer Defensive': 0.06, Energy: 0.04, 'Real Estate': 0.025,
+  Utilities: 0.025, 'Basic Materials': 0.02,
+}
+const SECTORS_NASDAQ: SectorWeights = {
+  Technology: 0.50, 'Communication Services': 0.16, 'Consumer Cyclical': 0.14,
+  Healthcare: 0.07, 'Consumer Defensive': 0.06, Industrials: 0.05,
+  Utilities: 0.01, 'Financial Services': 0.01,
+}
+const SECTORS_WORLD: SectorWeights = {
+  Technology: 0.25, 'Financial Services': 0.15, Healthcare: 0.11,
+  'Consumer Cyclical': 0.11, Industrials: 0.11, 'Communication Services': 0.07,
+  'Consumer Defensive': 0.06, Energy: 0.04, 'Basic Materials': 0.04,
+  Utilities: 0.03, 'Real Estate': 0.03,
+}
+const SECTORS_EUROPE: SectorWeights = {
+  'Financial Services': 0.18, Industrials: 0.16, Healthcare: 0.15,
+  'Consumer Cyclical': 0.11, 'Consumer Defensive': 0.10, Technology: 0.08,
+  'Basic Materials': 0.07, 'Communication Services': 0.05, Utilities: 0.05,
+  Energy: 0.04, 'Real Estate': 0.01,
+}
+const SECTORS_EM: SectorWeights = {
+  Technology: 0.23, 'Financial Services': 0.22, 'Consumer Cyclical': 0.13,
+  'Communication Services': 0.09, Industrials: 0.07, 'Basic Materials': 0.07,
+  Energy: 0.05, 'Consumer Defensive': 0.05, Healthcare: 0.04,
+  Utilities: 0.03, 'Real Estate': 0.02,
+}
+const SECTORS_REIT: SectorWeights = { 'Real Estate': 1 }
+const SECTORS_DEV_EX_US: SectorWeights = {
+  'Financial Services': 0.18, Industrials: 0.16, Healthcare: 0.12,
+  'Consumer Cyclical': 0.12, 'Basic Materials': 0.08, Technology: 0.09,
+  'Consumer Defensive': 0.09, 'Communication Services': 0.05, Energy: 0.05,
+  Utilities: 0.04, 'Real Estate': 0.02,
 }
 
 // Helper to express the same composition under multiple ticker aliases
@@ -22,11 +62,21 @@ function alias<T>(map: T, ...keys: string[]): Record<string, T> {
 
 const US_ONLY: EtfComposition = {
   countries: { 'United States': 1 },
+  sectors: SECTORS_SP500,
   description: 'Tracks US equities only',
+}
+const NASDAQ_US: EtfComposition = {
+  countries: { 'United States': 1 },
+  sectors: SECTORS_NASDAQ,
 }
 
 const SG_ONLY: EtfComposition = {
   countries: { Singapore: 1 },
+  sectors: {
+    'Financial Services': 0.45, Industrials: 0.18, 'Real Estate': 0.13,
+    'Communication Services': 0.08, 'Consumer Cyclical': 0.06,
+    Utilities: 0.04, 'Consumer Defensive': 0.03, Other: 0.03,
+  },
 }
 
 // Vanguard FTSE All-World (VWRL/VWRA/VT/VWRD)
@@ -47,6 +97,7 @@ const FTSE_ALL_WORLD: EtfComposition = {
     'South Korea': 0.012,
     Other: 0.061,
   },
+  sectors: SECTORS_WORLD,
   description: 'FTSE All-World — global developed + emerging',
 }
 
@@ -64,6 +115,7 @@ const MSCI_WORLD: EtfComposition = {
     Netherlands: 0.013,
     Other: 0.062,
   },
+  sectors: SECTORS_WORLD,
   description: 'MSCI World — developed markets',
 }
 
@@ -81,6 +133,7 @@ const DEVELOPED_EX_US: EtfComposition = {
     Sweden: 0.03,
     Other: 0.15,
   },
+  sectors: SECTORS_DEV_EX_US,
 }
 
 // Emerging Markets
@@ -96,6 +149,7 @@ const EMERGING_MARKETS: EtfComposition = {
     Mexico: 0.02,
     Other: 0.07,
   },
+  sectors: SECTORS_EM,
 }
 
 const EUROPE: EtfComposition = {
@@ -111,6 +165,7 @@ const EUROPE: EtfComposition = {
     Denmark: 0.03,
     Other: 0.04,
   },
+  sectors: SECTORS_EUROPE,
 }
 
 const ASIA_EX_JAPAN: EtfComposition = {
@@ -123,6 +178,7 @@ const ASIA_EX_JAPAN: EtfComposition = {
     Singapore: 0.04,
     Other: 0.08,
   },
+  sectors: SECTORS_EM,
 }
 
 const ASIA_REIT: EtfComposition = {
@@ -132,6 +188,7 @@ const ASIA_REIT: EtfComposition = {
     Australia: 0.08,
     Other: 0.07,
   },
+  sectors: SECTORS_REIT,
   description: 'Asia ex-Japan REITs (Singapore-heavy)',
 }
 
@@ -147,18 +204,19 @@ const HIGH_DIV_WORLD: EtfComposition = {
     Germany: 0.03,
     Other: 0.26,
   },
+  sectors: SECTORS_WORLD,
 }
 
-const CHINA: EtfComposition = { countries: { China: 1 } }
-const INDIA: EtfComposition = { countries: { India: 1 } }
-const JAPAN: EtfComposition = { countries: { Japan: 1 } }
-const UK: EtfComposition = { countries: { 'United Kingdom': 1 } }
+const CHINA: EtfComposition = { countries: { China: 1 }, sectors: SECTORS_EM }
+const INDIA: EtfComposition = { countries: { India: 1 }, sectors: SECTORS_EM }
+const JAPAN: EtfComposition = { countries: { Japan: 1 }, sectors: SECTORS_DEV_EX_US }
+const UK: EtfComposition = { countries: { 'United Kingdom': 1 }, sectors: SECTORS_EUROPE }
 
 export const ETF_COMPOSITIONS: Record<string, EtfComposition> = {
   // S&P 500 / total US
   ...alias(US_ONLY, 'SPY', 'IVV', 'VOO', 'VTI', 'ITOT', 'SPLG', 'VUSA.L', 'VUSA.AS', 'VUSD.L', 'CSPX.L', 'CSPX.AS', 'SXR8.DE', 'IUSA.L'),
   // Nasdaq
-  ...alias(US_ONLY, 'QQQ', 'QQQM', 'CNDX.L', 'EQQQ.L'),
+  ...alias(NASDAQ_US, 'QQQ', 'QQQM', 'CNDX.L', 'EQQQ.L'),
   // FTSE All-World
   ...alias(FTSE_ALL_WORLD, 'VT', 'VWRL.L', 'VWRL.AS', 'VWRA.L', 'VWRD.L', 'VWRP.L', 'FWRA.L'),
   // MSCI World
