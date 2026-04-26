@@ -28,8 +28,8 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="text-muted-foreground">Configure your portfolio preferences</p>
+        <h1 className="text-2xl md:text-3xl font-bold">Settings</h1>
+        <p className="text-sm md:text-base text-muted-foreground">Configure your portfolio preferences</p>
       </div>
 
       <Card className="max-w-md">

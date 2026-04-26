@@ -1,8 +1,11 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, Briefcase, TrendingUp, Sliders, LogOut, Settings, PieChart } from 'lucide-react'
+import {
+  LayoutDashboard, Briefcase, TrendingUp, Sliders, LogOut, Settings, PieChart, Activity, Menu, X,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
@@ -12,6 +15,7 @@ const navItems = [
   { href: '/holdings', label: 'Holdings', icon: Briefcase },
   { href: '/performance', label: 'Performance', icon: TrendingUp },
   { href: '/analytics', label: 'Analytics', icon: PieChart },
+  { href: '/risk', label: 'Risk', icon: Activity },
   { href: '/rebalancer', label: 'Rebalancer', icon: Sliders },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
@@ -19,6 +23,19 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  // Close mobile drawer on navigation
+  useEffect(() => {
+    setMobileOpen(false)
+  }, [pathname])
+
+  // Lock body scroll when drawer open on mobile
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    document.body.style.overflow = mobileOpen ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [mobileOpen])
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -26,47 +43,92 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="fixed left-0 top-0 z-40 flex h-full w-16 flex-col items-center border-r border-border bg-card py-4 md:w-56 md:items-start md:px-4">
-      {/* Logo */}
-      <div className="mb-8 flex items-center gap-2 px-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold shrink-0">
-          P
+    <>
+      {/* Mobile top bar with hamburger */}
+      <div className="fixed top-0 left-0 right-0 z-40 flex h-12 items-center justify-between border-b border-border bg-card px-3 md:hidden">
+        <button
+          aria-label="Open menu"
+          onClick={() => setMobileOpen(true)}
+          className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+        <div className="flex items-center gap-2">
+          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground text-xs font-bold">
+            P
+          </div>
+          <span className="text-sm font-semibold">Portfolio</span>
         </div>
-        <span className="hidden font-semibold md:block">Portfolio</span>
+        <div className="w-9" />
       </div>
 
-      {/* Nav */}
-      <nav className="flex flex-1 flex-col gap-1 w-full">
-        {navItems.map(({ href, label, icon: Icon }) => {
-          const active = href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(href)
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                'flex items-center gap-3 rounded-md px-2 py-2.5 text-sm transition-colors',
-                active
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-              )}
-            >
-              <Icon className="h-5 w-5 shrink-0" />
-              <span className="hidden md:block">{label}</span>
-            </Link>
-          )
-        })}
-      </nav>
+      {/* Mobile backdrop */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 md:hidden"
+          onClick={() => setMobileOpen(false)}
+          aria-hidden
+        />
+      )}
 
-      {/* Sign out */}
-      <Button
-        variant="ghost"
-        size="sm"
-        className="mt-auto flex w-full items-center gap-3 justify-start px-2 text-muted-foreground"
-        onClick={handleSignOut}
+      {/* Sidebar — desktop: always visible. Mobile: drawer that slides in. */}
+      <aside
+        className={cn(
+          'fixed left-0 top-0 z-50 flex h-full w-56 flex-col border-r border-border bg-card py-4 px-4 transition-transform duration-200 md:translate-x-0',
+          mobileOpen ? 'translate-x-0' : '-translate-x-full',
+        )}
       >
-        <LogOut className="h-5 w-5 shrink-0" />
-        <span className="hidden md:block">Sign out</span>
-      </Button>
-    </aside>
+        {/* Header */}
+        <div className="mb-6 flex items-center justify-between px-2">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold shrink-0">
+              P
+            </div>
+            <span className="font-semibold">Portfolio</span>
+          </div>
+          <button
+            aria-label="Close menu"
+            onClick={() => setMobileOpen(false)}
+            className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-accent md:hidden"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Nav */}
+        <nav className="flex flex-1 flex-col gap-1 w-full overflow-y-auto">
+          {navItems.map(({ href, label, icon: Icon }) => {
+            const active = href === '/dashboard'
+              ? pathname === '/dashboard'
+              : pathname.startsWith(href)
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={cn(
+                  'flex items-center gap-3 rounded-md px-2 py-2.5 text-sm transition-colors',
+                  active
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                )}
+              >
+                <Icon className="h-5 w-5 shrink-0" />
+                <span>{label}</span>
+              </Link>
+            )
+          })}
+        </nav>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mt-auto flex w-full items-center gap-3 justify-start px-2 text-muted-foreground"
+          onClick={handleSignOut}
+        >
+          <LogOut className="h-5 w-5 shrink-0" />
+          <span>Sign out</span>
+        </Button>
+      </aside>
+    </>
   )
 }

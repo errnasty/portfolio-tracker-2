@@ -179,12 +179,12 @@ export default function HoldingsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Holdings</h1>
-          <p className="text-muted-foreground">Manage your portfolio positions</p>
+          <h1 className="text-2xl md:text-3xl font-bold">Holdings</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Manage your portfolio positions</p>
         </div>
-        <Button onClick={openAdd}>
+        <Button onClick={openAdd} className="self-start sm:self-auto">
           <Plus className="mr-2 h-4 w-4" /> Add Holding
         </Button>
       </div>
@@ -201,6 +201,7 @@ export default function HoldingsPage() {
               <Button onClick={openAdd}><Plus className="mr-2 h-4 w-4" /> Add Holding</Button>
             </div>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -274,13 +275,14 @@ export default function HoldingsPage() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>
 
       {/* Add / Edit dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editId ? 'Edit Holding' : 'Add Holding'}</DialogTitle>
           </DialogHeader>

@@ -29,8 +29,8 @@ function StatCard({
           </div>
         ) : (
           <>
-            <div className="text-2xl font-bold">{value}</div>
-            <p className={`text-xs ${subColor}`}>{sub}</p>
+            <div className="text-lg md:text-2xl font-bold tabular-nums truncate">{value}</div>
+            <p className={`text-xs ${subColor} truncate`}>{sub}</p>
           </>
         )}
       </CardContent>
@@ -44,18 +44,18 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">Your portfolio overview</p>
+          <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Your portfolio overview</p>
         </div>
-        <Button variant="outline" size="sm" onClick={refreshPrices} disabled={loading}>
+        <Button variant="outline" size="sm" onClick={refreshPrices} disabled={loading} className="self-start sm:self-auto">
           <RefreshCw className="mr-2 h-4 w-4" />
           Refresh prices
         </Button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Value"
           value={stats ? formatCurrency(stats.totalValue, base) : '—'}

@@ -51,8 +51,8 @@ export default function RebalancerPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Rebalancer</h1>
-        <p className="text-muted-foreground">Set your target allocations and get buy/sell recommendations</p>
+        <h1 className="text-2xl md:text-3xl font-bold">Rebalancer</h1>
+        <p className="text-sm md:text-base text-muted-foreground">Set your target allocations and get buy/sell recommendations</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

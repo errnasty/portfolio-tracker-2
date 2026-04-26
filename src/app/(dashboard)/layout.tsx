@@ -34,8 +34,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <PortfolioProvider>
       <div className="flex min-h-screen bg-background">
         <Sidebar />
-        <main className="flex-1 pl-16 md:pl-56">
-          <div className="mx-auto max-w-7xl p-4 md:p-6 lg:p-8">
+        <main className="flex-1 pt-12 md:pt-0 md:pl-56">
+          <div className="mx-auto max-w-7xl p-3 sm:p-4 md:p-6 lg:p-8">
             {children}
           </div>
         </main>

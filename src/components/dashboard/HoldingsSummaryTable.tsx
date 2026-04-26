@@ -41,6 +41,7 @@ export function HoldingsSummaryTable({ enriched, loading, base }: Props) {
             </div>
           </div>
         ) : (
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -76,6 +77,7 @@ export function HoldingsSummaryTable({ enriched, loading, base }: Props) {
               ))}
             </TableBody>
           </Table>
+          </div>
         )}
       </CardContent>
     </Card>
