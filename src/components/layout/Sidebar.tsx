@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
-  LayoutDashboard, Briefcase, TrendingUp, Sliders, LogOut, Settings, PieChart, Activity, Menu, X,
+  LayoutDashboard, Briefcase, TrendingUp, Sliders, LogOut, Settings, PieChart, Activity, Menu, X, Beaker,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
@@ -17,6 +17,7 @@ const navItems = [
   { href: '/analytics', label: 'Analytics', icon: PieChart },
   { href: '/risk', label: 'Risk', icon: Activity },
   { href: '/rebalancer', label: 'Rebalancer', icon: Sliders },
+  { href: '/planner', label: 'Planner', icon: Beaker },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
 
