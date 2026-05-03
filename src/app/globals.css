@@ -57,3 +57,45 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ── Responsive table utilities ─────────────────────────────────────────── */
+/* Wrap a horizontally-scrolling table; the right edge gets a fade gradient
+   so users see there's more content when the table overflows. */
+.table-scroll {
+  position: relative;
+}
+.table-scroll > .table-scroll-inner {
+  overflow-x: auto;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+.table-scroll::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 24px;
+  background: linear-gradient(to left, hsl(var(--card)), transparent);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 150ms;
+}
+@media (max-width: 767px) {
+  .table-scroll.has-overflow::after {
+    opacity: 1;
+  }
+}
+
+/* Sticky first column — opt in by adding `sticky-first` to the table. */
+.sticky-first thead th:first-child,
+.sticky-first tbody td:first-child {
+  position: sticky;
+  left: 0;
+  background: hsl(var(--card));
+  z-index: 1;
+}
+.sticky-first.has-overflow thead th:first-child,
+.sticky-first.has-overflow tbody td:first-child {
+  box-shadow: 4px 0 6px -4px rgba(0, 0, 0, 0.4);
+}

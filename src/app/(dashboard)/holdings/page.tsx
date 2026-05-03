@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Plus, Pencil, Trash2, Search, Loader2 } from 'lucide-react'
+import { TableScroll } from '@/components/ui/table-scroll'
 import type { Currency, Holding, HoldingFormData } from '@/types'
 import type { SearchResult } from '@/app/api/search/route'
 
@@ -201,7 +202,7 @@ export default function HoldingsPage() {
               <Button onClick={openAdd}><Plus className="mr-2 h-4 w-4" /> Add Holding</Button>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <TableScroll stickyFirstCol>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -275,7 +276,7 @@ export default function HoldingsPage() {
                 ))}
               </TableBody>
             </Table>
-            </div>
+            </TableScroll>
           )}
         </CardContent>
       </Card>

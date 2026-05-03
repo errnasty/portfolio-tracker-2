@@ -54,15 +54,26 @@ export function enrichHoldings(
   })
 }
 
-export function calcPortfolioStats(enriched: EnrichedHolding[], baseCurrency: Currency): PortfolioStats {
-  const totalValue = enriched.reduce((s, h) => s + h.currentValueBase, 0)
+export function calcPortfolioStats(
+  enriched: EnrichedHolding[],
+  baseCurrency: Currency,
+  cashValueBase = 0,
+): PortfolioStats {
+  const holdingsValue = enriched.reduce((s, h) => s + h.currentValueBase, 0)
+  const totalValue = holdingsValue + cashValueBase
   const totalCost = enriched.reduce((s, h) => s + h.costBasisBase, 0)
-  const totalGainLoss = totalValue - totalCost
+  const totalGainLoss = holdingsValue - totalCost
   const totalGainLossPct = totalCost > 0 ? (totalGainLoss / totalCost) * 100 : 0
   const totalDayChange = enriched.reduce((s, h) => s + h.dayChange, 0)
-  const totalDayChangePct = totalValue > 0 ? (totalDayChange / (totalValue - totalDayChange)) * 100 : 0
+  const totalDayChangePct = holdingsValue > 0
+    ? (totalDayChange / (holdingsValue - totalDayChange)) * 100
+    : 0
 
-  return { totalValue, totalCost, totalGainLoss, totalGainLossPct, totalDayChange, totalDayChangePct, baseCurrency }
+  return {
+    totalValue, holdingsValue, cashValue: cashValueBase,
+    totalCost, totalGainLoss, totalGainLossPct,
+    totalDayChange, totalDayChangePct, baseCurrency,
+  }
 }
 
 export type RebalanceMode = 'full' | 'buy-only'

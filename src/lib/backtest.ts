@@ -13,22 +13,26 @@ export interface PriceHistory {
 }
 
 export interface BacktestPoint {
-  date: string  // YYYY-MM-DD (month-end)
-  value: number  // normalized index, starts at 100
+  date: string   // YYYY-MM-DD (month-end)
+  value: number  // portfolio value (or normalized index when no DCA)
+  invested: number  // cumulative dollars contributed up to this point
 }
 
 export interface BacktestResult {
   series: BacktestPoint[]
-  cagrPct: number
-  totalReturnPct: number
+  cagrPct: number          // time-weighted compound growth
+  totalReturnPct: number   // (final / starting) - 1, time-weighted
+  moneyWeightedReturnPct: number  // (final - invested) / invested — true ROI on DCA capital
   maxDrawdownPct: number
-  volPct: number          // annualized monthly vol (×√12)
-  sharpe: number          // assuming 0% rf for simplicity
+  volPct: number           // annualized monthly vol (×√12)
+  sharpe: number           // assuming 0% rf
   bestMonthPct: number
   worstMonthPct: number
   monthsCovered: number
   startDate: string
   endDate: string
+  totalInvested: number    // starting + sum of contributions
+  finalValue: number
 }
 
 // Resample daily series → month-end closes, keyed by YYYY-MM
@@ -46,11 +50,24 @@ function toMonthEndCloses(series: { date: string; close: number }[]): Map<string
   return out
 }
 
+export interface BacktestOptions {
+  rebalanceMonths?: number      // default 12
+  monthlyContribution?: number  // default 0; deployed per target weight each month
+  startingValue?: number        // default 100 (index)
+}
+
 export function runBacktest(
   positions: BacktestPosition[],
   histories: Record<string, PriceHistory>,
-  rebalanceMonths = 12,
+  optsOrRebalance: BacktestOptions | number = {},
 ): BacktestResult {
+  // Backward-compat: callers used to pass `rebalanceMonths` as a number.
+  const opts: BacktestOptions = typeof optsOrRebalance === 'number'
+    ? { rebalanceMonths: optsOrRebalance }
+    : optsOrRebalance
+  const rebalanceMonths = opts.rebalanceMonths ?? 12
+  const monthlyContribution = Math.max(0, opts.monthlyContribution ?? 0)
+  const startingValue = opts.startingValue ?? 100
   const valid = positions.filter((p) => p.pct > 0 && histories[p.ticker]?.series.length)
   if (valid.length === 0) {
     return emptyResult()
@@ -78,10 +95,11 @@ export function runBacktest(
   const totalWeight = valid.reduce((s, p) => s + p.pct, 0)
   const weights = new Map<string, number>(valid.map((p) => [p.ticker, p.pct / totalWeight]))
 
-  // Simulate. Start at index value 100. Hold each ticker's share count;
-  // rebalance every `rebalanceMonths`.
-  const startValue = 100
+  // Simulate. Hold each ticker's share count; rebalance every N months and
+  // optionally add a fixed monthly contribution split per target weight.
+  const startValue = startingValue
   let portfolioValue = startValue
+  let invested = startValue
   const shares = new Map<string, number>()
   // Initial allocation
   for (const p of valid) {
@@ -90,20 +108,47 @@ export function runBacktest(
     shares.set(p.ticker, dollarAmount / startClose)
   }
 
-  const series: BacktestPoint[] = [{ date: monthEndDate(commonMonths[0]), value: portfolioValue }]
+  const series: BacktestPoint[] = [{
+    date: monthEndDate(commonMonths[0]),
+    value: portfolioValue,
+    invested,
+  }]
   const monthlyReturns: number[] = []
 
   for (let i = 1; i < commonMonths.length; i++) {
     const month = commonMonths[i]
+    // Mark-to-market the existing position
+    let valueBefore = 0
+    for (const p of valid) {
+      const close = closesByTicker.get(p.ticker)!.get(month)!
+      valueBefore += (shares.get(p.ticker) ?? 0) * close
+    }
+    // Time-weighted return ignores contributions: it measures growth of
+    // existing capital from the previous month to this month BEFORE the
+    // new contribution is added.
+    const ret = portfolioValue > 0 ? (valueBefore - portfolioValue) / portfolioValue : 0
+    monthlyReturns.push(ret)
+
+    // Apply monthly contribution at month-end (DCA): buy each ticker
+    // worth `contribution × targetWeight` at the current month's close.
+    if (monthlyContribution > 0) {
+      for (const p of valid) {
+        const close = closesByTicker.get(p.ticker)!.get(month)!
+        const buyDollars = monthlyContribution * weights.get(p.ticker)!
+        const addedShares = buyDollars / close
+        shares.set(p.ticker, (shares.get(p.ticker) ?? 0) + addedShares)
+      }
+      invested += monthlyContribution
+    }
+
+    // Recompute value after contribution
     let value = 0
     for (const p of valid) {
       const close = closesByTicker.get(p.ticker)!.get(month)!
       value += (shares.get(p.ticker) ?? 0) * close
     }
-    const ret = portfolioValue > 0 ? (value - portfolioValue) / portfolioValue : 0
-    monthlyReturns.push(ret)
     portfolioValue = value
-    series.push({ date: monthEndDate(month), value })
+    series.push({ date: monthEndDate(month), value, invested })
 
     // Rebalance every N months
     if (i % rebalanceMonths === 0) {
@@ -115,10 +160,14 @@ export function runBacktest(
     }
   }
 
-  // Metrics
-  const totalReturnPct = ((portfolioValue / startValue) - 1) * 100
+  // Metrics — time-weighted (independent of contribution timing)
+  // We chain the monthly returns for true TWR.
+  const twrFactor = monthlyReturns.reduce((acc, r) => acc * (1 + r), 1)
+  const totalReturnPct = (twrFactor - 1) * 100
   const years = (series.length - 1) / 12
-  const cagrPct = years > 0 ? (Math.pow(portfolioValue / startValue, 1 / years) - 1) * 100 : 0
+  const cagrPct = years > 0 ? (Math.pow(twrFactor, 1 / years) - 1) * 100 : 0
+  // Money-weighted: simple ROI on capital deployed.
+  const moneyWeightedReturnPct = invested > 0 ? ((portfolioValue - invested) / invested) * 100 : 0
 
   // Max drawdown
   let peak = series[0].value
@@ -142,6 +191,7 @@ export function runBacktest(
     series,
     cagrPct,
     totalReturnPct,
+    moneyWeightedReturnPct,
     maxDrawdownPct: maxDD * 100,
     volPct: volAnnual * 100,
     sharpe,
@@ -150,6 +200,8 @@ export function runBacktest(
     monthsCovered: series.length,
     startDate: series[0].date,
     endDate: series[series.length - 1].date,
+    totalInvested: invested,
+    finalValue: portfolioValue,
   }
 }
 
@@ -164,6 +216,7 @@ function emptyResult(): BacktestResult {
     series: [],
     cagrPct: 0,
     totalReturnPct: 0,
+    moneyWeightedReturnPct: 0,
     maxDrawdownPct: 0,
     volPct: 0,
     sharpe: 0,
@@ -172,5 +225,7 @@ function emptyResult(): BacktestResult {
     monthsCovered: 0,
     startDate: '',
     endDate: '',
+    totalInvested: 0,
+    finalValue: 0,
   }
 }

@@ -10,6 +10,7 @@ import { AllocationChart } from '@/components/dashboard/AllocationChart'
 import { HoldingsSummaryTable } from '@/components/dashboard/HoldingsSummaryTable'
 import { RebalanceBandsWidget } from '@/components/dashboard/RebalanceBandsWidget'
 import { PortfolioSummaryWidget } from '@/components/dashboard/PortfolioSummaryWidget'
+import { CashBalancesCard } from '@/components/dashboard/CashBalancesCard'
 import type { Currency } from '@/types'
 
 function StatCard({
@@ -41,7 +42,11 @@ function StatCard({
 }
 
 export default function DashboardPage() {
-  const { stats, enriched, loading, refreshPrices, settings, targets } = usePortfolio()
+  const {
+    stats, enriched, loading, refreshPrices, settings, targets,
+    cashBalances, totalCashBase, fxRates,
+    upsertCashBalance, deleteCashBalance,
+  } = usePortfolio()
   const base = (settings?.base_currency ?? 'USD') as Currency
 
   return (
@@ -61,7 +66,11 @@ export default function DashboardPage() {
         <StatCard
           title="Total Value"
           value={stats ? formatCurrency(stats.totalValue, base) : '—'}
-          sub={stats ? `Cost: ${formatCurrency(stats.totalCost, base)}` : 'No holdings yet'}
+          sub={stats
+            ? stats.cashValue > 0
+              ? `${formatCurrency(stats.holdingsValue, base)} held + ${formatCurrency(stats.cashValue, base)} cash`
+              : `Cost: ${formatCurrency(stats.totalCost, base)}`
+            : 'No holdings yet'}
           subColor="text-muted-foreground"
           icon={DollarSign}
           loading={loading}
@@ -94,12 +103,23 @@ export default function DashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-1">
-          <AllocationChart enriched={enriched} loading={loading} />
+          <AllocationChart enriched={enriched} loading={loading} cashValue={totalCashBase} />
         </div>
         <div className="lg:col-span-2">
           <HoldingsSummaryTable enriched={enriched} loading={loading} base={base} />
         </div>
       </div>
+
+      {!loading && (
+        <CashBalancesCard
+          cashBalances={cashBalances}
+          totalCashBase={totalCashBase}
+          base={base}
+          fxRates={fxRates}
+          onUpsert={upsertCashBalance}
+          onDelete={deleteCashBalance}
+        />
+      )}
 
       {!loading && enriched.length > 0 && (
         <PortfolioSummaryWidget enriched={enriched} stats={stats} baseCurrency={base} />

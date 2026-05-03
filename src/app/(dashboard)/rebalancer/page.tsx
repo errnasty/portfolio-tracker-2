@@ -1,9 +1,12 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { usePortfolio } from '@/context/PortfolioContext'
 import { calcRebalance, type RebalanceMode } from '@/lib/calculations'
 import { formatCurrency, formatPercent, formatShares } from '@/lib/utils'
+import { Wallet } from 'lucide-react'
+import { TableScroll } from '@/components/ui/table-scroll'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
@@ -15,8 +18,12 @@ import { Plus, Trash2, AlertCircle } from 'lucide-react'
 import type { Currency } from '@/types'
 
 export default function RebalancerPage() {
-  const { enriched, targets, prices, fxRates, loading, upsertTarget, deleteTarget, settings } = usePortfolio()
+  const {
+    enriched, targets, prices, fxRates, loading, upsertTarget, deleteTarget, settings,
+    totalCashBase, cashBalances,
+  } = usePortfolio()
   const base = (settings?.base_currency ?? 'USD') as Currency
+  const searchParams = useSearchParams()
 
   const [newCash, setNewCash] = useState('')
   const [newTicker, setNewTicker] = useState('')
@@ -31,6 +38,13 @@ export default function RebalancerPage() {
     const stored = localStorage.getItem('rebalancer-mode')
     if (stored === 'full' || stored === 'buy-only') setMode(stored)
   }, [])
+
+  // Pre-fill cash from ?cash= query string (e.g. dashboard "Rebalance" button)
+  useEffect(() => {
+    const cashParam = searchParams.get('cash')
+    if (cashParam && !newCash) setNewCash(cashParam)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
   useEffect(() => {
     if (typeof window === 'undefined') return
     localStorage.setItem('rebalancer-mode', mode)
@@ -215,12 +229,28 @@ export default function RebalancerPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>Cash Amount ({base})</Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label>Cash Amount ({base})</Label>
+                {totalCashBase > 0 && (
+                  <Button
+                    type="button" variant="outline" size="sm" className="h-7"
+                    onClick={() => setNewCash(String(Math.round(totalCashBase)))}
+                  >
+                    <Wallet className="mr-1 h-3 w-3" />
+                    Use {formatCurrency(totalCashBase, base)}
+                  </Button>
+                )}
+              </div>
               <Input
                 type="number" min="0" step="any" placeholder="10000"
                 value={newCash}
                 onChange={(e) => setNewCash(e.target.value)}
               />
+              {totalCashBase > 0 && cashBalances.length > 1 && (
+                <p className="text-[11px] text-muted-foreground">
+                  Cash position: {cashBalances.map((c) => `${formatCurrency(Number(c.balance), c.currency)}`).join(' + ')}
+                </p>
+              )}
             </div>
             <div className="rounded-md bg-muted p-3 text-sm space-y-1">
               <div className="flex justify-between">
@@ -263,6 +293,7 @@ export default function RebalancerPage() {
               Set target allocations above to see recommendations
             </div>
           ) : (
+            <TableScroll stickyFirstCol>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -304,6 +335,7 @@ export default function RebalancerPage() {
                 ))}
               </TableBody>
             </Table>
+            </TableScroll>
           )}
 
           {/* Buy-only summary footer */}

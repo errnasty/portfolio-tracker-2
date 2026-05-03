@@ -9,17 +9,27 @@ const COLORS = [
   '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316',
   '#eab308', '#22c55e', '#14b8a6', '#0ea5e9', '#3b82f6',
 ]
+const CASH_COLOR = '#6b7280'
 
 interface Props {
   enriched: EnrichedHolding[]
   loading: boolean
+  cashValue?: number
 }
 
-export function AllocationChart({ enriched, loading }: Props) {
-  const data = enriched
-    .filter((h) => h.allocationPct > 0)
-    .sort((a, b) => b.allocationPct - a.allocationPct)
-    .map((h) => ({ name: h.ticker, value: parseFloat(h.allocationPct.toFixed(2)) }))
+export function AllocationChart({ enriched, loading, cashValue = 0 }: Props) {
+  const totalValue = enriched.reduce((s, h) => s + h.currentValueBase, 0) + cashValue
+  const holdingData = enriched
+    .filter((h) => h.currentValueBase > 0)
+    .sort((a, b) => b.currentValueBase - a.currentValueBase)
+    .map((h) => ({
+      name: h.ticker,
+      value: totalValue > 0 ? parseFloat(((h.currentValueBase / totalValue) * 100).toFixed(2)) : 0,
+      isCash: false,
+    }))
+  const data = cashValue > 0 && totalValue > 0
+    ? [...holdingData, { name: 'Cash', value: parseFloat(((cashValue / totalValue) * 100).toFixed(2)), isCash: true }]
+    : holdingData
 
   return (
     <Card className="h-full">
@@ -48,8 +58,8 @@ export function AllocationChart({ enriched, loading }: Props) {
                 paddingAngle={2}
                 dataKey="value"
               >
-                {data.map((_, i) => (
-                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                {data.map((d, i) => (
+                  <Cell key={i} fill={d.isCash ? CASH_COLOR : COLORS[i % COLORS.length]} />
                 ))}
               </Pie>
               <Tooltip

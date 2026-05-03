@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Plus, Pencil, Trash2, Loader2, Upload, ArrowDownCircle, ArrowUpCircle, Coins, Split } from 'lucide-react'
+import { TableScroll } from '@/components/ui/table-scroll'
 import { formatCurrency, formatShares } from '@/lib/utils'
 import type { Currency, Transaction, TransactionFormData, TransactionType } from '@/types'
 
@@ -172,7 +173,7 @@ export default function TransactionsPage() {
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <TableScroll stickyFirstCol>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -243,7 +244,7 @@ export default function TransactionsPage() {
                   })}
                 </TableBody>
               </Table>
-            </div>
+            </TableScroll>
           )}
         </CardContent>
       </Card>

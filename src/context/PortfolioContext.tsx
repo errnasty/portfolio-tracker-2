@@ -2,11 +2,12 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import { enrichHoldings, calcPortfolioStats } from '@/lib/calculations'
+import { enrichHoldings, calcPortfolioStats, convertToBase } from '@/lib/calculations'
 import { deriveAllPositions } from '@/lib/transactions'
 import type {
   Holding, PriceQuote, FxRates, EnrichedHolding, PortfolioStats,
   Currency, TargetAllocation, UserSettings, Transaction, DerivedPosition, Goal,
+  CashBalance,
 } from '@/types'
 
 interface PortfolioContextValue {
@@ -20,6 +21,8 @@ interface PortfolioContextValue {
   transactions: Transaction[]
   positions: Record<string, DerivedPosition>
   goals: Goal[]
+  cashBalances: CashBalance[]
+  totalCashBase: number
   loading: boolean
   refreshHoldings: () => Promise<void>
   refreshPrices: () => Promise<void>
@@ -38,6 +41,9 @@ interface PortfolioContextValue {
   addGoal: (g: Omit<Goal, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => Promise<void>
   updateGoal: (id: string, data: Partial<Goal>) => Promise<void>
   deleteGoal: (id: string) => Promise<void>
+  refreshCashBalances: () => Promise<void>
+  upsertCashBalance: (currency: string, balance: number, notes?: string | null) => Promise<void>
+  deleteCashBalance: (id: string) => Promise<void>
 }
 
 const PortfolioContext = createContext<PortfolioContextValue | null>(null)
@@ -50,6 +56,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<UserSettings | null>(null)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [goals, setGoals] = useState<Goal[]>([])
+  const [cashBalances, setCashBalances] = useState<CashBalance[]>([])
   const [loading, setLoading] = useState(true)
 
   const baseCurrency: Currency = (settings?.base_currency as Currency) ?? 'USD'
@@ -75,8 +82,13 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     ? enrichHoldings(mergedHoldings, prices, fxRates).filter((h) => h.shares > 0)
     : []
 
-  const stats: PortfolioStats | null = enriched.length > 0
-    ? calcPortfolioStats(enriched, baseCurrency)
+  // Sum cash across all currencies, converted to base.
+  const totalCashBase = fxRates
+    ? cashBalances.reduce((s, c) => s + convertToBase(Number(c.balance) || 0, c.currency, fxRates), 0)
+    : 0
+
+  const stats: PortfolioStats | null = (enriched.length > 0 || totalCashBase > 0)
+    ? calcPortfolioStats(enriched, baseCurrency, totalCashBase)
     : null
 
   const fetchSettings = useCallback(async () => {
@@ -120,6 +132,13 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     setGoals(data ?? [])
   }, [])
 
+  const refreshCashBalances = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data } = await supabase.from('cash_balances').select('*').eq('user_id', user.id).order('currency')
+    setCashBalances(data ?? [])
+  }, [])
+
   const refreshTransactions = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
@@ -156,10 +175,11 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
       await refreshHoldings()
       await refreshTransactions()
       await refreshGoals()
+      await refreshCashBalances()
       setLoading(false)
     }
     init()
-  }, [fetchSettings, refreshHoldings, refreshTransactions, refreshGoals])
+  }, [fetchSettings, refreshHoldings, refreshTransactions, refreshGoals, refreshCashBalances])
 
   useEffect(() => {
     fetchFxRates(baseCurrency)
@@ -342,15 +362,32 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     await refreshGoals()
   }
 
+  // ── Cash CRUD ──────────────────────────────────────────────────────────
+  const upsertCashBalance = async (currency: string, balance: number, notes: string | null = null) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    await supabase.from('cash_balances').upsert(
+      { user_id: user.id, currency: currency.toUpperCase(), balance, notes, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id,currency' },
+    )
+    await refreshCashBalances()
+  }
+
+  const deleteCashBalance = async (id: string) => {
+    await supabase.from('cash_balances').delete().eq('id', id)
+    await refreshCashBalances()
+  }
+
   return (
     <PortfolioContext.Provider value={{
       holdings: mergedHoldings, enriched, stats, prices, fxRates, targets, settings,
-      transactions, positions, goals,
+      transactions, positions, goals, cashBalances, totalCashBase,
       loading, refreshHoldings, refreshPrices, refreshTransactions,
       addHolding, updateHolding, deleteHolding,
       upsertTarget, deleteTarget, updateSettings,
       addTransaction, addTransactionsBulk, updateTransaction, deleteTransaction,
       refreshGoals, addGoal, updateGoal, deleteGoal,
+      refreshCashBalances, upsertCashBalance, deleteCashBalance,
     }}>
       {children}
     </PortfolioContext.Provider>

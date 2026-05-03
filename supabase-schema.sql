@@ -109,6 +109,25 @@ do $$ begin
     add column if not exists tolerance_pct numeric(6, 3) not null default 5.0;
 exception when others then null; end $$;
 
+-- Cash balances per user × currency. Rebalancer can pull from these to seed
+-- the "new cash to deploy" input, and the dashboard total includes them.
+create table if not exists cash_balances (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid references auth.users not null,
+  currency    text not null default 'USD',
+  balance     numeric(20, 2) not null default 0,
+  notes       text,
+  created_at  timestamptz default now(),
+  updated_at  timestamptz default now(),
+  unique(user_id, currency)
+);
+
+alter table cash_balances enable row level security;
+
+create policy "Users manage own cash balances"
+  on cash_balances for all
+  using (auth.uid() = user_id);
+
 -- ETF / ticker composition cache (public reference data — no per-user rows)
 -- Holds dynamically-fetched country/sector breakdowns + top holdings so we
 -- don't hammer Yahoo on every page load. TTL is enforced in the API route.

@@ -47,13 +47,25 @@ export interface EnrichedHolding extends Holding {
 }
 
 export interface PortfolioStats {
-  totalValue: number
+  totalValue: number          // holdings + cash, in base currency
+  holdingsValue: number       // holdings only, in base currency
+  cashValue: number           // cash total, in base currency
   totalCost: number
   totalGainLoss: number
   totalGainLossPct: number
   totalDayChange: number
   totalDayChangePct: number
   baseCurrency: Currency
+}
+
+export interface CashBalance {
+  id: string
+  user_id: string
+  currency: Currency | string
+  balance: number
+  notes: string | null
+  created_at: string
+  updated_at: string
 }
 
 export interface HistoricalPoint {

@@ -362,7 +362,12 @@ export default function PlannerPage() {
 
             {/* ── Backtest tab: historical simulation ──────────────────── */}
             <TabsContent value="backtest" className="space-y-4 pt-4">
-              <PlannerBacktest positions={positions} currentEnriched={currentEnriched} />
+              <PlannerBacktest
+                positions={positions}
+                currentEnriched={currentEnriched}
+                startingValue={totalValue > 0 ? totalValue : undefined}
+                baseCurrency={baseCurrency}
+              />
             </TabsContent>
 
             {/* ── Look-through tab: stock-level exposure of planner ────── */}
