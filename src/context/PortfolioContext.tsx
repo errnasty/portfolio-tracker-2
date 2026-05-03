@@ -3,9 +3,10 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { enrichHoldings, calcPortfolioStats } from '@/lib/calculations'
+import { deriveAllPositions } from '@/lib/transactions'
 import type {
   Holding, PriceQuote, FxRates, EnrichedHolding, PortfolioStats,
-  Currency, TargetAllocation, UserSettings,
+  Currency, TargetAllocation, UserSettings, Transaction, DerivedPosition, Goal,
 } from '@/types'
 
 interface PortfolioContextValue {
@@ -16,15 +17,27 @@ interface PortfolioContextValue {
   fxRates: FxRates | null
   targets: TargetAllocation[]
   settings: UserSettings | null
+  transactions: Transaction[]
+  positions: Record<string, DerivedPosition>
+  goals: Goal[]
   loading: boolean
   refreshHoldings: () => Promise<void>
   refreshPrices: () => Promise<void>
+  refreshTransactions: () => Promise<void>
   addHolding: (data: Omit<Holding, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => Promise<void>
   updateHolding: (id: string, data: Partial<Holding>) => Promise<void>
   deleteHolding: (id: string) => Promise<void>
-  upsertTarget: (ticker: string, pct: number) => Promise<void>
+  upsertTarget: (ticker: string, pct: number, tolerancePct?: number) => Promise<void>
   deleteTarget: (id: string) => Promise<void>
   updateSettings: (s: Partial<UserSettings>) => Promise<void>
+  addTransaction: (t: Omit<Transaction, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => Promise<void>
+  addTransactionsBulk: (rows: Omit<Transaction, 'id' | 'user_id' | 'created_at' | 'updated_at'>[]) => Promise<{ inserted: number }>
+  updateTransaction: (id: string, data: Partial<Transaction>) => Promise<void>
+  deleteTransaction: (id: string) => Promise<void>
+  refreshGoals: () => Promise<void>
+  addGoal: (g: Omit<Goal, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => Promise<void>
+  updateGoal: (id: string, data: Partial<Goal>) => Promise<void>
+  deleteGoal: (id: string) => Promise<void>
 }
 
 const PortfolioContext = createContext<PortfolioContextValue | null>(null)
@@ -35,12 +48,31 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   const [fxRates, setFxRates] = useState<FxRates | null>(null)
   const [targets, setTargets] = useState<TargetAllocation[]>([])
   const [settings, setSettings] = useState<UserSettings | null>(null)
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [goals, setGoals] = useState<Goal[]>([])
   const [loading, setLoading] = useState(true)
 
   const baseCurrency: Currency = (settings?.base_currency as Currency) ?? 'USD'
 
-  const enriched: EnrichedHolding[] = fxRates && holdings.length > 0
-    ? enrichHoldings(holdings, prices, fxRates)
+  // Derive positions per ticker from transaction log
+  const positions: Record<string, DerivedPosition> = deriveAllPositions(transactions)
+
+  // Merge: when transactions exist for a ticker, override the holding's
+  // shares + cost basis with the derived values. Holdings without txns fall
+  // back to the legacy stored fields (handles migration cleanly).
+  const mergedHoldings: Holding[] = holdings.map((h) => {
+    const pos = positions[h.ticker.toUpperCase()]
+    if (!pos || (pos.buyCount === 0 && pos.sellCount === 0)) return h
+    return {
+      ...h,
+      shares: pos.shares,
+      cost_basis_per_share: pos.avgCostBasis,
+      cost_basis_currency: (pos.costCurrency as Currency) ?? h.cost_basis_currency,
+    }
+  })
+
+  const enriched: EnrichedHolding[] = fxRates && mergedHoldings.length > 0
+    ? enrichHoldings(mergedHoldings, prices, fxRates).filter((h) => h.shares > 0)
     : []
 
   const stats: PortfolioStats | null = enriched.length > 0
@@ -54,7 +86,6 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     if (data) {
       setSettings(data)
     } else {
-      // Create default settings
       const { data: newSettings } = await supabase
         .from('user_settings')
         .insert({ user_id: user.id, base_currency: 'USD' })
@@ -82,9 +113,30 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     setTargets(targetsData ?? [])
   }, [])
 
+  const refreshGoals = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data } = await supabase.from('goals').select('*').eq('user_id', user.id).order('target_date')
+    setGoals(data ?? [])
+  }, [])
+
+  const refreshTransactions = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('date', { ascending: false })
+    setTransactions(data ?? [])
+  }, [])
+
   const refreshPrices = useCallback(async () => {
-    if (holdings.length === 0) return
-    const tickers = holdings.map((h) => h.ticker)
+    const tickers = Array.from(new Set([
+      ...holdings.map((h) => h.ticker),
+      ...transactions.map((t) => t.ticker),
+    ]))
+    if (tickers.length === 0) return
     const res = await fetch('/api/prices', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -94,7 +146,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
       const data = await res.json()
       setPrices(data.quotes)
     }
-  }, [holdings])
+  }, [holdings, transactions])
 
   // Initial load
   useEffect(() => {
@@ -102,26 +154,43 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
       setLoading(true)
       await fetchSettings()
       await refreshHoldings()
+      await refreshTransactions()
+      await refreshGoals()
       setLoading(false)
     }
     init()
-  }, [fetchSettings, refreshHoldings])
+  }, [fetchSettings, refreshHoldings, refreshTransactions, refreshGoals])
 
-  // When settings change, refresh FX rates
   useEffect(() => {
     fetchFxRates(baseCurrency)
   }, [baseCurrency, fetchFxRates])
 
-  // When holdings change, fetch prices
+  // Refresh prices when the set of tickers changes
   useEffect(() => {
     refreshPrices()
-  }, [holdings.length]) // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [holdings.length, transactions.length])
 
+  // ── Holding CRUD ────────────────────────────────────────────────────────
   const addHolding = async (data: Omit<Holding, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    await supabase.from('holdings').insert({ ...data, user_id: user.id })
+    // Insert holding row + an initial buy transaction so we have a clean log.
+    const { data: holdingRow } = await supabase.from('holdings').insert({ ...data, user_id: user.id }).select().single()
+    if (holdingRow && data.shares > 0 && data.cost_basis_per_share > 0) {
+      await supabase.from('transactions').insert({
+        user_id: user.id,
+        ticker: data.ticker.toUpperCase(),
+        type: 'buy',
+        date: new Date().toISOString().slice(0, 10),
+        shares: data.shares,
+        price_per_share: data.cost_basis_per_share,
+        currency: data.cost_basis_currency,
+        notes: 'Initial position',
+      })
+    }
     await refreshHoldings()
+    await refreshTransactions()
   }
 
   const updateHolding = async (id: string, data: Partial<Holding>) => {
@@ -130,15 +199,34 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   }
 
   const deleteHolding = async (id: string) => {
+    // Find ticker first so we can offer to delete its transactions
+    const holding = holdings.find((h) => h.id === id)
     await supabase.from('holdings').delete().eq('id', id)
+    if (holding) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        await supabase.from('transactions')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('ticker', holding.ticker)
+      }
+    }
     await refreshHoldings()
+    await refreshTransactions()
   }
 
-  const upsertTarget = async (ticker: string, pct: number) => {
+  // ── Target allocation CRUD ──────────────────────────────────────────────
+  const upsertTarget = async (ticker: string, pct: number, tolerancePct?: number) => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     await supabase.from('target_allocations').upsert(
-      { user_id: user.id, ticker, target_pct: pct, updated_at: new Date().toISOString() },
+      {
+        user_id: user.id,
+        ticker,
+        target_pct: pct,
+        ...(tolerancePct !== undefined ? { tolerance_pct: tolerancePct } : {}),
+        updated_at: new Date().toISOString(),
+      },
       { onConflict: 'user_id,ticker' },
     )
     await refreshHoldings()
@@ -149,6 +237,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     await refreshHoldings()
   }
 
+  // ── User settings ──────────────────────────────────────────────────────
   const updateSettings = async (s: Partial<UserSettings>) => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
@@ -156,12 +245,112 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     setSettings((prev) => prev ? { ...prev, ...s } : null)
   }
 
+  // ── Transaction CRUD ───────────────────────────────────────────────────
+  const addTransaction = async (t: Omit<Transaction, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    await supabase.from('transactions').insert({
+      ...t,
+      ticker: t.ticker.toUpperCase(),
+      user_id: user.id,
+    })
+    // Ensure a holding row exists for this ticker (so the dashboard picks it up)
+    const tickerUpper = t.ticker.toUpperCase()
+    if (!holdings.some((h) => h.ticker.toUpperCase() === tickerUpper)) {
+      await supabase.from('holdings').insert({
+        user_id: user.id,
+        ticker: tickerUpper,
+        name: null,
+        shares: 0,
+        cost_basis_per_share: 0,
+        cost_basis_currency: t.currency,
+      })
+    }
+    await refreshHoldings()
+    await refreshTransactions()
+  }
+
+  const addTransactionsBulk = async (
+    rows: Omit<Transaction, 'id' | 'user_id' | 'created_at' | 'updated_at'>[],
+  ) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { inserted: 0 }
+    if (rows.length === 0) return { inserted: 0 }
+
+    const payload = rows.map((r) => ({
+      ...r,
+      ticker: r.ticker.toUpperCase(),
+      user_id: user.id,
+    }))
+    const { data, error } = await supabase.from('transactions').insert(payload).select('id')
+    if (error) {
+      console.error('Bulk insert failed:', error)
+      return { inserted: 0 }
+    }
+
+    // Make sure a holding row exists for every ticker we just inserted txns for
+    const existingTickers = new Set(holdings.map((h) => h.ticker.toUpperCase()))
+    const newTickers = Array.from(new Set(payload.map((r) => r.ticker)))
+      .filter((t) => !existingTickers.has(t))
+    if (newTickers.length > 0) {
+      await supabase.from('holdings').insert(
+        newTickers.map((ticker) => ({
+          user_id: user.id,
+          ticker,
+          name: null,
+          shares: 0,
+          cost_basis_per_share: 0,
+          cost_basis_currency: 'USD',
+        })),
+      )
+    }
+
+    await refreshHoldings()
+    await refreshTransactions()
+    return { inserted: data?.length ?? 0 }
+  }
+
+  const updateTransaction = async (id: string, data: Partial<Transaction>) => {
+    await supabase.from('transactions').update({
+      ...data,
+      ...(data.ticker ? { ticker: data.ticker.toUpperCase() } : {}),
+      updated_at: new Date().toISOString(),
+    }).eq('id', id)
+    await refreshTransactions()
+  }
+
+  const deleteTransaction = async (id: string) => {
+    await supabase.from('transactions').delete().eq('id', id)
+    await refreshTransactions()
+  }
+
+  // ── Goals CRUD ─────────────────────────────────────────────────────────
+  const addGoal = async (g: Omit<Goal, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    await supabase.from('goals').insert({ ...g, user_id: user.id })
+    await refreshGoals()
+  }
+
+  const updateGoal = async (id: string, data: Partial<Goal>) => {
+    await supabase.from('goals').update({ ...data, updated_at: new Date().toISOString() }).eq('id', id)
+    await refreshGoals()
+  }
+
+  const deleteGoal = async (id: string) => {
+    await supabase.from('goals').delete().eq('id', id)
+    await refreshGoals()
+  }
+
   return (
     <PortfolioContext.Provider value={{
-      holdings, enriched, stats, prices, fxRates, targets, settings,
-      loading, refreshHoldings, refreshPrices,
+      holdings: mergedHoldings, enriched, stats, prices, fxRates, targets, settings,
+      transactions, positions, goals,
+      loading, refreshHoldings, refreshPrices, refreshTransactions,
       addHolding, updateHolding, deleteHolding,
       upsertTarget, deleteTarget, updateSettings,
+      addTransaction, addTransactionsBulk, updateTransaction, deleteTransaction,
+      refreshGoals, addGoal, updateGoal, deleteGoal,
     }}>
       {children}
     </PortfolioContext.Provider>

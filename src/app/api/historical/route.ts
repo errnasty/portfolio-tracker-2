@@ -11,6 +11,7 @@ function getPeriodStart(period: string): Date {
     case '1y':  return subYears(now, 1)
     case '3y':  return subYears(now, 3)
     case '5y':  return subYears(now, 5)
+    case '10y': return subYears(now, 10)
     default:    return subYears(now, 1)
   }
 }

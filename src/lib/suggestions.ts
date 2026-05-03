@@ -76,11 +76,19 @@ export interface Evidence {
   value: string
 }
 
+export type SuggestionApply =
+  | { kind: 'set'; ticker: string; pct: number }
+  | { kind: 'delta'; ticker: string; deltaPct: number }
+  | { kind: 'remove'; ticker: string }
+  | { kind: 'add'; ticker: string; pct: number }
+
 export interface SuggestionAction {
   text: string
   // Optional concrete numbers
   ticker?: string
   deltaPct?: number
+  // Encoded mutation for one-click "Apply to Planner"
+  apply?: SuggestionApply
 }
 
 export interface Suggestion {
@@ -161,7 +169,11 @@ function ruleConcentration(
           { label: 'Excess', value: pct(excess) },
         ],
         actions: [
-          { text: `Trim ${top.ticker} so its weight falls to ~${pct(prefs.maxSinglePositionPct, 0)}`, ticker: top.ticker, deltaPct: -excess },
+          {
+            text: `Trim ${top.ticker} so its weight falls to ~${pct(prefs.maxSinglePositionPct, 0)}`,
+            ticker: top.ticker, deltaPct: -excess,
+            apply: { kind: 'set', ticker: top.ticker, pct: prefs.maxSinglePositionPct },
+          },
           { text: `Alternatively, leave ${top.ticker} flat and add to other positions until its weight dilutes` },
           { text: 'Check the Analytics → Look-through tab for the combined direct + ETF exposure' },
         ],
@@ -333,7 +345,8 @@ function ruleGeographic(
         { label: '# of countries', value: breakdown.filter((b) => b.label !== 'Unknown').length.toString() },
       ],
       actions: [
-        { text: 'Add a developed-markets-ex-US ETF (e.g. VEA, VXUS, IDEV) to balance out' },
+        { text: 'Add a developed-markets-ex-US ETF (e.g. VEA, VXUS, IDEV) to balance out',
+          apply: { kind: 'add', ticker: 'VEA', pct: 15 } },
         { text: 'If concentration is intentional (home bias), set your home-bias preference accordingly so this rule stops firing' },
       ],
     })
@@ -418,7 +431,8 @@ function ruleGeographic(
         { label: 'Benchmark weight', value: '~10–12%' },
       ],
       actions: [
-        { text: 'Add ~10% via a broad EM ETF (VWO, IEMG, EIMI.L)' },
+        { text: 'Add ~10% via a broad EM ETF (VWO, IEMG, EIMI.L)',
+          apply: { kind: 'add', ticker: 'VWO', pct: 10 } },
         { text: 'Or pick country ETFs for higher conviction (FXI/MCHI for China, INDA for India)' },
       ],
     })
@@ -641,7 +655,8 @@ function ruleAssetMix(
         { label: 'ETFs / funds', value: pct(etfPct) },
       ],
       actions: [
-        { text: 'Add a broad-market ETF (VT, VWRL, VTI) at 50–70% as the core' },
+        { text: 'Add a broad-market ETF (VT, VWRL, VTI) at 50–70% as the core',
+          apply: { kind: 'add', ticker: 'VT', pct: 60 } },
         { text: 'Keep your highest-conviction stocks as satellites; sell the lower-conviction ones' },
       ],
     })

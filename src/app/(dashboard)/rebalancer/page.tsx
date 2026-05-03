@@ -21,6 +21,7 @@ export default function RebalancerPage() {
   const [newCash, setNewCash] = useState('')
   const [newTicker, setNewTicker] = useState('')
   const [newPct, setNewPct] = useState('')
+  const [newTolerance, setNewTolerance] = useState('5')
   const [saving, setSaving] = useState(false)
 
   const totalTargetPct = targets.reduce((s, t) => s + Number(t.target_pct), 0)
@@ -36,7 +37,8 @@ export default function RebalancerPage() {
     const pct = parseFloat(newPct)
     if (isNaN(pct) || pct <= 0) return
     setSaving(true)
-    await upsertTarget(newTicker.toUpperCase().trim(), pct)
+    const tolerance = parseFloat(newTolerance)
+    await upsertTarget(newTicker.toUpperCase().trim(), pct, isNaN(tolerance) ? undefined : tolerance)
     setNewTicker('')
     setNewPct('')
     setSaving(false)
@@ -113,7 +115,7 @@ export default function RebalancerPage() {
             )}
 
             {/* Add new target */}
-            <div className="grid grid-cols-[1fr_auto_auto] items-end gap-2 pt-2 border-t border-border">
+            <div className="grid grid-cols-[1fr_auto_auto_auto] items-end gap-2 pt-2 border-t border-border">
               <div className="space-y-1">
                 <Label className="text-xs">Ticker</Label>
                 <Input
@@ -131,6 +133,16 @@ export default function RebalancerPage() {
                   className="h-8 w-20 text-sm"
                   value={newPct}
                   onChange={(e) => setNewPct(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddTarget()}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">±Band %</Label>
+                <Input
+                  type="number" min="0" max="50" step="0.5"
+                  className="h-8 w-16 text-sm"
+                  value={newTolerance}
+                  onChange={(e) => setNewTolerance(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleAddTarget()}
                 />
               </div>

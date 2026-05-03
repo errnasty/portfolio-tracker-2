@@ -1,9 +1,14 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card } from '@/components/ui/card'
-import { ChevronDown, AlertTriangle, AlertOctagon, Info, CheckCircle2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { ChevronDown, AlertTriangle, AlertOctagon, Info, CheckCircle2, Wand2 } from 'lucide-react'
 import { CATEGORY_LABELS, type Suggestion, type SuggestionSeverity } from '@/lib/suggestions'
+import { applySuggestionToPlanner } from '@/lib/applySuggestion'
+import { usePortfolio } from '@/context/PortfolioContext'
+import type { Currency } from '@/types'
 
 const SEVERITY_STYLES: Record<SuggestionSeverity, { ring: string; bg: string; text: string; icon: typeof Info; label: string }> = {
   critical: {
@@ -38,8 +43,23 @@ const SEVERITY_STYLES: Record<SuggestionSeverity, { ring: string; bg: string; te
 
 export function SuggestionCard({ suggestion }: { suggestion: Suggestion }) {
   const [open, setOpen] = useState(suggestion.severity === 'critical')
+  const [applying, setApplying] = useState(false)
+  const router = useRouter()
+  const { enriched, settings } = usePortfolio()
+  const baseCurrency = (settings?.base_currency ?? 'USD') as Currency
   const style = SEVERITY_STYLES[suggestion.severity]
   const Icon = style.icon
+
+  const applyAction = async (action: typeof suggestion.actions[number]) => {
+    if (!action.apply) return
+    setApplying(true)
+    try {
+      applySuggestionToPlanner(action.apply, enriched, baseCurrency)
+      router.push('/planner')
+    } finally {
+      setApplying(false)
+    }
+  }
 
   return (
     <Card className={`overflow-hidden border ${style.ring}`}>
@@ -108,7 +128,18 @@ export function SuggestionCard({ suggestion }: { suggestion: Suggestion }) {
                 {suggestion.actions.map((a, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm">
                     <span className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${style.text.replace('text-', 'bg-')}`} />
-                    <span className="text-foreground/90">{a.text}</span>
+                    <span className="flex-1 text-foreground/90">{a.text}</span>
+                    {a.apply && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 shrink-0 px-2 text-[10px]"
+                        disabled={applying}
+                        onClick={() => applyAction(a)}
+                      >
+                        <Wand2 className="mr-1 h-3 w-3" /> Apply to Planner
+                      </Button>
+                    )}
                   </li>
                 ))}
               </ul>

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { MetricCard } from '@/components/risk/MetricCard'
 import { CorrelationMatrix } from '@/components/risk/CorrelationMatrix'
+import { FactorExposureCard } from '@/components/risk/FactorExposureCard'
 import {
   buildPortfolioSeries,
   computeRiskMetrics,
@@ -396,6 +397,11 @@ export default function RiskPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Factor exposure */}
+          {portfolioSeries.length >= 30 && (
+            <FactorExposureCard portfolioSeries={portfolioSeries} period={period} />
+          )}
 
           {/* Correlation matrix */}
           {corr && <CorrelationMatrix tickers={corr.tickers} matrix={corr.matrix} />}

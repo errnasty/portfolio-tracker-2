@@ -71,6 +71,66 @@ export interface TargetAllocation {
   user_id: string
   ticker: string
   target_pct: number
+  tolerance_pct?: number
+}
+
+export type TransactionType = 'buy' | 'sell' | 'dividend' | 'split'
+
+export interface Transaction {
+  id: string
+  user_id: string
+  ticker: string
+  type: TransactionType
+  date: string
+  shares: number
+  price_per_share: number
+  amount: number
+  currency: Currency | string
+  fees: number
+  split_ratio: number | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface TransactionFormData {
+  ticker: string
+  type: TransactionType
+  date: string
+  shares: string
+  price_per_share: string
+  amount: string
+  currency: Currency
+  fees: string
+  split_ratio: string
+  notes: string
+}
+
+export interface DerivedPosition {
+  ticker: string
+  shares: number
+  totalCost: number
+  avgCostBasis: number
+  realizedGain: number
+  totalDividends: number
+  costCurrency: Currency | string
+  buyCount: number
+  sellCount: number
+  firstBuyDate: string | null
+  lastTransactionDate: string | null
+}
+
+export interface Goal {
+  id: string
+  user_id: string
+  name: string
+  target_amount: number
+  target_date: string
+  monthly_contribution: number
+  expected_return_pct: number
+  expected_volatility_pct: number
+  created_at: string
+  updated_at: string
 }
 
 export interface UserSettings {

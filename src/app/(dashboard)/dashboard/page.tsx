@@ -8,6 +8,8 @@ import { TrendingUp, TrendingDown, DollarSign, BarChart2, RefreshCw } from 'luci
 import { Button } from '@/components/ui/button'
 import { AllocationChart } from '@/components/dashboard/AllocationChart'
 import { HoldingsSummaryTable } from '@/components/dashboard/HoldingsSummaryTable'
+import { RebalanceBandsWidget } from '@/components/dashboard/RebalanceBandsWidget'
+import { PortfolioSummaryWidget } from '@/components/dashboard/PortfolioSummaryWidget'
 import type { Currency } from '@/types'
 
 function StatCard({
@@ -39,7 +41,7 @@ function StatCard({
 }
 
 export default function DashboardPage() {
-  const { stats, enriched, loading, refreshPrices, settings } = usePortfolio()
+  const { stats, enriched, loading, refreshPrices, settings, targets } = usePortfolio()
   const base = (settings?.base_currency ?? 'USD') as Currency
 
   return (
@@ -98,6 +100,14 @@ export default function DashboardPage() {
           <HoldingsSummaryTable enriched={enriched} loading={loading} base={base} />
         </div>
       </div>
+
+      {!loading && enriched.length > 0 && (
+        <PortfolioSummaryWidget enriched={enriched} stats={stats} baseCurrency={base} />
+      )}
+
+      {!loading && enriched.length > 0 && (
+        <RebalanceBandsWidget enriched={enriched} targets={targets} base={base} />
+      )}
     </div>
   )
 }

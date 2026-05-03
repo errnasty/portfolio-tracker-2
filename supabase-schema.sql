@@ -53,6 +53,62 @@ create policy "Users manage own settings"
   on user_settings for all
   using (auth.uid() = user_id);
 
+-- Transactions: source-of-truth log of every buy/sell/dividend/split.
+-- The holdings table acts as a snapshot for legacy data; once a ticker has
+-- transactions, derive shares & cost basis from this log instead.
+create table if not exists transactions (
+  id              uuid primary key default gen_random_uuid(),
+  user_id         uuid references auth.users not null,
+  ticker          text not null,
+  type            text not null check (type in ('buy', 'sell', 'dividend', 'split')),
+  date            date not null default current_date,
+  shares          numeric(20, 8) not null default 0,
+  price_per_share numeric(20, 8) not null default 0,
+  amount          numeric(20, 8) not null default 0,
+  currency        text not null default 'USD',
+  fees            numeric(20, 8) not null default 0,
+  split_ratio     numeric(10, 4),
+  notes           text,
+  created_at      timestamptz default now(),
+  updated_at      timestamptz default now()
+);
+
+create index if not exists idx_transactions_user_ticker_date
+  on transactions(user_id, ticker, date);
+
+alter table transactions enable row level security;
+
+create policy "Users manage own transactions"
+  on transactions for all
+  using (auth.uid() = user_id);
+
+-- Goals: target amount + date + monthly contribution for the projection page.
+create table if not exists goals (
+  id                    uuid primary key default gen_random_uuid(),
+  user_id               uuid references auth.users not null,
+  name                  text not null,
+  target_amount         numeric(20, 2) not null,
+  target_date           date not null,
+  monthly_contribution  numeric(20, 2) not null default 0,
+  expected_return_pct   numeric(6, 3) not null default 7.0,
+  expected_volatility_pct numeric(6, 3) not null default 15.0,
+  created_at            timestamptz default now(),
+  updated_at            timestamptz default now()
+);
+
+alter table goals enable row level security;
+
+create policy "Users manage own goals"
+  on goals for all
+  using (auth.uid() = user_id);
+
+-- Add tolerance band to existing target_allocations table (idempotent).
+-- Default ±5% drift before flagging a position as out-of-band.
+do $$ begin
+  alter table target_allocations
+    add column if not exists tolerance_pct numeric(6, 3) not null default 5.0;
+exception when others then null; end $$;
+
 -- ETF / ticker composition cache (public reference data — no per-user rows)
 -- Holds dynamically-fetched country/sector breakdowns + top holdings so we
 -- don't hammer Yahoo on every page load. TTL is enforced in the API route.

@@ -10,6 +10,7 @@ import { ConcentrationCard } from '@/components/analytics/ConcentrationCard'
 import { LookThroughStocksCard } from '@/components/analytics/LookThroughStocksCard'
 import { PlannerEditor } from '@/components/planner/PlannerEditor'
 import { ComparisonBars, ConcentrationComparison } from '@/components/planner/PlannerComparison'
+import { PlannerBacktest } from '@/components/planner/PlannerBacktest'
 import {
   geographicBreakdown,
   sectorBreakdown,
@@ -258,6 +259,7 @@ export default function PlannerPage() {
               <TabsTrigger value="composition">Composition</TabsTrigger>
               <TabsTrigger value="comparison">vs Current</TabsTrigger>
               <TabsTrigger value="lookthrough">Look-through</TabsTrigger>
+              <TabsTrigger value="backtest">Backtest</TabsTrigger>
             </TabsList>
 
             {/* ── Composition tab: planner-only pies + concentration ───── */}
@@ -356,6 +358,11 @@ export default function PlannerPage() {
                   </div>
                 </>
               )}
+            </TabsContent>
+
+            {/* ── Backtest tab: historical simulation ──────────────────── */}
+            <TabsContent value="backtest" className="space-y-4 pt-4">
+              <PlannerBacktest positions={positions} currentEnriched={currentEnriched} />
             </TabsContent>
 
             {/* ── Look-through tab: stock-level exposure of planner ────── */}

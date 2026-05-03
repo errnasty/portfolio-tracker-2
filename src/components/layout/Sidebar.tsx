@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
-  LayoutDashboard, Briefcase, TrendingUp, Sliders, LogOut, Settings, PieChart, Activity, Menu, X, Beaker, Lightbulb,
+  LayoutDashboard, Briefcase, TrendingUp, Sliders, LogOut, Settings, PieChart, Activity, Menu, X, Beaker, Lightbulb, ListChecks, Coins, Target, Newspaper, FileText,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
@@ -13,12 +13,17 @@ import { Button } from '@/components/ui/button'
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/holdings', label: 'Holdings', icon: Briefcase },
+  { href: '/transactions', label: 'Transactions', icon: ListChecks },
+  { href: '/dividends', label: 'Dividends', icon: Coins },
   { href: '/performance', label: 'Performance', icon: TrendingUp },
   { href: '/analytics', label: 'Analytics', icon: PieChart },
   { href: '/risk', label: 'Risk', icon: Activity },
+  { href: '/news', label: 'News', icon: Newspaper },
   { href: '/rebalancer', label: 'Rebalancer', icon: Sliders },
   { href: '/planner', label: 'Planner', icon: Beaker },
+  { href: '/goals', label: 'Goals', icon: Target },
   { href: '/suggestions', label: 'Suggestions', icon: Lightbulb },
+  { href: '/report', label: 'Report', icon: FileText },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
 
