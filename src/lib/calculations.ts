@@ -65,44 +65,122 @@ export function calcPortfolioStats(enriched: EnrichedHolding[], baseCurrency: Cu
   return { totalValue, totalCost, totalGainLoss, totalGainLossPct, totalDayChange, totalDayChangePct, baseCurrency }
 }
 
+export type RebalanceMode = 'full' | 'buy-only'
+
+export interface RebalanceResult {
+  recommendations: RebalanceRecommendation[]
+  // Buy-only specific: cash that couldn't be deployed because all underweight
+  // gaps were filled and adding more would push overweight positions further
+  // out of band. Zero for 'full' mode.
+  unallocatedCash: number
+  totalBuy: number
+  totalSell: number
+}
+
 export function calcRebalance(
   enriched: EnrichedHolding[],
   targets: TargetAllocation[],
   newCash: number,
   prices: Record<string, PriceQuote>,
   fxRates: FxRates,
-): RebalanceRecommendation[] {
+  mode: RebalanceMode = 'full',
+): RebalanceResult {
   const totalCurrentValue = enriched.reduce((s, h) => s + h.currentValueBase, 0)
   const totalTarget = totalCurrentValue + newCash
-
-  // Build a map of current values by ticker
   const currentMap = new Map(enriched.map((h) => [h.ticker, h]))
 
-  return targets.map((t) => {
+  // First pass: compute target dollar values + raw gaps
+  const rows = targets.map((t) => {
     const holding = currentMap.get(t.ticker)
     const currentValue = holding?.currentValueBase ?? 0
     const targetValue = (t.target_pct / 100) * totalTarget
-    const delta = targetValue - currentValue
+    const fullDelta = targetValue - currentValue
     const currentPct = totalCurrentValue > 0 ? (currentValue / totalCurrentValue) * 100 : 0
-
     const quote = prices[t.ticker]
     const priceBase = quote ? convertToBase(quote.price, quote.currency, fxRates) : 0
-    const sharesToTrade = priceBase > 0 ? delta / priceBase : 0
-
-    const action: 'buy' | 'sell' | 'hold' =
-      Math.abs(sharesToTrade) < 0.001 ? 'hold' : sharesToTrade > 0 ? 'buy' : 'sell'
-
     return {
-      ticker: t.ticker,
-      name: holding?.name ?? t.ticker,
+      target: t,
+      holding,
       currentValue,
       targetValue,
+      fullDelta,
       currentPct,
-      targetPct: t.target_pct,
-      delta,
-      sharesToTrade,
-      action,
-      currentPrice: priceBase,
+      priceBase,
     }
   })
+
+  let recommendations: RebalanceRecommendation[]
+  let unallocatedCash = 0
+
+  if (mode === 'buy-only') {
+    // Allocate `newCash` only to underweight positions, proportional to their
+    // shortfall. Overweight positions get hold (no sell). If we have more cash
+    // than the total underweight gap, leftover is reported as unallocated —
+    // depositing it into already-overweight names would make drift worse.
+    const underweight = rows.filter((r) => r.fullDelta > 0)
+    const totalGap = underweight.reduce((s, r) => s + r.fullDelta, 0)
+
+    let remaining = newCash
+    const buys = new Map<string, number>()
+
+    if (totalGap > 0 && newCash > 0) {
+      if (newCash >= totalGap) {
+        // Fill every gap exactly; remainder cannot be deployed without
+        // pushing already-overweight positions further out of band.
+        for (const r of underweight) buys.set(r.target.ticker, r.fullDelta)
+        remaining = newCash - totalGap
+      } else {
+        // Pro-rata: each underweight position gets cash × (its gap / total gap)
+        for (const r of underweight) {
+          buys.set(r.target.ticker, newCash * (r.fullDelta / totalGap))
+        }
+        remaining = 0
+      }
+    }
+    unallocatedCash = remaining
+
+    recommendations = rows.map((r) => {
+      const delta = buys.get(r.target.ticker) ?? 0
+      const sharesToTrade = r.priceBase > 0 ? delta / r.priceBase : 0
+      const action: 'buy' | 'sell' | 'hold' =
+        delta > 0.005 ? 'buy' : 'hold'
+      return {
+        ticker: r.target.ticker,
+        name: r.holding?.name ?? r.target.ticker,
+        currentValue: r.currentValue,
+        targetValue: r.targetValue,
+        currentPct: r.currentPct,
+        targetPct: r.target.target_pct,
+        delta,
+        sharesToTrade,
+        action,
+        currentPrice: r.priceBase,
+      }
+    })
+  } else {
+    // Full rebalance — original behavior. May recommend selling overweight
+    // positions to fund underweight ones.
+    recommendations = rows.map((r) => {
+      const sharesToTrade = r.priceBase > 0 ? r.fullDelta / r.priceBase : 0
+      const action: 'buy' | 'sell' | 'hold' =
+        Math.abs(sharesToTrade) < 0.001 ? 'hold' : sharesToTrade > 0 ? 'buy' : 'sell'
+      return {
+        ticker: r.target.ticker,
+        name: r.holding?.name ?? r.target.ticker,
+        currentValue: r.currentValue,
+        targetValue: r.targetValue,
+        currentPct: r.currentPct,
+        targetPct: r.target.target_pct,
+        delta: r.fullDelta,
+        sharesToTrade,
+        action,
+        currentPrice: r.priceBase,
+      }
+    })
+  }
+
+  const totalBuy = recommendations.filter((r) => r.action === 'buy').reduce((s, r) => s + r.delta, 0)
+  const totalSell = recommendations.filter((r) => r.action === 'sell').reduce((s, r) => s + Math.abs(r.delta), 0)
+
+  return { recommendations, unallocatedCash, totalBuy, totalSell }
 }

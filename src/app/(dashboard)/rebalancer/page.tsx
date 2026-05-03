@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { usePortfolio } from '@/context/PortfolioContext'
-import { calcRebalance } from '@/lib/calculations'
+import { calcRebalance, type RebalanceMode } from '@/lib/calculations'
 import { formatCurrency, formatPercent, formatShares } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -23,14 +23,30 @@ export default function RebalancerPage() {
   const [newPct, setNewPct] = useState('')
   const [newTolerance, setNewTolerance] = useState('5')
   const [saving, setSaving] = useState(false)
+  const [mode, setMode] = useState<RebalanceMode>('buy-only')
+
+  // Persist mode preference
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const stored = localStorage.getItem('rebalancer-mode')
+    if (stored === 'full' || stored === 'buy-only') setMode(stored)
+  }, [])
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    localStorage.setItem('rebalancer-mode', mode)
+  }, [mode])
 
   const totalTargetPct = targets.reduce((s, t) => s + Number(t.target_pct), 0)
   const remaining = 100 - totalTargetPct
 
-  const recommendations = useMemo(() => {
-    if (!fxRates || targets.length === 0 || Object.keys(prices).length === 0) return []
-    return calcRebalance(enriched, targets, parseFloat(newCash) || 0, prices, fxRates)
-  }, [enriched, targets, prices, fxRates, newCash])
+  const result = useMemo(() => {
+    if (!fxRates || targets.length === 0 || Object.keys(prices).length === 0) {
+      return { recommendations: [], unallocatedCash: 0, totalBuy: 0, totalSell: 0 }
+    }
+    return calcRebalance(enriched, targets, parseFloat(newCash) || 0, prices, fxRates, mode)
+  }, [enriched, targets, prices, fxRates, newCash, mode])
+
+  const recommendations = result.recommendations
 
   const handleAddTarget = async () => {
     if (!newTicker || !newPct) return
@@ -52,9 +68,40 @@ export default function RebalancerPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold">Rebalancer</h1>
-        <p className="text-sm md:text-base text-muted-foreground">Set your target allocations and get buy/sell recommendations</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold">Rebalancer</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
+            {mode === 'buy-only'
+              ? 'Deploy new cash into underweight positions — no sells'
+              : 'Set your target allocations and get buy/sell recommendations'}
+          </p>
+        </div>
+        {/* Mode toggle */}
+        <div className="flex gap-1 rounded-md bg-muted p-1 self-start">
+          <button
+            type="button"
+            onClick={() => setMode('buy-only')}
+            className={`rounded-sm px-3 py-1.5 text-xs font-medium transition-colors ${
+              mode === 'buy-only'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Buy-only
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('full')}
+            className={`rounded-sm px-3 py-1.5 text-xs font-medium transition-colors ${
+              mode === 'full'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Full rebalance
+          </button>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -196,9 +243,18 @@ export default function RebalancerPage() {
       {/* Recommendations */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Recommendations</CardTitle>
+          <CardTitle className="text-base">
+            {mode === 'buy-only' ? 'New cash deployment plan' : 'Recommendations'}
+          </CardTitle>
           <CardDescription>
-            Based on your target allocations {parseFloat(newCash) > 0 && `+ ${formatCurrency(parseFloat(newCash), base)} new cash`}
+            {mode === 'buy-only' ? (
+              <>
+                Distributes {parseFloat(newCash) > 0 ? formatCurrency(parseFloat(newCash), base) : 'new cash'} into underweight positions.
+                Overweight positions show <strong>Hold</strong> — drift down naturally as the rest grows.
+              </>
+            ) : (
+              <>Based on your target allocations {parseFloat(newCash) > 0 && `+ ${formatCurrency(parseFloat(newCash), base)} new cash`}</>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -248,6 +304,40 @@ export default function RebalancerPage() {
                 ))}
               </TableBody>
             </Table>
+          )}
+
+          {/* Buy-only summary footer */}
+          {recommendations.length > 0 && mode === 'buy-only' && (
+            <div className="border-t border-border p-4 space-y-2">
+              <div className="grid gap-3 grid-cols-2 md:grid-cols-3 text-sm">
+                <div>
+                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Total to buy</div>
+                  <div className="font-semibold tabular-nums text-emerald-400">{formatCurrency(result.totalBuy, base)}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Cash deployed</div>
+                  <div className="font-semibold tabular-nums">
+                    {formatCurrency((parseFloat(newCash) || 0) - result.unallocatedCash, base)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Unallocated</div>
+                  <div className={`font-semibold tabular-nums ${result.unallocatedCash > 0.005 ? 'text-amber-400' : 'text-muted-foreground'}`}>
+                    {formatCurrency(result.unallocatedCash, base)}
+                  </div>
+                </div>
+              </div>
+              {result.unallocatedCash > 0.005 && (
+                <div className="flex items-start gap-2 rounded-md bg-amber-400/10 p-3 text-xs text-amber-400">
+                  <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                  <div>
+                    <strong>{formatCurrency(result.unallocatedCash, base)}</strong> is left over after filling every underweight position to its target.
+                    Adding more to already-overweight positions would push them further out of band.
+                    Keep this in cash for the next rebalance, or switch to <em>Full rebalance</em> if you&apos;re willing to sell.
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </CardContent>
       </Card>
