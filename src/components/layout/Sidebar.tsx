@@ -9,6 +9,7 @@ import {
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
+import { ThemeToggle } from '@/components/layout/ThemeToggle'
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -126,15 +127,18 @@ export function Sidebar() {
           })}
         </nav>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          className="mt-auto flex w-full items-center gap-3 justify-start px-2 text-muted-foreground"
-          onClick={handleSignOut}
-        >
-          <LogOut className="h-5 w-5 shrink-0" />
-          <span>Sign out</span>
-        </Button>
+        <div className="mt-auto space-y-2">
+          <ThemeToggle />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="flex w-full items-center gap-3 justify-start px-2 text-muted-foreground"
+            onClick={handleSignOut}
+          >
+            <LogOut className="h-5 w-5 shrink-0" />
+            <span>Sign out</span>
+          </Button>
+        </div>
       </aside>
     </>
   )

@@ -99,3 +99,16 @@
 .sticky-first.has-overflow tbody td:first-child {
   box-shadow: 4px 0 6px -4px rgba(0, 0, 0, 0.4);
 }
+
+/* Force light theme for printing — much better on paper. */
+@media print {
+  html, html.dark {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --border: 240 5.9% 90%;
+  }
+}

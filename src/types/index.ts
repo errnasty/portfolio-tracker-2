@@ -157,10 +157,13 @@ export interface RebalanceRecommendation {
   targetValue: number
   currentPct: number
   targetPct: number
-  delta: number
+  delta: number               // amount to trade, in base currency
   sharesToTrade: number
   action: 'buy' | 'sell' | 'hold'
-  currentPrice: number
+  currentPrice: number        // price per share converted to base currency
+  nativePrice: number         // price per share in the ticker's quote currency
+  priceCurrency: string       // e.g. "USD" for VOO, "SGD" for ES3.SI
+  nativeAmount: number        // |delta| in the ticker's native currency
 }
 
 export const DEFAULT_BENCHMARKS: BenchmarkConfig[] = [

@@ -108,10 +108,14 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const fetchFxRates = useCallback(async (base: Currency) => {
-    const res = await fetch(`/api/fx?base=${base}&symbols=USD,SGD,EUR`)
-    if (res.ok) {
-      const data = await res.json()
-      setFxRates(data)
+    try {
+      const res = await fetch(`/api/fx?base=${base}&symbols=USD,SGD,EUR`)
+      if (res.ok) {
+        const data = await res.json()
+        setFxRates(data)
+      }
+    } catch (err) {
+      console.error('FX fetch failed:', err)
     }
   }, [])
 
@@ -156,14 +160,18 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
       ...transactions.map((t) => t.ticker),
     ]))
     if (tickers.length === 0) return
-    const res = await fetch('/api/prices', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tickers }),
-    })
-    if (res.ok) {
-      const data = await res.json()
-      setPrices(data.quotes)
+    try {
+      const res = await fetch('/api/prices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tickers }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setPrices(data.quotes)
+      }
+    } catch (err) {
+      console.error('Prices fetch failed:', err)
     }
   }, [holdings, transactions])
 

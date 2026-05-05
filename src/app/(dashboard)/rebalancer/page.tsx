@@ -5,8 +5,10 @@ import { useSearchParams } from 'next/navigation'
 import { usePortfolio } from '@/context/PortfolioContext'
 import { calcRebalance, type RebalanceMode } from '@/lib/calculations'
 import { formatCurrency, formatPercent, formatShares } from '@/lib/utils'
-import { Wallet } from 'lucide-react'
+import { Wallet, Check } from 'lucide-react'
 import { TableScroll } from '@/components/ui/table-scroll'
+import { ConfirmTradeDialog } from '@/components/rebalancer/ConfirmTradeDialog'
+import type { RebalanceRecommendation } from '@/types'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
@@ -20,9 +22,12 @@ import type { Currency } from '@/types'
 export default function RebalancerPage() {
   const {
     enriched, targets, prices, fxRates, loading, upsertTarget, deleteTarget, settings,
-    totalCashBase, cashBalances,
+    totalCashBase, cashBalances, addTransaction,
   } = usePortfolio()
   const base = (settings?.base_currency ?? 'USD') as Currency
+
+  const [tradeRec, setTradeRec] = useState<RebalanceRecommendation | null>(null)
+  const [recentlyExecuted, setRecentlyExecuted] = useState<Record<string, number>>({})
   const searchParams = useSearchParams()
 
   const [newCash, setNewCash] = useState('')
@@ -285,6 +290,7 @@ export default function RebalancerPage() {
             ) : (
               <>Based on your target allocations {parseFloat(newCash) > 0 && `+ ${formatCurrency(parseFloat(newCash), base)} new cash`}</>
             )}
+            {' '}Trade amounts are shown in each ticker&apos;s native currency. Click <strong>Mark as bought</strong> after executing — your holdings update automatically.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -300,39 +306,72 @@ export default function RebalancerPage() {
                   <TableHead>Ticker</TableHead>
                   <TableHead className="text-right">Current</TableHead>
                   <TableHead className="text-right">Target</TableHead>
-                  <TableHead className="text-right">Delta ({base})</TableHead>
+                  <TableHead className="text-right">Trade amount</TableHead>
                   <TableHead className="text-right">Action</TableHead>
                   <TableHead className="text-right">Shares</TableHead>
+                  <TableHead className="text-right" />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {recommendations.map((r) => (
-                  <TableRow key={r.ticker}>
-                    <TableCell>
-                      <div className="font-semibold">{r.ticker}</div>
-                      <div className="text-xs text-muted-foreground">{r.name}</div>
-                    </TableCell>
-                    <TableCell className="text-right text-sm">
-                      <div>{formatCurrency(r.currentValue, base)}</div>
-                      <div className="text-xs text-muted-foreground">{r.currentPct.toFixed(1)}%</div>
-                    </TableCell>
-                    <TableCell className="text-right text-sm">
-                      <div>{formatCurrency(r.targetValue, base)}</div>
-                      <div className="text-xs text-muted-foreground">{r.targetPct.toFixed(1)}%</div>
-                    </TableCell>
-                    <TableCell className={`text-right font-mono text-sm ${r.delta > 0 ? 'text-emerald-400' : r.delta < 0 ? 'text-red-400' : 'text-muted-foreground'}`}>
-                      {r.delta >= 0 ? '+' : ''}{formatCurrency(r.delta, base)}
-                    </TableCell>
-                    <TableCell className="text-right">{actionBadge(r.action)}</TableCell>
-                    <TableCell className="text-right font-mono text-sm">
-                      {r.action !== 'hold' ? (
-                        <span className={r.action === 'buy' ? 'text-emerald-400' : 'text-red-400'}>
-                          {r.action === 'buy' ? '+' : ''}{formatShares(r.sharesToTrade)}
-                        </span>
-                      ) : '—'}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {recommendations.map((r) => {
+                  const justExecuted = recentlyExecuted[r.ticker]
+                    && Date.now() - recentlyExecuted[r.ticker] < 8000
+                  const cur = (r.priceCurrency || base).toUpperCase()
+                  const isForeign = cur !== base
+                  return (
+                    <TableRow key={r.ticker}>
+                      <TableCell>
+                        <div className="font-semibold">{r.ticker}</div>
+                        <div className="text-xs text-muted-foreground">{r.name}</div>
+                      </TableCell>
+                      <TableCell className="text-right text-sm">
+                        <div>{formatCurrency(r.currentValue, base)}</div>
+                        <div className="text-xs text-muted-foreground">{r.currentPct.toFixed(1)}%</div>
+                      </TableCell>
+                      <TableCell className="text-right text-sm">
+                        <div>{formatCurrency(r.targetValue, base)}</div>
+                        <div className="text-xs text-muted-foreground">{r.targetPct.toFixed(1)}%</div>
+                      </TableCell>
+                      <TableCell className={`text-right font-mono text-sm ${r.delta > 0 ? 'text-emerald-400' : r.delta < 0 ? 'text-red-400' : 'text-muted-foreground'}`}>
+                        {r.action !== 'hold' && r.nativeAmount > 0 && isForeign ? (
+                          <>
+                            <div>{r.delta >= 0 ? '+' : '−'}{formatCurrency(r.nativeAmount, cur)}</div>
+                            <div className="text-[10px] text-muted-foreground">
+                              ≈ {r.delta >= 0 ? '+' : '−'}{formatCurrency(Math.abs(r.delta), base)}
+                            </div>
+                          </>
+                        ) : (
+                          <div>{r.delta >= 0 ? '+' : ''}{formatCurrency(r.delta, base)}</div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">{actionBadge(r.action)}</TableCell>
+                      <TableCell className="text-right font-mono text-sm">
+                        {r.action !== 'hold' ? (
+                          <span className={r.action === 'buy' ? 'text-emerald-400' : 'text-red-400'}>
+                            {r.action === 'buy' ? '+' : ''}{formatShares(r.sharesToTrade)}
+                          </span>
+                        ) : '—'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {r.action === 'hold' ? null : justExecuted ? (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/15 px-2 py-1 text-[11px] font-medium text-emerald-400">
+                            <Check className="h-3 w-3" /> Logged
+                          </span>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs"
+                            disabled={r.nativePrice <= 0 || Math.abs(r.sharesToTrade) < 0.0001}
+                            onClick={() => setTradeRec(r)}
+                          >
+                            Mark as {r.action === 'buy' ? 'bought' : 'sold'}
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
               </TableBody>
             </Table>
             </TableScroll>
@@ -373,6 +412,18 @@ export default function RebalancerPage() {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmTradeDialog
+        open={tradeRec !== null}
+        onOpenChange={(o) => { if (!o) setTradeRec(null) }}
+        recommendation={tradeRec}
+        baseCurrency={base}
+        fxRates={fxRates}
+        onConfirm={async (txn) => {
+          await addTransaction(txn)
+          setRecentlyExecuted((prev) => ({ ...prev, [txn.ticker]: Date.now() }))
+        }}
+      />
     </div>
   )
 }

@@ -109,6 +109,8 @@ export function calcRebalance(
     const currentPct = totalCurrentValue > 0 ? (currentValue / totalCurrentValue) * 100 : 0
     const quote = prices[t.ticker]
     const priceBase = quote ? convertToBase(quote.price, quote.currency, fxRates) : 0
+    const nativePrice = quote?.price ?? 0
+    const priceCurrency = quote?.currency ?? fxRates.base
     return {
       target: t,
       holding,
@@ -117,6 +119,8 @@ export function calcRebalance(
       fullDelta,
       currentPct,
       priceBase,
+      nativePrice,
+      priceCurrency,
     }
   })
 
@@ -153,6 +157,7 @@ export function calcRebalance(
     recommendations = rows.map((r) => {
       const delta = buys.get(r.target.ticker) ?? 0
       const sharesToTrade = r.priceBase > 0 ? delta / r.priceBase : 0
+      const nativeAmount = Math.abs(sharesToTrade) * r.nativePrice
       const action: 'buy' | 'sell' | 'hold' =
         delta > 0.005 ? 'buy' : 'hold'
       return {
@@ -166,6 +171,9 @@ export function calcRebalance(
         sharesToTrade,
         action,
         currentPrice: r.priceBase,
+        nativePrice: r.nativePrice,
+        priceCurrency: r.priceCurrency,
+        nativeAmount,
       }
     })
   } else {
@@ -173,6 +181,7 @@ export function calcRebalance(
     // positions to fund underweight ones.
     recommendations = rows.map((r) => {
       const sharesToTrade = r.priceBase > 0 ? r.fullDelta / r.priceBase : 0
+      const nativeAmount = Math.abs(sharesToTrade) * r.nativePrice
       const action: 'buy' | 'sell' | 'hold' =
         Math.abs(sharesToTrade) < 0.001 ? 'hold' : sharesToTrade > 0 ? 'buy' : 'sell'
       return {
@@ -186,6 +195,9 @@ export function calcRebalance(
         sharesToTrade,
         action,
         currentPrice: r.priceBase,
+        nativePrice: r.nativePrice,
+        priceCurrency: r.priceCurrency,
+        nativeAmount,
       }
     })
   }
