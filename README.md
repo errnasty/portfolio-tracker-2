@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Portfolio Tracker
 
-## Getting Started
+Personal portfolio tracker with Singapore-resident tax awareness, look-through analytics, planner, rebalancer, dividends, factor exposure, Monte Carlo goals, stress-test scenarios, and a deterministic plain-English portfolio summary.
 
-First, run the development server:
+## Setup
 
 ```bash
+npm install
+cp .env.local.example .env.local
+# Edit .env.local with your Supabase URL/key and (optional) Anthropic API key
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Environment variables
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+`.env.local` lives in the project root (next to `package.json`). It is loaded automatically by Next.js when the dev server starts. **Restart the dev server after editing it.**
 
-## Learn More
+| Variable | Required | What for |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | yes | Your Supabase project URL — Settings → API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | yes | The Supabase `anon` public key — Settings → API |
+| `SENTRY_DSN` | optional | If set, client errors POSTed to `/api/log` are forwarded to Sentry. |
 
-To learn more about Next.js, take a look at the following resources:
+The dashboard "Portfolio summary" widget is fully deterministic — no API key required, no per-render cost. If you want LLM-powered narratives or chat in future, free options include [Groq](https://console.groq.com) (Llama 3.x, ~14k req/day free), [Google Gemini](https://aistudio.google.com) (Gemini Flash, 15 req/min, 1M tokens/day free), or running [Ollama](https://ollama.com) locally. The previous `/api/summary` and `/api/chat` Anthropic routes have been removed; you can re-add them on top of any provider that exposes a chat-completion endpoint.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Database
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+Run `supabase-schema.sql` in your Supabase SQL editor once (Settings → SQL Editor → New query → paste → Run). The script is idempotent — safe to re-run when new tables/columns are added.
 
-## Deploy on Vercel
+## Scripts
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm run dev          # development server
+npm run build        # production build
+npm run lint         # ESLint
+npm test             # Vitest run-once
+npm run test:watch   # Vitest in watch mode
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+## Tech stack
+
+- Next.js 13 (app router) · TypeScript · Tailwind · shadcn/ui
+- Supabase (auth + Postgres)
+- Recharts for charts
+- Yahoo Finance (prices, dividends, fundamentals) and frankfurter.app (FX)

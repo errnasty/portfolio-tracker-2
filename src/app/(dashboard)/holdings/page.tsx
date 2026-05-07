@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Plus, Pencil, Trash2, Search, Loader2 } from 'lucide-react'
 import { TableScroll } from '@/components/ui/table-scroll'
 import { InlineNumberCell } from '@/components/holdings/InlineNumberCell'
+import { deleteWithUndo } from '@/lib/toast-undo'
 import type { Currency, Holding, HoldingFormData } from '@/types'
 import type { SearchResult } from '@/app/api/search/route'
 
@@ -173,8 +174,20 @@ export default function HoldingsPage() {
 
   const handleDelete = async () => {
     if (!deleteId) return
-    await deleteHolding(deleteId)
+    const row = enriched.find((h) => h.id === deleteId)
     setDeleteId(null)
+    if (!row) return
+    await deleteWithUndo({
+      description: `Deleted ${row.ticker}`,
+      remove: () => deleteHolding(row.id),
+      restore: () => addHolding({
+        ticker: row.ticker,
+        name: row.name,
+        shares: row.shares,
+        cost_basis_per_share: row.cost_basis_per_share,
+        cost_basis_currency: row.cost_basis_currency,
+      }),
+    })
   }
 
   const canSave = form.ticker.trim() && form.shares && form.cost_basis_per_share && !saving

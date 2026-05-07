@@ -8,9 +8,10 @@ import { Skeleton } from '@/components/ui/skeleton'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts'
-import { DEFAULT_BENCHMARKS } from '@/types'
+import { DEFAULT_BENCHMARKS, type Currency } from '@/types'
 import { format, parseISO } from 'date-fns'
 import { RefreshCw } from 'lucide-react'
+import { AttributionCard } from '@/components/performance/AttributionCard'
 
 const PERIODS = [
   { label: '1M', value: '1m' },
@@ -46,10 +47,12 @@ function mergeSeriesOnDates(
 }
 
 export default function PerformancePage() {
-  const { holdings, fxRates } = usePortfolio()
+  const { holdings, enriched, settings, fxRates } = usePortfolio()
+  const baseCurrency: Currency = (settings?.base_currency ?? 'USD') as Currency
   const [period, setPeriod] = useState('1y')
   const [activeBenchmarks, setActiveBenchmarks] = useState<string[]>(['SPY'])
   const [chartData, setChartData] = useState<any[]>([])
+  const [holdingHistories, setHoldingHistories] = useState<Record<string, { date: string; close: number }[]>>({})
   const [loading, setLoading] = useState(false)
 
   const fetchData = useCallback(async () => {
@@ -63,6 +66,13 @@ export default function PerformancePage() {
     if (!res.ok) { setLoading(false); return }
 
     const { history } = await res.json() as { history: Record<string, { date: string; close: number }[]> }
+
+    // Stash raw histories for the attribution card
+    const holdingOnlyHistories: Record<string, { date: string; close: number }[]> = {}
+    for (const t of holdingTickers) {
+      if (history[t]) holdingOnlyHistories[t] = history[t]
+    }
+    setHoldingHistories(holdingOnlyHistories)
 
     // Build portfolio value series: assume equal-weighted by current allocation
     // (simplification since we don't have historical fx rates)
@@ -222,6 +232,15 @@ export default function PerformancePage() {
           )}
         </CardContent>
       </Card>
+
+      {!loading && enriched.length > 0 && Object.keys(holdingHistories).length > 0 && (
+        <AttributionCard
+          enriched={enriched}
+          histories={holdingHistories}
+          baseCurrency={baseCurrency}
+          period={period}
+        />
+      )}
     </div>
   )
 }

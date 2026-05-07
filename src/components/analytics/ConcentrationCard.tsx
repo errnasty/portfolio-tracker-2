@@ -1,6 +1,7 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { MetricLabel } from '@/components/ui/metric-label'
 import type { ConcentrationMetrics } from '@/lib/analytics'
 
 interface Props {
@@ -43,12 +44,11 @@ export function ConcentrationCard({ metrics, totalHoldings }: Props) {
           value={totalHoldings.toString()}
         />
         <Stat
-          label="Effective holdings"
+          label={<MetricLabel term="effective_holdings">Effective holdings</MetricLabel>}
           value={metrics.effectiveHoldings.toFixed(1)}
-          hint="1 / Σ(weightᵢ²) — equivalent number of equally-weighted positions"
         />
         <Stat
-          label="HHI"
+          label={<MetricLabel term="hhi">HHI</MetricLabel>}
           value={metrics.hhi.toFixed(0)}
           hint={interp.label}
           hintColor={interp.color}
@@ -64,7 +64,7 @@ function Stat({
   hint,
   hintColor,
 }: {
-  label: string
+  label: React.ReactNode
   value: string
   hint?: string
   hintColor?: string

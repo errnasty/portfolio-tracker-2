@@ -3,7 +3,7 @@
 import { cn } from '@/lib/utils'
 
 interface Props {
-  label: string
+  label: React.ReactNode
   value: string
   hint?: string
   hintColor?: string

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { CheckCircle2, AlertTriangle, ArrowRight } from 'lucide-react'
 import { formatCurrency, formatPercent } from '@/lib/utils'
+import { MetricLabel } from '@/components/ui/metric-label'
 import type { Currency, EnrichedHolding, TargetAllocation } from '@/types'
 
 interface BandRow {
@@ -145,7 +146,7 @@ function BandRow({ row, base }: { row: BandRow; base: Currency }) {
         />
       </div>
       <div className="flex justify-between text-[10px] text-muted-foreground">
-        <span>Drift {formatCurrency(row.currentValue - row.targetValue, base)}</span>
+        <span><MetricLabel term="drift">Drift</MetricLabel> {formatCurrency(row.currentValue - row.targetValue, base)}</span>
         <span>±{row.tolerancePct.toFixed(0)}% band</span>
       </div>
     </div>

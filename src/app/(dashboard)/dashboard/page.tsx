@@ -11,6 +11,7 @@ import { HoldingsSummaryTable } from '@/components/dashboard/HoldingsSummaryTabl
 import { RebalanceBandsWidget } from '@/components/dashboard/RebalanceBandsWidget'
 import { PortfolioSummaryWidget } from '@/components/dashboard/PortfolioSummaryWidget'
 import { CashBalancesCard } from '@/components/dashboard/CashBalancesCard'
+import { deleteWithUndo } from '@/lib/toast-undo'
 import type { Currency } from '@/types'
 
 function StatCard({
@@ -118,7 +119,15 @@ export default function DashboardPage() {
           fxRates={fxRates}
           loadError={cashBalancesError}
           onUpsert={upsertCashBalance}
-          onDelete={deleteCashBalance}
+          onDelete={async (id) => {
+            const row = cashBalances.find((c) => c.id === id)
+            if (!row) return
+            await deleteWithUndo({
+              description: `Deleted ${row.currency} cash`,
+              remove: () => deleteCashBalance(id),
+              restore: () => upsertCashBalance(row.currency, Number(row.balance), row.notes),
+            })
+          }}
         />
       )}
 

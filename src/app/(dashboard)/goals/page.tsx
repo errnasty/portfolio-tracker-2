@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Plus, Pencil, Trash2, Target, TrendingUp } from 'lucide-react'
+import { deleteWithUndo } from '@/lib/toast-undo'
 import { ResponsiveContainer, ComposedChart, Line, Area, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine, Legend } from 'recharts'
 import { formatCurrency } from '@/lib/utils'
 import { monteCarlo, monthsBetween } from '@/lib/projection'
@@ -174,7 +175,24 @@ export default function GoalsPage() {
           <p className="text-sm text-muted-foreground">This permanently removes the goal.</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={async () => { if (deleteId) { await deleteGoal(deleteId); setDeleteId(null) } }}>Delete</Button>
+            <Button variant="destructive" onClick={async () => {
+              if (!deleteId) return
+              const row = goals.find((g) => g.id === deleteId)
+              setDeleteId(null)
+              if (!row) return
+              await deleteWithUndo({
+                description: `Deleted goal "${row.name}"`,
+                remove: () => deleteGoal(row.id),
+                restore: () => addGoal({
+                  name: row.name,
+                  target_amount: row.target_amount,
+                  target_date: row.target_date,
+                  monthly_contribution: row.monthly_contribution,
+                  expected_return_pct: row.expected_return_pct,
+                  expected_volatility_pct: row.expected_volatility_pct,
+                }),
+              })
+            }}>Delete</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

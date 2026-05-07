@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { MetricCard } from '@/components/risk/MetricCard'
 import { CorrelationMatrix } from '@/components/risk/CorrelationMatrix'
 import { FactorExposureCard } from '@/components/risk/FactorExposureCard'
+import { MetricLabel } from '@/components/ui/metric-label'
 import {
   buildPortfolioSeries,
   computeRiskMetrics,
@@ -170,7 +171,7 @@ export default function RiskPage() {
               hint={`${metrics.observations} trading days`}
             />
             <MetricCard
-              label="CAGR"
+              label={<MetricLabel term="cagr">CAGR</MetricLabel>}
               value={formatPercent(metrics.cagr * 100)}
               tone={metrics.cagr >= 0 ? 'positive' : 'negative'}
               size="lg"
@@ -183,7 +184,7 @@ export default function RiskPage() {
               hint="Standard deviation × √252"
             />
             <MetricCard
-              label="Max Drawdown"
+              label={<MetricLabel term="max_drawdown">Max Drawdown</MetricLabel>}
               value={`${(metrics.maxDrawdownPct * 100).toFixed(2)}%`}
               tone="negative"
               size="lg"
@@ -206,7 +207,7 @@ export default function RiskPage() {
             <CardContent>
               <div className="grid gap-3 grid-cols-2 md:grid-cols-3">
                 <MetricCard
-                  label="Sharpe Ratio"
+                  label={<MetricLabel term="sharpe">Sharpe Ratio</MetricLabel>}
                   value={metrics.sharpeRatio.toFixed(2)}
                   hint={
                     metrics.sharpeRatio > 1 ? 'Good (>1)'
@@ -221,12 +222,12 @@ export default function RiskPage() {
                   }
                 />
                 <MetricCard
-                  label="Sortino Ratio"
+                  label={<MetricLabel term="sortino">Sortino Ratio</MetricLabel>}
                   value={metrics.sortinoRatio.toFixed(2)}
                   hint="Penalizes downside vol only"
                 />
                 <MetricCard
-                  label="Calmar Ratio"
+                  label={<MetricLabel term="calmar">Calmar Ratio</MetricLabel>}
                   value={metrics.calmarRatio.toFixed(2)}
                   hint="CAGR / |Max Drawdown|"
                 />
@@ -260,13 +261,13 @@ export default function RiskPage() {
             <CardContent>
               <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
                 <MetricCard
-                  label="VaR 95%"
+                  label={<MetricLabel term="var">VaR 95%</MetricLabel>}
                   value={`${(metrics.var95 * 100).toFixed(2)}%`}
                   tone="negative"
                   hint="Daily loss exceeded 1 day in 20"
                 />
                 <MetricCard
-                  label="CVaR 95%"
+                  label={<MetricLabel term="cvar">CVaR 95%</MetricLabel>}
                   value={`${(metrics.cvar95 * 100).toFixed(2)}%`}
                   tone="negative"
                   hint="Avg loss in worst 5% of days"
@@ -297,7 +298,7 @@ export default function RiskPage() {
               <CardContent>
                 <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
                   <MetricCard
-                    label="Beta"
+                    label={<MetricLabel term="beta">Beta</MetricLabel>}
                     value={metrics.beta.toFixed(2)}
                     hint={
                       metrics.beta > 1.1 ? 'More volatile than benchmark'
@@ -306,7 +307,7 @@ export default function RiskPage() {
                     }
                   />
                   <MetricCard
-                    label="Alpha"
+                    label={<MetricLabel term="alpha">Alpha</MetricLabel>}
                     value={`${((metrics.alpha ?? 0) * 100).toFixed(2)}%`}
                     tone={(metrics.alpha ?? 0) >= 0 ? 'positive' : 'negative'}
                     hint="Annualized excess return"
@@ -321,12 +322,12 @@ export default function RiskPage() {
                     }
                   />
                   <MetricCard
-                    label="Tracking Error"
+                    label={<MetricLabel term="tracking_error">Tracking Error</MetricLabel>}
                     value={`${((metrics.trackingError ?? 0) * 100).toFixed(2)}%`}
                     hint="Annualized stdev of excess returns"
                   />
                   <MetricCard
-                    label="Information Ratio"
+                    label={<MetricLabel term="information_ratio">Information Ratio</MetricLabel>}
                     value={(metrics.informationRatio ?? 0).toFixed(2)}
                     hint="Excess return per unit of tracking error"
                   />
@@ -352,8 +353,8 @@ export default function RiskPage() {
                       <th className="p-2 font-medium text-right">Return</th>
                       <th className="p-2 font-medium text-right hidden sm:table-cell">CAGR</th>
                       <th className="p-2 font-medium text-right">Vol</th>
-                      <th className="p-2 font-medium text-right">Max DD</th>
-                      <th className="p-2 font-medium text-right hidden sm:table-cell">Sharpe</th>
+                      <th className="p-2 font-medium text-right"><MetricLabel term="max_drawdown">Max DD</MetricLabel></th>
+                      <th className="p-2 font-medium text-right hidden sm:table-cell"><MetricLabel term="sharpe">Sharpe</MetricLabel></th>
                     </tr>
                   </thead>
                   <tbody>

@@ -8,6 +8,7 @@ import { formatCurrency, formatPercent, formatShares } from '@/lib/utils'
 import { Wallet, Check } from 'lucide-react'
 import { TableScroll } from '@/components/ui/table-scroll'
 import { ConfirmTradeDialog } from '@/components/rebalancer/ConfirmTradeDialog'
+import { deleteWithUndo } from '@/lib/toast-undo'
 import type { RebalanceRecommendation } from '@/types'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -170,7 +171,11 @@ export default function RebalancerPage() {
                       <Button
                         variant="ghost" size="icon"
                         className="h-7 w-7 text-muted-foreground hover:text-red-400"
-                        onClick={() => deleteTarget(t.id)}
+                        onClick={() => deleteWithUndo({
+                          description: `Removed target ${t.ticker}`,
+                          remove: () => deleteTarget(t.id),
+                          restore: () => upsertTarget(t.ticker, Number(t.target_pct), Number(t.tolerance_pct ?? 5)),
+                        })}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>

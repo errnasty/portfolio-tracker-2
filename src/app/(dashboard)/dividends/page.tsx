@@ -11,6 +11,7 @@ import type { Currency } from '@/types'
 import type { DividendData } from '@/app/api/dividends/route'
 import { detectDomicile, singaporeDwtRate, DOMICILE_LABEL, type Domicile } from '@/lib/tax'
 import { Receipt } from 'lucide-react'
+import { MetricLabel } from '@/components/ui/metric-label'
 
 export default function DividendsPage() {
   const { enriched, transactions, fxRates, settings, loading: portfolioLoading } = usePortfolio()
@@ -173,13 +174,13 @@ export default function DividendsPage() {
           loading={initialLoading}
         />
         <SummaryCard
-          label="Portfolio yield"
+          label={<MetricLabel term="yield">Portfolio yield</MetricLabel>}
           value={formatPercent(totals.portfolioYield, 2)}
           sub="Forward income / value"
           loading={initialLoading}
         />
         <SummaryCard
-          label="Yield on cost"
+          label={<MetricLabel term="yield_on_cost">Yield on cost</MetricLabel>}
           value={formatPercent(totals.portfolioYoc, 2)}
           sub="Forward income / cost basis"
           loading={initialLoading}
@@ -241,9 +242,9 @@ export default function DividendsPage() {
                     <th className="px-4 py-2 font-medium">Ticker</th>
                     <th className="px-4 py-2 font-medium">Domicile</th>
                     <th className="px-4 py-2 font-medium text-right">TTM / share</th>
-                    <th className="px-4 py-2 font-medium text-right">Yield</th>
+                    <th className="px-4 py-2 font-medium text-right"><MetricLabel term="yield">Yield</MetricLabel></th>
                     <th className="px-4 py-2 font-medium text-right">Gross 12m</th>
-                    {base === 'SGD' && <th className="px-4 py-2 font-medium text-right">WHT</th>}
+                    {base === 'SGD' && <th className="px-4 py-2 font-medium text-right"><MetricLabel term="wht">WHT</MetricLabel></th>}
                     {base === 'SGD' && <th className="px-4 py-2 font-medium text-right">Net 12m</th>}
                   </tr>
                 </thead>
@@ -374,7 +375,7 @@ function Stat({ label, value, valueColor }: { label: string; value: string; valu
   )
 }
 
-function SummaryCard({ label, value, sub, loading }: { label: string; value: string; sub: string; loading: boolean }) {
+function SummaryCard({ label, value, sub, loading }: { label: React.ReactNode; value: string; sub: string; loading: boolean }) {
   return (
     <Card>
       <CardHeader className="pb-2">

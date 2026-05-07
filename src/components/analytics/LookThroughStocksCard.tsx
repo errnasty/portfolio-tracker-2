@@ -1,6 +1,7 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { MetricLabel } from '@/components/ui/metric-label'
 import { formatCurrency } from '@/lib/utils'
 import type { LookThroughStock } from '@/lib/analytics'
 import type { Currency } from '@/types'
@@ -19,7 +20,9 @@ export function LookThroughStocksCard({ stocks, coveragePct, baseCurrency }: Pro
       <CardHeader>
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <CardTitle className="text-base">Look-through Stock Exposure</CardTitle>
+            <CardTitle className="text-base">
+              <MetricLabel term="look_through">Look-through Stock Exposure</MetricLabel>
+            </CardTitle>
             <p className="text-xs text-muted-foreground mt-1">
               Underlying single-stock positions, including those held inside ETFs.
               Direct stocks count fully; ETF top-holdings count proportionally.

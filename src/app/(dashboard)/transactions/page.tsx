@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton'
 import { Plus, Pencil, Trash2, Loader2, Upload, ArrowDownCircle, ArrowUpCircle, Coins, Split } from 'lucide-react'
 import { TableScroll } from '@/components/ui/table-scroll'
+import { deleteWithUndo } from '@/lib/toast-undo'
 import { formatCurrency, formatShares } from '@/lib/utils'
 import type { Currency, Transaction, TransactionFormData, TransactionType } from '@/types'
 
@@ -103,8 +104,25 @@ export default function TransactionsPage() {
 
   const handleDelete = async () => {
     if (!deleteId) return
-    await deleteTransaction(deleteId)
+    const row = transactions.find((t) => t.id === deleteId)
     setDeleteId(null)
+    if (!row) return
+    await deleteWithUndo({
+      description: `Deleted ${row.type} transaction · ${row.ticker}`,
+      remove: () => deleteTransaction(row.id),
+      restore: () => addTransaction({
+        ticker: row.ticker,
+        type: row.type,
+        date: row.date,
+        shares: row.shares,
+        price_per_share: row.price_per_share,
+        amount: row.amount,
+        currency: row.currency,
+        fees: row.fees,
+        split_ratio: row.split_ratio,
+        notes: row.notes,
+      }),
+    })
   }
 
   const canSave = !!form.ticker.trim() && !!form.date && !saving
