@@ -49,6 +49,9 @@ export function CashBalancesCard({
     try {
       await onUpsert(currency, value, notes || null)
       setDialogOpen(false)
+    } catch {
+      // Error already reported via toast in the context. Keep the dialog
+      // open so the user can adjust and retry.
     } finally {
       setSaving(false)
     }

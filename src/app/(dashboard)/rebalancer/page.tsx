@@ -21,8 +21,8 @@ import type { Currency } from '@/types'
 
 export default function RebalancerPage() {
   const {
-    enriched, targets, prices, fxRates, loading, upsertTarget, deleteTarget, settings,
-    totalCashBase, cashBalances, addTransaction,
+    enriched, holdings, targets, prices, fxRates, loading, upsertTarget, deleteTarget, settings,
+    totalCashBase, cashBalances, applyTrade,
   } = usePortfolio()
   const base = (settings?.base_currency ?? 'USD') as Currency
 
@@ -419,9 +419,12 @@ export default function RebalancerPage() {
         recommendation={tradeRec}
         baseCurrency={base}
         fxRates={fxRates}
-        onConfirm={async (txn) => {
-          await addTransaction(txn)
-          setRecentlyExecuted((prev) => ({ ...prev, [txn.ticker]: Date.now() }))
+        existingHolding={tradeRec
+          ? holdings.find((h) => h.ticker.toUpperCase() === tradeRec.ticker.toUpperCase()) ?? null
+          : null}
+        onConfirm={async (trade, alsoLog) => {
+          await applyTrade(trade, alsoLog)
+          setRecentlyExecuted((prev) => ({ ...prev, [trade.ticker.toUpperCase()]: Date.now() }))
         }}
       />
     </div>

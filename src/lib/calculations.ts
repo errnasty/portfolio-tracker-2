@@ -8,6 +8,16 @@ export function convertToBase(amount: number, fromCurrency: string, fxRates: FxR
   return amount / rate
 }
 
+// Convert between two arbitrary currencies, routing through base.
+export function convertBetween(amount: number, from: string, to: string, fxRates: FxRates): number {
+  if (from === to) return amount
+  const inBase = convertToBase(amount, from, fxRates)
+  if (to === fxRates.base) return inBase
+  const rate = fxRates.rates[to]
+  if (!rate) return amount  // best-effort fallback if target currency unknown
+  return inBase * rate
+}
+
 export function enrichHoldings(
   holdings: Holding[],
   prices: Record<string, PriceQuote>,

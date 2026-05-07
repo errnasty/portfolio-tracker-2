@@ -1,9 +1,28 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
-import { enrichHoldings, calcPortfolioStats, convertToBase } from '@/lib/calculations'
+import { enrichHoldings, calcPortfolioStats, convertToBase, convertBetween } from '@/lib/calculations'
 import { deriveAllPositions } from '@/lib/transactions'
+
+// Translate Supabase errors into user-actionable toasts. The most common one
+// new users hit is the "relation does not exist" error when a migration
+// hasn't been applied yet.
+function reportSupabaseError(operation: string, error: { message: string; code?: string } | null) {
+  if (!error) return
+  console.error(`[supabase] ${operation} failed:`, error)
+  // Postgres "undefined_table" error code = 42P01
+  if (error.code === '42P01' || /relation .* does not exist/i.test(error.message)) {
+    const m = error.message.match(/relation "(\w+)"/)
+    const table = m?.[1] ?? 'a table'
+    toast.error(`Database is missing ${table}. Re-run supabase-schema.sql in your Supabase SQL editor.`, {
+      duration: 8000,
+    })
+    return
+  }
+  toast.error(`${operation} failed: ${error.message}`)
+}
 import type {
   Holding, PriceQuote, FxRates, EnrichedHolding, PortfolioStats,
   Currency, TargetAllocation, UserSettings, Transaction, DerivedPosition, Goal,
@@ -44,6 +63,21 @@ interface PortfolioContextValue {
   refreshCashBalances: () => Promise<void>
   upsertCashBalance: (currency: string, balance: number, notes?: string | null) => Promise<void>
   deleteCashBalance: (id: string) => Promise<void>
+  // Apply a buy/sell to the holdings table directly (weighted-avg cost basis).
+  // Optionally also write a row to the transaction log.
+  applyTrade: (trade: TradeInput, alsoLog?: boolean) => Promise<void>
+}
+
+export interface TradeInput {
+  ticker: string
+  type: 'buy' | 'sell'
+  date: string
+  shares: number
+  pricePerShare: number       // in trade currency
+  fees: number                // in trade currency
+  currency: string            // trade currency (e.g. 'USD')
+  name?: string | null        // used only when creating a new holding row
+  notes?: string | null
 }
 
 const PortfolioContext = createContext<PortfolioContextValue | null>(null)
@@ -61,25 +95,14 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
 
   const baseCurrency: Currency = (settings?.base_currency as Currency) ?? 'USD'
 
-  // Derive positions per ticker from transaction log
+  // The transaction log is a separate, optional ledger. We derive
+  // per-ticker positions for the Transactions/Dividends pages, but
+  // **transactions never override the holdings table** — holdings are
+  // the source of truth for the dashboard, analytics, and rebalancer.
   const positions: Record<string, DerivedPosition> = deriveAllPositions(transactions)
 
-  // Merge: when transactions exist for a ticker, override the holding's
-  // shares + cost basis with the derived values. Holdings without txns fall
-  // back to the legacy stored fields (handles migration cleanly).
-  const mergedHoldings: Holding[] = holdings.map((h) => {
-    const pos = positions[h.ticker.toUpperCase()]
-    if (!pos || (pos.buyCount === 0 && pos.sellCount === 0)) return h
-    return {
-      ...h,
-      shares: pos.shares,
-      cost_basis_per_share: pos.avgCostBasis,
-      cost_basis_currency: (pos.costCurrency as Currency) ?? h.cost_basis_currency,
-    }
-  })
-
-  const enriched: EnrichedHolding[] = fxRates && mergedHoldings.length > 0
-    ? enrichHoldings(mergedHoldings, prices, fxRates).filter((h) => h.shares > 0)
+  const enriched: EnrichedHolding[] = fxRates && holdings.length > 0
+    ? enrichHoldings(holdings, prices, fxRates).filter((h) => h.shares > 0)
     : []
 
   // Sum cash across all currencies, converted to base.
@@ -139,7 +162,18 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   const refreshCashBalances = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    const { data } = await supabase.from('cash_balances').select('*').eq('user_id', user.id).order('currency')
+    const { data, error } = await supabase
+      .from('cash_balances')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('currency')
+    if (error) {
+      // Don't toast on initial load; just log. The save flow will surface
+      // the "missing table" message in a more contextual moment.
+      console.error('[supabase] Load cash balances failed:', error)
+      setCashBalances([])
+      return
+    }
     setCashBalances(data ?? [])
   }, [])
 
@@ -200,47 +234,29 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   }, [holdings.length, transactions.length])
 
   // ── Holding CRUD ────────────────────────────────────────────────────────
+  // Holdings are the user's source of truth. We don't auto-create or
+  // auto-delete transactions when holdings change — the transaction log is
+  // an independent ledger the user opts into.
   const addHolding = async (data: Omit<Holding, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    // Insert holding row + an initial buy transaction so we have a clean log.
-    const { data: holdingRow } = await supabase.from('holdings').insert({ ...data, user_id: user.id }).select().single()
-    if (holdingRow && data.shares > 0 && data.cost_basis_per_share > 0) {
-      await supabase.from('transactions').insert({
-        user_id: user.id,
-        ticker: data.ticker.toUpperCase(),
-        type: 'buy',
-        date: new Date().toISOString().slice(0, 10),
-        shares: data.shares,
-        price_per_share: data.cost_basis_per_share,
-        currency: data.cost_basis_currency,
-        notes: 'Initial position',
-      })
-    }
+    const { error } = await supabase.from('holdings').insert({ ...data, user_id: user.id })
+    if (error) { reportSupabaseError('Add holding', error); throw error }
     await refreshHoldings()
-    await refreshTransactions()
   }
 
   const updateHolding = async (id: string, data: Partial<Holding>) => {
-    await supabase.from('holdings').update({ ...data, updated_at: new Date().toISOString() }).eq('id', id)
+    const { error } = await supabase.from('holdings')
+      .update({ ...data, updated_at: new Date().toISOString() })
+      .eq('id', id)
+    if (error) { reportSupabaseError('Update holding', error); throw error }
     await refreshHoldings()
   }
 
   const deleteHolding = async (id: string) => {
-    // Find ticker first so we can offer to delete its transactions
-    const holding = holdings.find((h) => h.id === id)
-    await supabase.from('holdings').delete().eq('id', id)
-    if (holding) {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        await supabase.from('transactions')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('ticker', holding.ticker)
-      }
-    }
+    const { error } = await supabase.from('holdings').delete().eq('id', id)
+    if (error) { reportSupabaseError('Delete holding', error); throw error }
     await refreshHoldings()
-    await refreshTransactions()
   }
 
   // ── Target allocation CRUD ──────────────────────────────────────────────
@@ -274,27 +290,17 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   }
 
   // ── Transaction CRUD ───────────────────────────────────────────────────
+  // Transactions are an independent log. They do NOT auto-create or update
+  // holdings rows — use applyTrade() if you want a trade to update both.
   const addTransaction = async (t: Omit<Transaction, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    await supabase.from('transactions').insert({
+    const { error } = await supabase.from('transactions').insert({
       ...t,
       ticker: t.ticker.toUpperCase(),
       user_id: user.id,
     })
-    // Ensure a holding row exists for this ticker (so the dashboard picks it up)
-    const tickerUpper = t.ticker.toUpperCase()
-    if (!holdings.some((h) => h.ticker.toUpperCase() === tickerUpper)) {
-      await supabase.from('holdings').insert({
-        user_id: user.id,
-        ticker: tickerUpper,
-        name: null,
-        shares: 0,
-        cost_basis_per_share: 0,
-        cost_basis_currency: t.currency,
-      })
-    }
-    await refreshHoldings()
+    if (error) { reportSupabaseError('Add transaction', error); throw error }
     await refreshTransactions()
   }
 
@@ -312,28 +318,9 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     }))
     const { data, error } = await supabase.from('transactions').insert(payload).select('id')
     if (error) {
-      console.error('Bulk insert failed:', error)
+      reportSupabaseError('Import transactions', error)
       return { inserted: 0 }
     }
-
-    // Make sure a holding row exists for every ticker we just inserted txns for
-    const existingTickers = new Set(holdings.map((h) => h.ticker.toUpperCase()))
-    const newTickers = Array.from(new Set(payload.map((r) => r.ticker)))
-      .filter((t) => !existingTickers.has(t))
-    if (newTickers.length > 0) {
-      await supabase.from('holdings').insert(
-        newTickers.map((ticker) => ({
-          user_id: user.id,
-          ticker,
-          name: null,
-          shares: 0,
-          cost_basis_per_share: 0,
-          cost_basis_currency: 'USD',
-        })),
-      )
-    }
-
-    await refreshHoldings()
     await refreshTransactions()
     return { inserted: data?.length ?? 0 }
   }
@@ -373,22 +360,134 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   // ── Cash CRUD ──────────────────────────────────────────────────────────
   const upsertCashBalance = async (currency: string, balance: number, notes: string | null = null) => {
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-    await supabase.from('cash_balances').upsert(
+    if (!user) {
+      toast.error('Not signed in')
+      throw new Error('Not signed in')
+    }
+    const { error } = await supabase.from('cash_balances').upsert(
       { user_id: user.id, currency: currency.toUpperCase(), balance, notes, updated_at: new Date().toISOString() },
       { onConflict: 'user_id,currency' },
     )
+    if (error) {
+      reportSupabaseError('Save cash balance', error)
+      throw error
+    }
+    toast.success(`Saved ${currency.toUpperCase()} ${balance.toLocaleString()}`)
     await refreshCashBalances()
   }
 
   const deleteCashBalance = async (id: string) => {
-    await supabase.from('cash_balances').delete().eq('id', id)
+    const { error } = await supabase.from('cash_balances').delete().eq('id', id)
+    if (error) {
+      reportSupabaseError('Delete cash balance', error)
+      throw error
+    }
     await refreshCashBalances()
+  }
+
+  // ── applyTrade ─────────────────────────────────────────────────────────
+  // Update the holdings table with a buy or sell. Uses weighted-average
+  // cost basis. If the holding doesn't exist yet, creates one in the
+  // trade's currency. Optionally also logs a transaction.
+  const applyTrade = async (trade: TradeInput, alsoLog = false) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      toast.error('Not signed in')
+      throw new Error('Not signed in')
+    }
+    const tickerUpper = trade.ticker.toUpperCase().trim()
+    if (!tickerUpper) throw new Error('Missing ticker')
+    if (trade.shares <= 0) throw new Error('Shares must be positive')
+    if (trade.pricePerShare <= 0) throw new Error('Price must be positive')
+
+    const existing = holdings.find((h) => h.ticker.toUpperCase() === tickerUpper)
+
+    if (trade.type === 'buy') {
+      if (!existing) {
+        // Fresh ticker — create the holding in the trade's currency.
+        // Bake fees into per-share cost.
+        const costPerShare = trade.pricePerShare + (trade.fees / trade.shares)
+        const { error } = await supabase.from('holdings').insert({
+          user_id: user.id,
+          ticker: tickerUpper,
+          name: trade.name ?? null,
+          shares: trade.shares,
+          cost_basis_per_share: costPerShare,
+          cost_basis_currency: trade.currency.toUpperCase(),
+        })
+        if (error) { reportSupabaseError('Create holding', error); throw error }
+      } else {
+        // Existing position — weighted-average cost basis math, in the
+        // holding's currency. Convert the trade's spend if needed.
+        const holdingCur = existing.cost_basis_currency
+        let buyTotalInHoldingCur = trade.shares * trade.pricePerShare + trade.fees
+        if (trade.currency.toUpperCase() !== holdingCur.toUpperCase()) {
+          if (!fxRates) {
+            toast.error('FX rates unavailable — cannot convert between currencies')
+            throw new Error('FX rates unavailable')
+          }
+          buyTotalInHoldingCur = convertBetween(
+            buyTotalInHoldingCur,
+            trade.currency.toUpperCase(),
+            holdingCur,
+            fxRates,
+          )
+        }
+        const oldShares = Number(existing.shares) || 0
+        const oldCost = oldShares * (Number(existing.cost_basis_per_share) || 0)
+        const newShares = oldShares + trade.shares
+        const newTotalCost = oldCost + buyTotalInHoldingCur
+        const newCostPerShare = newShares > 0 ? newTotalCost / newShares : 0
+        const { error } = await supabase.from('holdings').update({
+          shares: newShares,
+          cost_basis_per_share: newCostPerShare,
+          updated_at: new Date().toISOString(),
+        }).eq('id', existing.id)
+        if (error) { reportSupabaseError('Update holding', error); throw error }
+      }
+    } else {
+      // Sell — reduce shares, leave avg cost basis untouched
+      if (!existing) {
+        toast.error(`Can't sell ${tickerUpper}: no existing position`)
+        throw new Error('No existing position to sell from')
+      }
+      const oldShares = Number(existing.shares) || 0
+      const newShares = Math.max(0, oldShares - trade.shares)
+      const { error } = await supabase.from('holdings').update({
+        shares: newShares,
+        updated_at: new Date().toISOString(),
+      }).eq('id', existing.id)
+      if (error) { reportSupabaseError('Update holding', error); throw error }
+    }
+
+    // Optionally log to transaction history (independent ledger)
+    if (alsoLog) {
+      const { error } = await supabase.from('transactions').insert({
+        user_id: user.id,
+        ticker: tickerUpper,
+        type: trade.type,
+        date: trade.date,
+        shares: trade.shares,
+        price_per_share: trade.pricePerShare,
+        amount: 0,
+        currency: trade.currency.toUpperCase(),
+        fees: trade.fees,
+        split_ratio: null,
+        notes: trade.notes ?? 'Rebalancer',
+      })
+      if (error) { reportSupabaseError('Log transaction', error); /* non-fatal */ }
+      else await refreshTransactions()
+    }
+
+    await refreshHoldings()
+    toast.success(
+      `${trade.type === 'buy' ? 'Bought' : 'Sold'} ${trade.shares} ${tickerUpper} @ ${trade.pricePerShare.toFixed(2)} ${trade.currency.toUpperCase()}`,
+    )
   }
 
   return (
     <PortfolioContext.Provider value={{
-      holdings: mergedHoldings, enriched, stats, prices, fxRates, targets, settings,
+      holdings, enriched, stats, prices, fxRates, targets, settings,
       transactions, positions, goals, cashBalances, totalCashBase,
       loading, refreshHoldings, refreshPrices, refreshTransactions,
       addHolding, updateHolding, deleteHolding,
@@ -396,6 +495,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
       addTransaction, addTransactionsBulk, updateTransaction, deleteTransaction,
       refreshGoals, addGoal, updateGoal, deleteGoal,
       refreshCashBalances, upsertCashBalance, deleteCashBalance,
+      applyTrade,
     }}>
       {children}
     </PortfolioContext.Provider>

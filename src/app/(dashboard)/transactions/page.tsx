@@ -115,7 +115,7 @@ export default function TransactionsPage() {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">Transactions</h1>
           <p className="text-sm md:text-base text-muted-foreground">
-            Source-of-truth log of every buy, sell, dividend and split
+            Optional ledger of buys, sells, dividends and splits — independent of your holdings
           </p>
         </div>
         <div className="flex gap-2">
