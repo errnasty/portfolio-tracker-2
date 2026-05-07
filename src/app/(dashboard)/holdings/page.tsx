@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton'
 import { Plus, Pencil, Trash2, Search, Loader2 } from 'lucide-react'
 import { TableScroll } from '@/components/ui/table-scroll'
+import { InlineNumberCell } from '@/components/holdings/InlineNumberCell'
 import type { Currency, Holding, HoldingFormData } from '@/types'
 import type { SearchResult } from '@/app/api/search/route'
 
@@ -207,8 +208,8 @@ export default function HoldingsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Ticker / Name</TableHead>
-                  <TableHead className="text-right">Shares</TableHead>
-                  <TableHead className="text-right">Cost Basis</TableHead>
+                  <TableHead className="text-right" title="Click to edit">Shares</TableHead>
+                  <TableHead className="text-right" title="Click to edit">Cost Basis</TableHead>
                   <TableHead className="text-right">Current Price</TableHead>
                   <TableHead className="text-right">Value ({base})</TableHead>
                   <TableHead className="text-right">Day</TableHead>
@@ -223,10 +224,24 @@ export default function HoldingsPage() {
                       <div className="font-semibold">{h.ticker}</div>
                       <div className="text-xs text-muted-foreground">{h.name ?? '—'}</div>
                     </TableCell>
-                    <TableCell className="text-right font-mono text-sm">{formatShares(h.shares)}</TableCell>
-                    <TableCell className="text-right text-sm">
-                      <div className="font-mono">{formatCurrency(h.cost_basis_per_share, h.cost_basis_currency)}</div>
-                      <div className="text-xs text-muted-foreground">{h.cost_basis_currency}</div>
+                    <TableCell className="text-right">
+                      <InlineNumberCell
+                        value={h.shares}
+                        format={(n) => formatShares(n)}
+                        align="right"
+                        ariaLabel={`Shares of ${h.ticker}`}
+                        onSave={(v) => updateHolding(h.id, { shares: v })}
+                      />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <InlineNumberCell
+                        value={h.cost_basis_per_share}
+                        format={(n) => formatCurrency(n, h.cost_basis_currency)}
+                        align="right"
+                        ariaLabel={`Cost basis per share of ${h.ticker}`}
+                        subline={<span>{h.cost_basis_currency}</span>}
+                        onSave={(v) => updateHolding(h.id, { cost_basis_per_share: v })}
+                      />
                     </TableCell>
                     <TableCell className="text-right text-sm">
                       {h.currentPrice > 0 ? (

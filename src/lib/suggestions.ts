@@ -9,6 +9,11 @@ import {
   lookThroughStocks,
 } from '@/lib/analytics'
 import { countryToCurrency } from '@/lib/etf-composition'
+import { formatCurrency } from '@/lib/utils'
+import {
+  detectDomicile, singaporeDwtRate,
+  US_ESTATE_TAX_THRESHOLD_USD, type Domicile,
+} from '@/lib/tax'
 
 // ── Types ─────────────────────────────────────────────────────────────────
 export type SuggestionSeverity = 'positive' | 'info' | 'warning' | 'critical'
@@ -23,6 +28,7 @@ export type SuggestionCategory =
   | 'overlap'
   | 'coverage'
   | 'holdings_count'
+  | 'tax'
 
 export const CATEGORY_LABELS: Record<SuggestionCategory, string> = {
   concentration: 'Concentration',
@@ -34,6 +40,7 @@ export const CATEGORY_LABELS: Record<SuggestionCategory, string> = {
   overlap: 'ETF Overlap',
   coverage: 'Data Coverage',
   holdings_count: 'Holdings Count',
+  tax: 'Tax (Singapore)',
 }
 
 export type RiskProfile = 'conservative' | 'balanced' | 'aggressive'
@@ -58,7 +65,7 @@ export interface SuggestionPreferences {
 export const DEFAULT_PREFERENCES: SuggestionPreferences = {
   focusAreas: [
     'concentration', 'geographic', 'sector', 'currency',
-    'asset_mix', 'look_through', 'overlap', 'coverage', 'holdings_count',
+    'asset_mix', 'look_through', 'overlap', 'coverage', 'holdings_count', 'tax',
   ],
   riskProfile: 'balanced',
   homeBias: 'global',
@@ -845,6 +852,133 @@ function ruleCoverage(
   return out
 }
 
+// ── Rule: tax (Singapore-resident investors) ─────────────────────────────
+// Surfaces the two highest-impact tax considerations for SG retail
+// investors: dividend withholding (US 30% vs Irish UCITS 15%) and US estate
+// tax exposure (US-domiciled assets above ~$60k for non-resident aliens).
+//
+// We use the dividends API data when it's already loaded; otherwise we
+// estimate dividend cost from a conservative 1.5% blended yield. The
+// suggestion is meant to be educational, not a precise calculator.
+function ruleTaxSingapore(
+  enriched: EnrichedHolding[],
+  baseCurrency: Currency,
+): Suggestion[] {
+  if (enriched.length === 0) return []
+  const out: Suggestion[] = []
+
+  // Bucket holdings by detected domicile, in base currency
+  const buckets: Record<Domicile, number> = {
+    US: 0, IE: 0, SG: 0, UK: 0, CA: 0, AU: 0, JP: 0, HK: 0, unknown: 0,
+  }
+  for (const h of enriched) {
+    const d = detectDomicile(h.ticker)
+    buckets[d] += h.currentValueBase
+  }
+  const totalValue = enriched.reduce((s, h) => s + h.currentValueBase, 0)
+  if (totalValue <= 0) return out
+
+  const usValue = buckets.US
+  const usPct = (usValue / totalValue) * 100
+
+  // Estimated annual dividend yield for the US bucket. Without per-ticker
+  // dividend data, use a conservative 1.5% blended yield (typical for broad
+  // US index funds like VOO/VTI/SPY).
+  const ASSUMED_BLENDED_YIELD = 0.015
+
+  // ─── Suggestion 1: US dividend withholding ──────────────────────────────
+  if (usValue > 0 && usPct > 5) {
+    const usDividends = usValue * ASSUMED_BLENDED_YIELD
+    const usDwt = usDividends * singaporeDwtRate('US')
+    const irishDwt = usDividends * singaporeDwtRate('IE')
+    const annualSaving = usDwt - irishDwt
+
+    out.push({
+      id: 'tax-sg-us-dwt',
+      category: 'tax',
+      severity: usPct > 30 ? 'warning' : 'info',
+      title: 'US-domiciled funds: 30% dividend withholding',
+      summary: `${pct(usPct)} of your portfolio is in US-domiciled funds, taxed at 30% on dividends.`,
+      explanation: [
+        'As a Singapore-resident investor, dividends from US-domiciled ETFs (VOO, VTI, QQQ, SPY, etc.) are subject to 30% US withholding tax. There is no Singapore-US tax treaty for individuals, so the rate cannot be reduced via a W-8BEN.',
+        'Irish-domiciled UCITS equivalents (VWRA for VT, CSPX for VOO, SWDA / IWDA for total developed markets) hold the same underlying companies but pay only 15% withholding via the US-Ireland tax treaty. Singapore takes nothing further on top — these are tax-free at withdrawal.',
+        `On your current US-domiciled bucket (${formatCurrency(usValue, baseCurrency)}), at a typical ~1.5% blended dividend yield, the WHT cost is roughly ${formatCurrency(usDwt, baseCurrency)}/year vs. ~${formatCurrency(irishDwt, baseCurrency)}/year if you held Irish UCITS instead — an estimated annual saving of ${formatCurrency(annualSaving, baseCurrency)}.`,
+        'Note: Accumulating Irish UCITS (CSPX, IWDA, VWRA) reinvest dividends inside the fund — no SG-side payout, no further tax events, and dividends compound at the post-15% rate automatically.',
+      ],
+      evidence: [
+        { label: 'US-domiciled allocation', value: `${pct(usPct)} (${formatCurrency(usValue, baseCurrency)})` },
+        { label: 'Irish-domiciled allocation', value: `${pct((buckets.IE / totalValue) * 100)} (${formatCurrency(buckets.IE, baseCurrency)})` },
+        { label: 'Est. annual WHT now', value: formatCurrency(usDwt, baseCurrency) },
+        { label: 'Est. annual saving (Irish)', value: formatCurrency(annualSaving, baseCurrency) },
+      ],
+      actions: [
+        { text: 'Migrate VOO / SPY → CSPX or VUSA (Irish S&P 500 UCITS)',
+          apply: { kind: 'add', ticker: 'CSPX', pct: 30 } },
+        { text: 'Migrate VTI / total-US-market → ITOT alternative or use SWDA/IWDA for global',
+          apply: { kind: 'add', ticker: 'IWDA', pct: 30 } },
+        { text: 'Migrate VT / VWRL → VWRA (Vanguard FTSE All-World UCITS Acc)',
+          apply: { kind: 'add', ticker: 'VWRA', pct: 30 } },
+        { text: 'Existing US positions: hold for the long term to amortise capital-gains-on-rebalance from your broker fees, then phase into UCITS' },
+      ],
+    })
+  }
+
+  // ─── Suggestion 2: US estate tax exposure ──────────────────────────────
+  if (usValue > US_ESTATE_TAX_THRESHOLD_USD) {
+    const isCritical = usValue > US_ESTATE_TAX_THRESHOLD_USD * 5  // > $300k
+    out.push({
+      id: 'tax-sg-us-estate',
+      category: 'tax',
+      severity: isCritical ? 'critical' : 'warning',
+      title: 'US estate tax exposure on US-domiciled assets',
+      summary: `${formatCurrency(usValue, baseCurrency)} in US-situs assets — above the US$60k non-resident-alien estate-tax threshold.`,
+      explanation: [
+        'For Singapore residents (and other non-resident aliens), US-domiciled stocks and ETFs are "US-situs" assets. On death, anything above ~US$60,000 is exposed to US federal estate tax at rates climbing to 40%. There is no Singapore-US estate tax treaty.',
+        'This is one of the strongest practical reasons for SG investors to use Irish-domiciled UCITS for long-term equity exposure: the fund itself is the asset, and Irish-domiciled funds are NOT US-situs even though they hold US stocks internally. Your estate would owe nothing to the IRS on a VWRA / CSPX / IWDA position.',
+        'Typical mitigations: (a) cap US-domiciled exposure below $60k, (b) hold US-equity exposure via Irish UCITS instead, (c) for very large portfolios, consider holding US-domiciled positions in joint accounts or via an LLC structure (consult a cross-border tax advisor — beyond what this app can quantify).',
+      ],
+      evidence: [
+        { label: 'US-situs assets', value: formatCurrency(usValue, baseCurrency) },
+        { label: 'NRA threshold', value: 'US$60,000' },
+        { label: 'Excess', value: formatCurrency(Math.max(0, usValue - US_ESTATE_TAX_THRESHOLD_USD), baseCurrency) },
+        { label: 'Max marginal estate-tax rate', value: '40%' },
+      ],
+      actions: [
+        { text: 'Phase US-domiciled equity into Irish UCITS equivalents (VWRA, CSPX, IWDA)',
+          apply: { kind: 'add', ticker: 'VWRA', pct: 50 } },
+        { text: 'Until phased out, keep US-domiciled bucket under US$60k of total cost basis' },
+        { text: 'Consult a cross-border tax advisor for portfolios where US-domiciled exposure can\'t be reduced quickly (RSUs, employer plans, etc.)' },
+      ],
+    })
+  }
+
+  // ─── Suggestion 3: Positive — Singapore tax-efficient structure ────────
+  const taxEfficient = buckets.IE + buckets.SG + buckets.UK + buckets.HK
+  const taxEfficientPct = (taxEfficient / totalValue) * 100
+  if (taxEfficientPct > 70 && usPct < 20) {
+    out.push({
+      id: 'tax-sg-good',
+      category: 'tax',
+      severity: 'positive',
+      title: 'Tax-efficient structure for Singapore residency',
+      summary: `${pct(taxEfficientPct)} held in low-WHT or treaty-favoured domiciles.`,
+      explanation: [
+        'Your portfolio is structured to minimise foreign withholding tax for a Singapore-resident investor. Irish UCITS at 15% effective WHT, plus SG/HK/UK at 0%, dominate your holdings — and US-situs estate-tax exposure is contained.',
+        'Singapore itself imposes no tax on these capital flows: dividends received by individuals from non-Singapore sources are not taxed, and there is no capital gains tax on personal investments.',
+      ],
+      evidence: [
+        { label: 'Irish UCITS', value: formatCurrency(buckets.IE, baseCurrency) },
+        { label: 'Singapore-listed', value: formatCurrency(buckets.SG, baseCurrency) },
+        { label: 'US-domiciled', value: formatCurrency(buckets.US, baseCurrency) },
+        { label: 'Tax-efficient bucket', value: pct(taxEfficientPct) },
+      ],
+      actions: [],
+    })
+  }
+
+  return out
+}
+
 // ── Main entry ────────────────────────────────────────────────────────────
 export function generateSuggestions(
   enriched: EnrichedHolding[],
@@ -871,6 +1005,9 @@ export function generateSuggestions(
     ...ruleLookThrough(enriched, analytics, prefs),
     ...ruleOverlap(enriched, analytics),
     ...ruleCoverage(enriched, analytics),
+    // Tax rules apply Singapore-resident assumptions. They surface only if
+    // the user keeps `tax` in their focus areas (default on).
+    ...(baseCurrency === 'SGD' ? ruleTaxSingapore(enriched, baseCurrency) : []),
   ]
 
   // Filter by focus areas

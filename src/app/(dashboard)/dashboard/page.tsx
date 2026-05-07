@@ -44,7 +44,7 @@ function StatCard({
 export default function DashboardPage() {
   const {
     stats, enriched, loading, refreshPrices, settings, targets,
-    cashBalances, totalCashBase, fxRates,
+    cashBalances, totalCashBase, cashBalancesError, fxRates,
     upsertCashBalance, deleteCashBalance,
   } = usePortfolio()
   const base = (settings?.base_currency ?? 'USD') as Currency
@@ -116,6 +116,7 @@ export default function DashboardPage() {
           totalCashBase={totalCashBase}
           base={base}
           fxRates={fxRates}
+          loadError={cashBalancesError}
           onUpsert={upsertCashBalance}
           onDelete={deleteCashBalance}
         />

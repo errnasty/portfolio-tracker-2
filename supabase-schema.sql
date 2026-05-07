@@ -122,11 +122,26 @@ create table if not exists cash_balances (
   unique(user_id, currency)
 );
 
+-- Idempotent guards in case an older version of this table exists without
+-- the latest columns / unique constraint / RLS. Safe to re-run.
+do $$ begin
+  alter table cash_balances add column if not exists notes text;
+exception when others then null; end $$;
+
+do $$ begin
+  alter table cash_balances
+    add constraint cash_balances_user_currency_key unique (user_id, currency);
+exception when duplicate_table then null;
+         when duplicate_object then null;
+         when others then null; end $$;
+
 alter table cash_balances enable row level security;
 
+drop policy if exists "Users manage own cash balances" on cash_balances;
 create policy "Users manage own cash balances"
   on cash_balances for all
-  using (auth.uid() = user_id);
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
 
 -- ETF / ticker composition cache (public reference data — no per-user rows)
 -- Holds dynamically-fetched country/sector breakdowns + top holdings so we

@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Wallet, Plus, Pencil, Trash2, ArrowRight } from 'lucide-react'
+import { Wallet, Plus, Pencil, Trash2, ArrowRight, AlertTriangle } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { convertToBase } from '@/lib/calculations'
 import type { CashBalance, Currency, FxRates } from '@/types'
@@ -20,12 +20,13 @@ interface Props {
   totalCashBase: number
   base: Currency
   fxRates: FxRates | null
+  loadError?: string | null
   onUpsert: (currency: string, balance: number, notes?: string | null) => Promise<void>
   onDelete: (id: string) => Promise<void>
 }
 
 export function CashBalancesCard({
-  cashBalances, totalCashBase, base, fxRates, onUpsert, onDelete,
+  cashBalances, totalCashBase, base, fxRates, loadError, onUpsert, onDelete,
 }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -88,7 +89,20 @@ export function CashBalancesCard({
         </div>
       </CardHeader>
       <CardContent>
-        {sorted.length === 0 ? (
+        {loadError ? (
+          <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-400">
+            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <div className="font-medium">Cash tracking unavailable</div>
+              <div className="text-xs text-amber-400/90">{loadError}</div>
+              <div className="text-[11px] text-muted-foreground">
+                Open your Supabase project &rarr; SQL editor &rarr; paste the contents of
+                <code className="mx-1 rounded bg-muted px-1">supabase-schema.sql</code> &rarr; Run.
+                It&apos;s safe to re-run; existing data is untouched.
+              </div>
+            </div>
+          </div>
+        ) : sorted.length === 0 ? (
           <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
             Track uninvested cash to see your true total net worth and feed the rebalancer.
           </div>

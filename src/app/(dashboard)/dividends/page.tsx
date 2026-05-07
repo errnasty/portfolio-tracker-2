@@ -9,6 +9,8 @@ import { convertToBase } from '@/lib/calculations'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
 import type { Currency } from '@/types'
 import type { DividendData } from '@/app/api/dividends/route'
+import { detectDomicile, singaporeDwtRate, DOMICILE_LABEL, type Domicile } from '@/lib/tax'
+import { Receipt } from 'lucide-react'
 
 export default function DividendsPage() {
   const { enriched, transactions, fxRates, settings, loading: portfolioLoading } = usePortfolio()
@@ -41,6 +43,10 @@ export default function DividendsPage() {
       const annualIncomeBase = convertToBase(annualIncomeLocal, cur, fxRates)
       const yieldPct = h.currentPrice > 0 ? (ttm / h.currentPrice) * 100 : 0
       const yieldOnCost = h.cost_basis_per_share > 0 ? (ttm / h.cost_basis_per_share) * 100 : 0
+      const domicile = detectDomicile(h.ticker)
+      const dwtRate = base === 'SGD' ? singaporeDwtRate(domicile) : 0
+      const wht = annualIncomeBase * dwtRate
+      const netIncomeBase = annualIncomeBase - wht
       return {
         ticker: h.ticker,
         name: h.name ?? '',
@@ -52,9 +58,13 @@ export default function DividendsPage() {
         yieldPct,
         yieldOnCost,
         events: data?.events ?? [],
+        domicile,
+        dwtRate,
+        wht,
+        netIncomeBase,
       }
     }).sort((a, b) => b.annualIncomeBase - a.annualIncomeBase)
-  }, [enriched, dividends, fxRates])
+  }, [enriched, dividends, fxRates, base])
 
   const totals = useMemo(() => {
     const totalForwardIncome = perHolding.reduce((s, h) => s + h.annualIncomeBase, 0)
@@ -205,10 +215,18 @@ export default function DividendsPage() {
         </CardContent>
       </Card>
 
+      {/* Tax summary — only meaningful for SGD-base (Singapore-resident) users */}
+      {base === 'SGD' && perHolding.length > 0 && !initialLoading && (
+        <TaxSummaryCard perHolding={perHolding} base={base} />
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Per-holding income</CardTitle>
-          <CardDescription>TTM dividend per share, forward income at current shares</CardDescription>
+          <CardDescription>
+            TTM dividend per share, forward income at current shares.
+            {base === 'SGD' && ' Withholding tax estimated for Singapore-resident investors.'}
+          </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           {initialLoading ? (
@@ -221,10 +239,12 @@ export default function DividendsPage() {
                 <thead>
                   <tr className="border-b border-border text-left text-xs text-muted-foreground">
                     <th className="px-4 py-2 font-medium">Ticker</th>
+                    <th className="px-4 py-2 font-medium">Domicile</th>
                     <th className="px-4 py-2 font-medium text-right">TTM / share</th>
                     <th className="px-4 py-2 font-medium text-right">Yield</th>
-                    <th className="px-4 py-2 font-medium text-right">Yield on cost</th>
-                    <th className="px-4 py-2 font-medium text-right">Forward 12m income</th>
+                    <th className="px-4 py-2 font-medium text-right">Gross 12m</th>
+                    {base === 'SGD' && <th className="px-4 py-2 font-medium text-right">WHT</th>}
+                    {base === 'SGD' && <th className="px-4 py-2 font-medium text-right">Net 12m</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -234,18 +254,28 @@ export default function DividendsPage() {
                         <div className="font-medium">{h.ticker}</div>
                         <div className="text-xs text-muted-foreground truncate max-w-[200px]">{h.name}</div>
                       </td>
+                      <td className="px-4 py-2.5 text-xs text-muted-foreground">
+                        {DOMICILE_LABEL[h.domicile]}
+                      </td>
                       <td className="px-4 py-2.5 text-right tabular-nums">
                         {h.ttmPerShare > 0 ? formatCurrency(h.ttmPerShare, h.currency) : '—'}
                       </td>
                       <td className="px-4 py-2.5 text-right tabular-nums text-emerald-400">
                         {h.yieldPct > 0 ? formatPercent(h.yieldPct, 2) : '—'}
                       </td>
-                      <td className="px-4 py-2.5 text-right tabular-nums text-emerald-400">
-                        {h.yieldOnCost > 0 ? formatPercent(h.yieldOnCost, 2) : '—'}
-                      </td>
-                      <td className="px-4 py-2.5 text-right tabular-nums font-medium">
+                      <td className="px-4 py-2.5 text-right tabular-nums">
                         {h.annualIncomeBase > 0 ? formatCurrency(h.annualIncomeBase, base) : '—'}
                       </td>
+                      {base === 'SGD' && (
+                        <td className="px-4 py-2.5 text-right tabular-nums text-red-400">
+                          {h.wht > 0 ? `−${formatCurrency(h.wht, base)} (${(h.dwtRate * 100).toFixed(0)}%)` : '—'}
+                        </td>
+                      )}
+                      {base === 'SGD' && (
+                        <td className="px-4 py-2.5 text-right tabular-nums font-medium">
+                          {h.netIncomeBase > 0 ? formatCurrency(h.netIncomeBase, base) : '—'}
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -254,6 +284,92 @@ export default function DividendsPage() {
           )}
         </CardContent>
       </Card>
+    </div>
+  )
+}
+
+interface PerHoldingTax {
+  domicile: Domicile
+  annualIncomeBase: number
+  wht: number
+  netIncomeBase: number
+}
+
+function TaxSummaryCard({ perHolding, base }: { perHolding: PerHoldingTax[]; base: Currency }) {
+  const totalGross = perHolding.reduce((s, h) => s + h.annualIncomeBase, 0)
+  const totalWht = perHolding.reduce((s, h) => s + h.wht, 0)
+  const totalNet = totalGross - totalWht
+  const effectiveRate = totalGross > 0 ? (totalWht / totalGross) * 100 : 0
+
+  // Hypothetical: what if everything were Irish-domiciled UCITS?
+  const hypotheticalIrishWht = totalGross * 0.15
+  const hypotheticalSavings = Math.max(0, totalWht - hypotheticalIrishWht)
+
+  // Per-domicile breakdown
+  const byDomicile = new Map<Domicile, { gross: number; wht: number }>()
+  for (const h of perHolding) {
+    const cur = byDomicile.get(h.domicile) ?? { gross: 0, wht: 0 }
+    cur.gross += h.annualIncomeBase
+    cur.wht += h.wht
+    byDomicile.set(h.domicile, cur)
+  }
+  const sorted = Array.from(byDomicile.entries()).sort((a, b) => b[1].gross - a[1].gross)
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Receipt className="h-4 w-4" /> Tax summary (Singapore resident)
+        </CardTitle>
+        <CardDescription>
+          Estimated dividend withholding tax based on each holding&apos;s domicile.
+          SG itself imposes no further tax on these dividends, and capital gains are tax-free.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
+          <Stat label="Gross 12m" value={formatCurrency(totalGross, base)} />
+          <Stat label="Estimated WHT" value={`−${formatCurrency(totalWht, base)}`} valueColor="text-red-400" />
+          <Stat label="Net to you" value={formatCurrency(totalNet, base)} valueColor="text-emerald-400" />
+          <Stat label="Effective rate" value={`${effectiveRate.toFixed(1)}%`} />
+        </div>
+
+        {hypotheticalSavings > 0 && (
+          <div className="rounded-md bg-emerald-500/10 px-3 py-2 text-sm text-emerald-400">
+            <strong>Saving opportunity:</strong> If all your equity were held via Irish-domiciled UCITS
+            (15% WHT instead of 30% on US holdings), your annual WHT would be approximately{' '}
+            <strong>{formatCurrency(hypotheticalIrishWht, base)}</strong> — saving roughly{' '}
+            <strong>{formatCurrency(hypotheticalSavings, base)}/year</strong>.
+            See the Suggestions page for specific UCITS equivalents.
+          </div>
+        )}
+
+        <div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">By domicile</div>
+          <div className="space-y-1 text-sm">
+            {sorted.map(([domicile, v]) => {
+              const rate = v.gross > 0 ? (v.wht / v.gross) * 100 : 0
+              return (
+                <div key={domicile} className="flex justify-between rounded-md bg-muted/30 px-3 py-1.5">
+                  <span>{DOMICILE_LABEL[domicile]}</span>
+                  <span className="tabular-nums text-xs">
+                    {formatCurrency(v.gross, base)} gross · WHT {formatCurrency(v.wht, base)} ({rate.toFixed(0)}%)
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function Stat({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
+  return (
+    <div className="rounded-md bg-muted/30 px-3 py-2">
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className={`text-base font-semibold tabular-nums ${valueColor ?? ''}`}>{value}</div>
     </div>
   )
 }

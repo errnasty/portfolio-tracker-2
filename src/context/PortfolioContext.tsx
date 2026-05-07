@@ -42,6 +42,7 @@ interface PortfolioContextValue {
   goals: Goal[]
   cashBalances: CashBalance[]
   totalCashBase: number
+  cashBalancesError: string | null
   loading: boolean
   refreshHoldings: () => Promise<void>
   refreshPrices: () => Promise<void>
@@ -91,6 +92,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [goals, setGoals] = useState<Goal[]>([])
   const [cashBalances, setCashBalances] = useState<CashBalance[]>([])
+  const [cashBalancesError, setCashBalancesError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   const baseCurrency: Currency = (settings?.base_currency as Currency) ?? 'USD'
@@ -168,12 +170,20 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
       .eq('user_id', user.id)
       .order('currency')
     if (error) {
-      // Don't toast on initial load; just log. The save flow will surface
-      // the "missing table" message in a more contextual moment.
       console.error('[supabase] Load cash balances failed:', error)
       setCashBalances([])
+      // Surface as inline state so the dashboard can show a banner.
+      // Most common cause: the cash_balances table doesn't exist yet.
+      const isMissingTable = error.code === '42P01' ||
+        /relation .* does not exist/i.test(error.message)
+      setCashBalancesError(
+        isMissingTable
+          ? 'The cash_balances table is missing. Re-run supabase-schema.sql in your Supabase SQL editor.'
+          : `Couldn\'t load cash balances: ${error.message}`,
+      )
       return
     }
+    setCashBalancesError(null)
     setCashBalances(data ?? [])
   }, [])
 
@@ -488,7 +498,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   return (
     <PortfolioContext.Provider value={{
       holdings, enriched, stats, prices, fxRates, targets, settings,
-      transactions, positions, goals, cashBalances, totalCashBase,
+      transactions, positions, goals, cashBalances, totalCashBase, cashBalancesError,
       loading, refreshHoldings, refreshPrices, refreshTransactions,
       addHolding, updateHolding, deleteHolding,
       upsertTarget, deleteTarget, updateSettings,
