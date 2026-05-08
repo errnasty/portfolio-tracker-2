@@ -134,3 +134,75 @@ export function monthsBetween(fromIso: string, toIso: string): number {
   const b = new Date(toIso)
   return (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth())
 }
+
+// Closed-form: monthly contribution needed for the deterministic compound
+// path to land at exactly `target` after `months` months. Ignores volatility
+// (gives a 50%-probability answer roughly, since the median GBM path is
+// slightly below the deterministic compound).
+export function requiredMonthlyDeterministic(
+  startingValue: number,
+  months: number,
+  expectedAnnualReturnPct: number,
+  target: number,
+): number {
+  if (months <= 0) return Math.max(0, target - startingValue)
+  const r = expectedAnnualReturnPct / 100 / 12
+  const grown = startingValue * Math.pow(1 + r, months)
+  const gap = target - grown
+  if (gap <= 0) return 0
+  if (r === 0) return gap / months
+  const annuityFactor = (Math.pow(1 + r, months) - 1) / r
+  return gap / annuityFactor
+}
+
+// Numerical search for the monthly contribution that produces a given
+// success probability under Monte Carlo. Uses bisection on monthly
+// contribution; for each candidate we run a small MC and check the
+// fraction of paths that land >= target.
+export function requiredMonthlyForSuccess(
+  startingValue: number,
+  months: number,
+  expectedAnnualReturnPct: number,
+  expectedAnnualVolPct: number,
+  target: number,
+  successProbability: number,
+  paths = 400,
+  seed = 7,
+): number {
+  if (months <= 0) return Math.max(0, target - startingValue)
+  // Quick out: if zero contribution already exceeds the success threshold,
+  // no extra savings needed.
+  const zero = monteCarlo({
+    startingValue, monthlyContribution: 0,
+    expectedAnnualReturnPct, expectedAnnualVolPct,
+    months, paths, seed,
+  }, target)
+  if (zero.successRate >= successProbability) return 0
+
+  // Bisection bounds. Upper bound: enough contribution to fund target with
+  // zero compounding (worst case).
+  let lo = 0
+  let hi = Math.max(target / months, 1)
+  // Expand hi until it's clearly enough
+  for (let i = 0; i < 20; i++) {
+    const test = monteCarlo({
+      startingValue, monthlyContribution: hi,
+      expectedAnnualReturnPct, expectedAnnualVolPct,
+      months, paths, seed,
+    }, target)
+    if (test.successRate >= successProbability) break
+    hi *= 2
+  }
+
+  for (let i = 0; i < 18; i++) {
+    const mid = (lo + hi) / 2
+    const r = monteCarlo({
+      startingValue, monthlyContribution: mid,
+      expectedAnnualReturnPct, expectedAnnualVolPct,
+      months, paths, seed,
+    }, target)
+    if (r.successRate >= successProbability) hi = mid
+    else lo = mid
+  }
+  return Math.round((lo + hi) / 2)
+}

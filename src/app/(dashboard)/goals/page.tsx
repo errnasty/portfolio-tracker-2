@@ -12,8 +12,12 @@ import { Plus, Pencil, Trash2, Target, TrendingUp } from 'lucide-react'
 import { deleteWithUndo } from '@/lib/toast-undo'
 import { ResponsiveContainer, ComposedChart, Line, Area, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine, Legend } from 'recharts'
 import { formatCurrency } from '@/lib/utils'
-import { monteCarlo, monthsBetween } from '@/lib/projection'
+import {
+  monteCarlo, monthsBetween,
+  requiredMonthlyDeterministic, requiredMonthlyForSuccess,
+} from '@/lib/projection'
 import type { Goal, Currency } from '@/types'
+import { CheckCircle2, AlertTriangle, Sparkles } from 'lucide-react'
 
 interface GoalForm {
   name: string
@@ -227,20 +231,38 @@ function GoalCard({
     }, goal.target_amount)
   }, [startingValue, goal, months])
 
-  const onTrack = result.successRate >= 0.5
-  const successColor = result.successRate >= 0.85 ? 'text-emerald-400' : result.successRate >= 0.6 ? 'text-sky-400' : result.successRate >= 0.35 ? 'text-amber-400' : 'text-red-400'
+  // Status classification — used for the prominent banner up top
+  const status: 'ahead' | 'on_track' | 'behind' | 'critical' =
+    result.successRate >= 0.85 ? 'ahead'
+    : result.successRate >= 0.50 ? 'on_track'
+    : result.successRate >= 0.25 ? 'behind'
+    : 'critical'
 
-  // Required monthly to hit target with 50% probability — solve for contribution
-  // such that deterministic compound = target. Quick analytic solution.
-  const requiredMonthly = useMemo(() => {
-    const r = goal.expected_return_pct / 100 / 12
-    const grown = startingValue * Math.pow(1 + r, months)
-    const gap = goal.target_amount - grown
-    if (gap <= 0) return 0
-    if (r === 0) return gap / months
-    const annuityFactor = (Math.pow(1 + r, months) - 1) / r
-    return gap / annuityFactor
-  }, [startingValue, goal, months])
+  // Progress bar: how far the *current* portfolio value is to the target
+  const progressPct = goal.target_amount > 0
+    ? Math.min(100, (startingValue / goal.target_amount) * 100)
+    : 0
+
+  // Required monthly contribution at two levels:
+  //  - deterministic (≈ 50% probability): closed-form annuity solve
+  //  - 80% probability: numerical Monte Carlo bisection
+  const requiredFor50 = useMemo(
+    () => requiredMonthlyDeterministic(
+      startingValue, months, goal.expected_return_pct, goal.target_amount,
+    ),
+    [startingValue, months, goal.expected_return_pct, goal.target_amount],
+  )
+  const requiredFor80 = useMemo(
+    () => requiredMonthlyForSuccess(
+      startingValue, months,
+      goal.expected_return_pct, goal.expected_volatility_pct,
+      goal.target_amount,
+      0.80,
+    ),
+    [startingValue, months, goal.expected_return_pct, goal.expected_volatility_pct, goal.target_amount],
+  )
+  // Gap between what user contributes today and what's needed for 50%
+  const monthlyGap = Math.max(0, requiredFor50 - goal.monthly_contribution)
 
   // Sample chart data — only show every Nth point if very long horizon
   const chartData = useMemo(() => {
@@ -269,25 +291,115 @@ function GoalCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
-          <Stat label="Success probability" value={`${(result.successRate * 100).toFixed(0)}%`} valueColor={successColor} />
-          <Stat label="Expected (median)" value={formatCurrency(result.finalP50, base)} />
-          <Stat label="Pessimistic (5th %)" value={formatCurrency(result.finalP5, base)} />
-          <Stat label="Optimistic (95th %)" value={formatCurrency(result.finalP95, base)} />
+        {/* Status banner — most prominent element */}
+        <StatusBanner
+          status={status}
+          successRate={result.successRate}
+          medianFinal={result.finalP50}
+          target={goal.target_amount}
+          monthlyGap={monthlyGap}
+          base={base}
+        />
+
+        {/* Progress bar — current value vs target */}
+        <div className="space-y-1.5">
+          <div className="flex items-baseline justify-between text-xs">
+            <span className="text-muted-foreground">
+              Current progress
+            </span>
+            <span className="tabular-nums">
+              <strong>{formatCurrency(startingValue, base)}</strong>
+              {' / '}
+              <span className="text-muted-foreground">{formatCurrency(goal.target_amount, base)}</span>
+              {' · '}
+              <span className="text-muted-foreground">{progressPct.toFixed(1)}%</span>
+            </span>
+          </div>
+          <div className="h-2 rounded-full bg-muted overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all ${
+                status === 'ahead' ? 'bg-emerald-500'
+                : status === 'on_track' ? 'bg-sky-500'
+                : status === 'behind' ? 'bg-amber-500' : 'bg-red-500'
+              }`}
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
         </div>
 
-        <div className={`rounded-md p-3 text-sm ${onTrack ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>
-          <div className="flex items-center gap-2 font-medium">
-            <TrendingUp className="h-4 w-4" />
-            {onTrack
-              ? `On track — median path lands ~${formatCurrency(result.finalP50, base)}, above target.`
-              : `Behind target — median path lands ~${formatCurrency(result.finalP50, base)}.`}
+        {/* Projected outcome at target date */}
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+            Projected portfolio at {goal.target_date}
           </div>
-          {!onTrack && requiredMonthly > goal.monthly_contribution && (
-            <div className="mt-1 text-xs">
-              Need ~{formatCurrency(requiredMonthly, base)}/mo (vs current {formatCurrency(goal.monthly_contribution, base)}) for a 50% expected hit.
-            </div>
-          )}
+          <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
+            <Stat
+              label="Median outcome"
+              value={formatCurrency(result.finalP50, base)}
+              valueColor={result.finalP50 >= goal.target_amount ? 'text-emerald-400' : 'text-amber-400'}
+              hint={result.finalP50 >= goal.target_amount
+                ? `+${formatCurrency(result.finalP50 - goal.target_amount, base)} above target`
+                : `−${formatCurrency(goal.target_amount - result.finalP50, base)} below target`}
+            />
+            <Stat
+              label="Pessimistic (5th %)"
+              value={formatCurrency(result.finalP5, base)}
+              hint="Bad-luck path"
+            />
+            <Stat
+              label="Optimistic (95th %)"
+              value={formatCurrency(result.finalP95, base)}
+              hint="Good-luck path"
+            />
+            <Stat
+              label="Success probability"
+              value={`${(result.successRate * 100).toFixed(0)}%`}
+              valueColor={
+                result.successRate >= 0.85 ? 'text-emerald-400'
+                : result.successRate >= 0.5 ? 'text-sky-400'
+                : result.successRate >= 0.25 ? 'text-amber-400' : 'text-red-400'
+              }
+              hint={`Hits ${formatCurrency(goal.target_amount, base)}+ across paths`}
+            />
+          </div>
+        </div>
+
+        {/* Required monthly contribution — always visible */}
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+            Monthly contribution needed
+          </div>
+          <div className="grid gap-3 grid-cols-1 md:grid-cols-3">
+            <Stat
+              label="You contribute"
+              value={`${formatCurrency(goal.monthly_contribution, base)}/mo`}
+            />
+            <Stat
+              label="For 50% chance"
+              value={requiredFor50 > 0 ? `${formatCurrency(requiredFor50, base)}/mo` : 'Already there'}
+              valueColor={
+                requiredFor50 === 0 ? 'text-emerald-400'
+                : monthlyGap === 0 ? 'text-emerald-400'
+                : monthlyGap < goal.monthly_contribution * 0.5 ? 'text-amber-400'
+                : 'text-red-400'
+              }
+              hint={
+                requiredFor50 === 0
+                  ? 'Trajectory already covers it'
+                  : monthlyGap > 0
+                    ? `Add ${formatCurrency(monthlyGap, base)}/mo`
+                    : `Surplus ${formatCurrency(goal.monthly_contribution - requiredFor50, base)}/mo`
+              }
+            />
+            <Stat
+              label="For 80% chance"
+              value={requiredFor80 > 0 ? `${formatCurrency(requiredFor80, base)}/mo` : 'Already there'}
+              valueColor={requiredFor80 === 0 ? 'text-emerald-400' : 'text-foreground'}
+              hint={requiredFor80 === 0
+                ? 'Trajectory covers it with high confidence'
+                : `${formatCurrency(Math.max(0, requiredFor80 - goal.monthly_contribution), base)}/mo more for stronger odds`}
+            />
+          </div>
         </div>
 
         <ResponsiveContainer width="100%" height={260}>
@@ -320,11 +432,69 @@ function GoalCard({
   )
 }
 
-function Stat({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
+function Stat({
+  label, value, valueColor, hint,
+}: {
+  label: string
+  value: string
+  valueColor?: string
+  hint?: string
+}) {
   return (
     <div className="rounded-md bg-muted/30 px-3 py-2">
       <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
       <div className={`text-lg font-semibold tabular-nums ${valueColor ?? ''}`}>{value}</div>
+      {hint && <div className="text-[10px] text-muted-foreground mt-0.5">{hint}</div>}
+    </div>
+  )
+}
+
+function StatusBanner({
+  status, successRate, medianFinal, target, monthlyGap, base,
+}: {
+  status: 'ahead' | 'on_track' | 'behind' | 'critical'
+  successRate: number
+  medianFinal: number
+  target: number
+  monthlyGap: number
+  base: Currency
+}) {
+  const config = {
+    ahead: {
+      icon: Sparkles,
+      label: 'AHEAD OF TARGET',
+      classes: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400',
+      message: `You're tracking strongly — ${(successRate * 100).toFixed(0)}% of paths land at or above ${formatCurrency(target, base)}. Median outcome ${formatCurrency(medianFinal, base)}.`,
+    },
+    on_track: {
+      icon: CheckCircle2,
+      label: 'ON TRACK',
+      classes: 'border-sky-500/40 bg-sky-500/10 text-sky-400',
+      message: `${(successRate * 100).toFixed(0)}% chance of hitting target. Median outcome ${formatCurrency(medianFinal, base)} vs ${formatCurrency(target, base)} target.`,
+    },
+    behind: {
+      icon: AlertTriangle,
+      label: 'BEHIND',
+      classes: 'border-amber-500/40 bg-amber-500/10 text-amber-400',
+      message: `Only ${(successRate * 100).toFixed(0)}% chance at current pace. Median ${formatCurrency(medianFinal, base)}, target ${formatCurrency(target, base)}.${monthlyGap > 0 ? ` Add ~${formatCurrency(monthlyGap, base)}/mo to get to a coin-flip.` : ''}`,
+    },
+    critical: {
+      icon: AlertTriangle,
+      label: 'OFF TRACK',
+      classes: 'border-red-500/40 bg-red-500/10 text-red-400',
+      message: `Only ${(successRate * 100).toFixed(0)}% of paths hit target. Median outcome ${formatCurrency(medianFinal, base)} — significantly below ${formatCurrency(target, base)}.${monthlyGap > 0 ? ` Need ~${formatCurrency(monthlyGap, base)}/mo more, or revisit the target/horizon.` : ''}`,
+    },
+  }[status]
+  const Icon = config.icon
+  return (
+    <div className={`rounded-md border p-4 ${config.classes}`}>
+      <div className="flex items-start gap-3">
+        <Icon className="h-5 w-5 shrink-0 mt-0.5" />
+        <div className="flex-1">
+          <div className="text-xs font-bold uppercase tracking-wider">{config.label}</div>
+          <div className="mt-1 text-sm leading-relaxed">{config.message}</div>
+        </div>
+      </div>
     </div>
   )
 }

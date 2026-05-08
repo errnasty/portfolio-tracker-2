@@ -15,6 +15,9 @@ export function formatCurrency(value: number, currency: Currency | string, compa
   }
   if (compact && Math.abs(value) >= 1_000_000) {
     opts.notation = 'compact'
+    // Both bounds must move together: max < min raises RangeError
+    // ("maximumFractionDigits value is out of range").
+    opts.minimumFractionDigits = 0
     opts.maximumFractionDigits = 1
   }
   return new Intl.NumberFormat('en-US', opts).format(value)
