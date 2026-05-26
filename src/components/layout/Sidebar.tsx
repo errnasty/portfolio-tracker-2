@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
-  LayoutDashboard, Briefcase, TrendingUp, Sliders, LogOut, Settings, PieChart, Activity, Menu, X, Beaker, Lightbulb, ListChecks, Coins, Target, Newspaper, FileText, Zap,
+  LayoutDashboard, Briefcase, TrendingUp, Sliders, LogOut, Settings, PieChart, Activity, Menu, X, Beaker, Lightbulb, ListChecks, Coins, Target, Newspaper, FileText, Zap, Compass, Bell,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
@@ -20,8 +20,10 @@ const navItems = [
   { href: '/analytics', label: 'Analytics', icon: PieChart },
   { href: '/risk', label: 'Risk', icon: Activity },
   { href: '/stress-test', label: 'Stress Test', icon: Zap },
+  { href: '/signals', label: 'Signals', icon: Bell },
   { href: '/news', label: 'News', icon: Newspaper },
   { href: '/rebalancer', label: 'Rebalancer', icon: Sliders },
+  { href: '/optimizer', label: 'Optimizer', icon: Compass },
   { href: '/planner', label: 'Planner', icon: Beaker },
   { href: '/goals', label: 'Goals', icon: Target },
   { href: '/suggestions', label: 'Suggestions', icon: Lightbulb },
