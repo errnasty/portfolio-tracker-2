@@ -1,51 +1,37 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ── "Console" theme ────────────────────────────────────────────────────────
+   Dense terminal/ops-console aesthetic. Dark-native: both :root and .dark map
+   to the same console palette so the look is consistent regardless of toggle.
+   Tokens mirror the Claude design ref:
+     bg #06070a · panel #0c0d10 · rule #1f2228 · text #ece8e1 · mute #6a6e78
+     accent(yellow) #ffd166 · up #6fcf97 · down #ff7a59 · cool #6aa9ff */
 @layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 5.9% 10%;
-    --radius: 0.5rem;
-  }
-
-  .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 5.5%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 5.5%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
+  :root, .dark {
+    --background: 225 25% 3%;
+    --foreground: 40 22% 90%;
+    --card: 228 14% 6%;
+    --card-foreground: 40 22% 90%;
+    --popover: 228 16% 5%;
+    --popover-foreground: 40 22% 90%;
+    --primary: 42 100% 70%;
+    --primary-foreground: 225 25% 4%;
+    --secondary: 225 14% 9%;
+    --secondary-foreground: 40 22% 90%;
+    --muted: 222 12% 12%;
+    --muted-foreground: 222 7% 55%;
+    --accent: 222 13% 13%;
+    --accent-foreground: 40 22% 92%;
+    --destructive: 12 100% 67%;
+    --destructive-foreground: 225 25% 4%;
+    --border: 220 13% 14%;
+    --input: 220 13% 14%;
+    --ring: 42 100% 70%;
+    --radius: 0.25rem;
   }
 }
 
@@ -55,6 +41,12 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+    font-variant-numeric: tabular-nums;
+  }
+  /* Headings use Geist (sans) for a touch of contrast against the mono body. */
+  h1, h2, h3, .font-sans {
+    font-family: 'Geist', system-ui, -apple-system, sans-serif;
   }
 }
 
