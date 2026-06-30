@@ -14,8 +14,10 @@ export const dynamic = 'force-dynamic'
 // connected Gmail (read-only) in Settings, which stores a refresh token in the
 // google_tokens table.
 
+// Sender-only filter is the most reliable — DBS/POSB alerts all come from these
+// addresses. parseDbsAlert() drops anything without a transaction amount.
 const GMAIL_QUERY =
-  'from:(dbs.com.sg OR dbs.com OR posb.com.sg) (transaction OR alert OR paynow OR paylah OR debited OR credited)'
+  'from:(ibanking.alert@dbs.com OR alert@dbs.com.sg OR dbs.com.sg OR dbs.com OR posb.com.sg)'
 
 function decodeB64Url(data: string): string {
   return Buffer.from(data.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8')

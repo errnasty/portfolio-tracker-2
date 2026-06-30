@@ -43,16 +43,18 @@ function findDate(text: string): string | null {
   return null
 }
 
-function findMerchant(text: string): string | null {
-  const patterns = [
-    /\bat\s+([A-Za-z0-9][^\n.,;]{2,40})/i,
-    /\bto\s+([A-Za-z0-9][^\n.,;]{2,40})/i,
-    /\bfrom\s+([A-Za-z0-9][^\n.,;]{2,40})/i,
-    /merchant[:\s]+([A-Za-z0-9][^\n.,;]{2,40})/i,
-  ]
-  for (const p of patterns) {
-    const m = text.match(p)
-    if (m) return m[1].trim().replace(/\s+/g, ' ')
+// Pull a counterparty after a label (From/To/at/merchant). The body is a single
+// line after stripHtml, so we stop the capture at the next field label or
+// punctuation to avoid swallowing the rest of the email.
+const STOP = '(?=\\s+(?:to|from|on|ref|dear|thank|didn|via|account|your)\\b|[.,;]|$)'
+function extractField(text: string, labels: string[]): string | null {
+  for (const label of labels) {
+    const re = new RegExp(`\\b${label}[:\\s]+([A-Za-z0-9][\\s\\S]{1,60}?)${STOP}`, 'i')
+    const m = text.match(re)
+    if (m) {
+      const v = m[1].trim().replace(/\s+/g, ' ')
+      if (v && !/^your\b/i.test(v)) return v
+    }
   }
   return null
 }
@@ -73,9 +75,13 @@ export function parseDbsAlert(subject: string, body: string): ParsedEmailTxn | n
   const isCredit = /credited|received|incoming|refund|deposit|inward|salary/i.test(text)
   const amount = isCredit ? magnitude : -magnitude
 
-  const merchant = findMerchant(text)
+  // Credit = money in → counterparty is the sender (From). Debit = money out →
+  // recipient/merchant (To / at).
+  const merchant = isCredit
+    ? extractField(text, ['from', 'at'])
+    : extractField(text, ['to', 'at', 'merchant'])
   const description = merchant
-    ? `${isCredit ? 'Received' : 'Paid'} ${merchant}`
+    ? `${isCredit ? 'Received from' : 'Paid'} ${merchant}`
     : subject.trim() || 'DBS transaction alert'
 
   return {

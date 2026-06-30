@@ -29,6 +29,22 @@ describe('parseDbsAlert', () => {
     expect(r!.currency).toBe('SGD')
   })
 
+  it('parses a real PayNow received-transfer alert', () => {
+    const r = parseDbsAlert(
+      "digibank Alerts - You've received a transfer",
+      'Transaction Ref: 012606290119148480EPS0C100564403075 Dear Customer, ' +
+      'You have received SGD 30.00 via PayNow on 29 Jun 2026 16:13 SGT. ' +
+      'From: TAY KAI YUN CHARMAINE To: Your DBS/ POSB account ending 0152 ' +
+      "Didn't expect these funds? Thank you for banking with us.",
+    )
+    expect(r).not.toBeNull()
+    expect(r!.amount).toBe(30)
+    expect(r!.currency).toBe('SGD')
+    expect(r!.date).toBe('2026-06-29')
+    expect(r!.merchant).toBe('TAY KAI YUN CHARMAINE')
+    expect(r!.description).toBe('Received from TAY KAI YUN CHARMAINE')
+  })
+
   it('returns null for non-transaction emails', () => {
     expect(parseDbsAlert('Your eStatement is ready', 'Log in to view your statement.')).toBeNull()
   })

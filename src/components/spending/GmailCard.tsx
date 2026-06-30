@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { supabase } from '@/lib/supabase'
+import { supabase, PENDING_GOOGLE_TOKEN_KEY } from '@/lib/supabase'
 import { useSpending } from '@/context/SpendingContext'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -22,6 +22,20 @@ export function GmailCard() {
     ;(async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user || !active) return
+
+      // Persist a refresh token captured during the OAuth redirect (stashed by
+      // the listener in lib/supabase). Runs wherever the redirect landed.
+      let pending: string | null = null
+      try { pending = window.localStorage.getItem(PENDING_GOOGLE_TOKEN_KEY) } catch { /* ignore */ }
+      if (pending) {
+        await supabase.from('google_tokens').upsert(
+          { user_id: user.id, refresh_token: pending, email: user.email, updated_at: new Date().toISOString() },
+          { onConflict: 'user_id' },
+        )
+        try { window.localStorage.removeItem(PENDING_GOOGLE_TOKEN_KEY) } catch { /* ignore */ }
+        if (active) { setConnected(true); toast.success('Gmail connected') }
+      }
+
       const { data } = await supabase
         .from('google_tokens').select('last_synced').eq('user_id', user.id).single()
       if (data && active) { setConnected(true); setLastSynced(data.last_synced) }
