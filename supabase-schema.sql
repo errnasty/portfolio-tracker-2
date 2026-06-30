@@ -18,6 +18,7 @@ create table if not exists holdings (
 
 alter table holdings enable row level security;
 
+drop policy if exists "Users manage own holdings" on holdings;
 create policy "Users manage own holdings"
   on holdings for all
   using (auth.uid() = user_id);
@@ -35,6 +36,7 @@ create table if not exists target_allocations (
 
 alter table target_allocations enable row level security;
 
+drop policy if exists "Users manage own target allocations" on target_allocations;
 create policy "Users manage own target allocations"
   on target_allocations for all
   using (auth.uid() = user_id);
@@ -49,6 +51,7 @@ create table if not exists user_settings (
 
 alter table user_settings enable row level security;
 
+drop policy if exists "Users manage own settings" on user_settings;
 create policy "Users manage own settings"
   on user_settings for all
   using (auth.uid() = user_id);
@@ -78,6 +81,7 @@ create index if not exists idx_transactions_user_ticker_date
 
 alter table transactions enable row level security;
 
+drop policy if exists "Users manage own transactions" on transactions;
 create policy "Users manage own transactions"
   on transactions for all
   using (auth.uid() = user_id);
@@ -98,6 +102,7 @@ create table if not exists goals (
 
 alter table goals enable row level security;
 
+drop policy if exists "Users manage own goals" on goals;
 create policy "Users manage own goals"
   on goals for all
   using (auth.uid() = user_id);
@@ -143,6 +148,129 @@ create policy "Users manage own cash balances"
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+-- ============================================================
+-- Personal finance hub: accounts, categories, bank/spending ledger
+-- ============================================================
+
+-- Accounts: unified store for bank / cash / credit / wallet balances.
+-- 'cash' accounts are treated as investable buying power (feed the rebalancer
+-- and the portfolio "cash" total). All accounts roll up into net worth.
+create table if not exists accounts (
+  id              uuid primary key default gen_random_uuid(),
+  user_id         uuid references auth.users not null,
+  name            text not null,
+  type            text not null default 'bank'
+                  check (type in ('bank', 'cash', 'credit', 'wallet')),
+  institution     text,
+  currency        text not null default 'SGD',
+  current_balance numeric(20, 2) not null default 0,
+  is_active       boolean not null default true,
+  created_at      timestamptz default now(),
+  updated_at      timestamptz default now()
+);
+
+alter table accounts enable row level security;
+
+drop policy if exists "Users manage own accounts" on accounts;
+create policy "Users manage own accounts"
+  on accounts for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+-- One-time migration: fold legacy cash_balances into accounts as 'cash'
+-- accounts. Idempotent — skips currencies already present as a cash account.
+do $$ begin
+  insert into accounts (user_id, name, type, currency, current_balance)
+  select cb.user_id, cb.currency || ' Cash', 'cash', cb.currency, cb.balance
+  from cash_balances cb
+  where not exists (
+    select 1 from accounts a
+    where a.user_id = cb.user_id and a.type = 'cash' and a.currency = cb.currency
+  );
+exception when undefined_table then null; when others then null; end $$;
+
+-- Categories: user-defined spending/income buckets. Seeded client-side on
+-- first load when empty (see SpendingContext).
+create table if not exists categories (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid references auth.users not null,
+  name        text not null,
+  kind        text not null default 'expense'
+              check (kind in ('expense', 'income', 'transfer')),
+  color       text,
+  icon        text,
+  parent_id   uuid references categories(id) on delete set null,
+  sort        integer not null default 0,
+  created_at  timestamptz default now(),
+  unique(user_id, name)
+);
+
+alter table categories enable row level security;
+
+drop policy if exists "Users manage own categories" on categories;
+create policy "Users manage own categories"
+  on categories for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+-- Bank transactions: the spending/income ledger. Distinct from the
+-- investment `transactions` table. amount is signed: negative = expense,
+-- positive = income. external_id dedupes CSV re-imports and Gmail syncs.
+create table if not exists bank_transactions (
+  id           uuid primary key default gen_random_uuid(),
+  user_id      uuid references auth.users not null,
+  account_id   uuid references accounts(id) on delete set null,
+  date         date not null default current_date,
+  description  text not null default '',
+  merchant     text,
+  amount       numeric(20, 2) not null default 0,
+  currency     text not null default 'SGD',
+  category_id  uuid references categories(id) on delete set null,
+  source       text not null default 'manual'
+               check (source in ('csv', 'email', 'manual')),
+  external_id  text,
+  notes        text,
+  created_at   timestamptz default now(),
+  updated_at   timestamptz default now()
+);
+
+create index if not exists idx_bank_txns_user_date
+  on bank_transactions(user_id, date desc);
+create index if not exists idx_bank_txns_user_category
+  on bank_transactions(user_id, category_id);
+-- Dedupe key: a user never has the same external_id twice (NULLs allowed).
+create unique index if not exists uniq_bank_txns_user_external
+  on bank_transactions(user_id, external_id)
+  where external_id is not null;
+
+alter table bank_transactions enable row level security;
+
+drop policy if exists "Users manage own bank transactions" on bank_transactions;
+create policy "Users manage own bank transactions"
+  on bank_transactions for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+-- Google OAuth tokens for Gmail alert sync (Phase B). Stores the long-lived
+-- refresh token so the server can mint Gmail access tokens to read DBS/POSB
+-- transaction-alert emails. RLS-own: only the user can read/write their row.
+create table if not exists google_tokens (
+  user_id       uuid primary key references auth.users,
+  refresh_token text not null,
+  email         text,
+  last_synced   timestamptz,
+  created_at    timestamptz default now(),
+  updated_at    timestamptz default now()
+);
+
+alter table google_tokens enable row level security;
+
+drop policy if exists "Users manage own google tokens" on google_tokens;
+create policy "Users manage own google tokens"
+  on google_tokens for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
 -- ETF / ticker composition cache (public reference data — no per-user rows)
 -- Holds dynamically-fetched country/sector breakdowns + top holdings so we
 -- don't hammer Yahoo on every page load. TTL is enforced in the API route.
@@ -156,14 +284,17 @@ alter table etf_composition_cache enable row level security;
 
 -- Public reference data — any authenticated user can read, and any user
 -- can populate the cache (data is non-sensitive market metadata).
+drop policy if exists "Anyone can read composition cache" on etf_composition_cache;
 create policy "Anyone can read composition cache"
   on etf_composition_cache for select
   using (true);
 
+drop policy if exists "Anyone can insert composition cache" on etf_composition_cache;
 create policy "Anyone can insert composition cache"
   on etf_composition_cache for insert
   with check (true);
 
+drop policy if exists "Anyone can update composition cache" on etf_composition_cache;
 create policy "Anyone can update composition cache"
   on etf_composition_cache for update
   using (true);

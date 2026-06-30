@@ -4,42 +4,64 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
-  LayoutDashboard, Briefcase, TrendingUp, Sliders, LogOut, Settings, PieChart, Activity, Menu, X, Beaker, Lightbulb, ListChecks, Coins, Target, Newspaper, FileText, Zap, Compass, Bell,
+  LayoutDashboard, Wallet, Briefcase, TrendingUp, Sliders, LogOut, Settings,
+  PieChart, Activity, Menu, X, Beaker, ListChecks, Coins, Target, FileText, Bell,
+  ChevronDown, ChevronRight,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/layout/ThemeToggle'
 
-const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/holdings', label: 'Holdings', icon: Briefcase },
-  { href: '/transactions', label: 'Transactions', icon: ListChecks },
-  { href: '/dividends', label: 'Dividends', icon: Coins },
-  { href: '/performance', label: 'Performance', icon: TrendingUp },
-  { href: '/analytics', label: 'Analytics', icon: PieChart },
-  { href: '/risk', label: 'Risk', icon: Activity },
-  { href: '/stress-test', label: 'Stress Test', icon: Zap },
-  { href: '/signals', label: 'Signals', icon: Bell },
-  { href: '/news', label: 'News', icon: Newspaper },
-  { href: '/rebalancer', label: 'Rebalancer', icon: Sliders },
-  { href: '/optimizer', label: 'Optimizer', icon: Compass },
-  { href: '/planner', label: 'Planner', icon: Beaker },
+type NavLink = { href: string; label: string; icon: React.ElementType }
+type NavGroup = { label: string; icon: React.ElementType; children: NavLink[] }
+type NavEntry = NavLink | NavGroup
+
+const isGroup = (e: NavEntry): e is NavGroup => 'children' in e
+
+const nav: NavEntry[] = [
+  { href: '/dashboard', label: 'Home', icon: LayoutDashboard },
+  { href: '/spending', label: 'Spending', icon: Wallet },
+  {
+    label: 'Portfolio', icon: Briefcase, children: [
+      { href: '/holdings', label: 'Holdings', icon: Briefcase },
+      { href: '/transactions', label: 'Transactions', icon: ListChecks },
+      { href: '/dividends', label: 'Dividends', icon: Coins },
+      { href: '/performance', label: 'Performance', icon: TrendingUp },
+      { href: '/analytics', label: 'Analytics', icon: PieChart },
+      { href: '/risk', label: 'Risk', icon: Activity },
+      { href: '/signals', label: 'Signals', icon: Bell },
+      { href: '/rebalancer', label: 'Rebalancer', icon: Sliders },
+      { href: '/planner', label: 'Planner', icon: Beaker },
+      { href: '/report', label: 'Report', icon: FileText },
+    ],
+  },
   { href: '/goals', label: 'Goals', icon: Target },
-  { href: '/suggestions', label: 'Suggestions', icon: Lightbulb },
-  { href: '/report', label: 'Report', icon: FileText },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
+
+const portfolioHrefs = (nav.find((e) => isGroup(e)) as NavGroup).children.map((c) => c.href)
+
+function linkActive(pathname: string, href: string): boolean {
+  return href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(href)
+}
 
 export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const inPortfolio = portfolioHrefs.some((h) => pathname.startsWith(h))
+  const [portfolioOpen, setPortfolioOpen] = useState(inPortfolio)
 
   // Close mobile drawer on navigation
   useEffect(() => {
     setMobileOpen(false)
   }, [pathname])
+
+  // Auto-expand the Portfolio group when navigating into one of its routes.
+  useEffect(() => {
+    if (inPortfolio) setPortfolioOpen(true)
+  }, [inPortfolio])
 
   // Lock body scroll when drawer open on mobile
   useEffect(() => {
@@ -52,6 +74,14 @@ export function Sidebar() {
     await supabase.auth.signOut()
     router.push('/login')
   }
+
+  const linkClass = (active: boolean, indent = false) => cn(
+    'flex items-center gap-3 rounded-md px-2 py-2.5 text-sm transition-colors',
+    indent && 'pl-9 py-2',
+    active
+      ? 'bg-primary text-primary-foreground'
+      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+  )
 
   return (
     <>
@@ -66,9 +96,9 @@ export function Sidebar() {
         </button>
         <div className="flex items-center gap-2">
           <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground text-xs font-bold">
-            P
+            $
           </div>
-          <span className="text-sm font-semibold">Portfolio</span>
+          <span className="text-sm font-semibold">Finance</span>
         </div>
         <div className="w-9" />
       </div>
@@ -93,9 +123,9 @@ export function Sidebar() {
         <div className="mb-6 flex items-center justify-between px-2">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold shrink-0">
-              P
+              $
             </div>
-            <span className="font-semibold">Portfolio</span>
+            <span className="font-semibold">Finance</span>
           </div>
           <button
             aria-label="Close menu"
@@ -108,24 +138,46 @@ export function Sidebar() {
 
         {/* Nav */}
         <nav className="flex flex-1 flex-col gap-1 w-full overflow-y-auto">
-          {navItems.map(({ href, label, icon: Icon }) => {
-            const active = href === '/dashboard'
-              ? pathname === '/dashboard'
-              : pathname.startsWith(href)
+          {nav.map((entry) => {
+            if (!isGroup(entry)) {
+              const active = linkActive(pathname, entry.href)
+              const Icon = entry.icon
+              return (
+                <Link key={entry.href} href={entry.href} className={linkClass(active)}>
+                  <Icon className="h-5 w-5 shrink-0" />
+                  <span>{entry.label}</span>
+                </Link>
+              )
+            }
+
+            const GroupIcon = entry.icon
+            const Chevron = portfolioOpen ? ChevronDown : ChevronRight
             return (
-              <Link
-                key={href}
-                href={href}
-                className={cn(
-                  'flex items-center gap-3 rounded-md px-2 py-2.5 text-sm transition-colors',
-                  active
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                )}
-              >
-                <Icon className="h-5 w-5 shrink-0" />
-                <span>{label}</span>
-              </Link>
+              <div key={entry.label} className="flex flex-col">
+                <button
+                  onClick={() => setPortfolioOpen((o) => !o)}
+                  aria-expanded={portfolioOpen}
+                  className={cn(
+                    'flex items-center gap-3 rounded-md px-2 py-2.5 text-sm transition-colors',
+                    inPortfolio && !portfolioOpen
+                      ? 'text-foreground'
+                      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                  )}
+                >
+                  <GroupIcon className="h-5 w-5 shrink-0" />
+                  <span className="flex-1 text-left">{entry.label}</span>
+                  <Chevron className="h-4 w-4 shrink-0" />
+                </button>
+                {portfolioOpen && entry.children.map(({ href, label, icon: Icon }) => {
+                  const active = linkActive(pathname, href)
+                  return (
+                    <Link key={href} href={href} className={linkClass(active, true)}>
+                      <Icon className="h-4 w-4 shrink-0" />
+                      <span>{label}</span>
+                    </Link>
+                  )
+                })}
+              </div>
             )
           })}
         </nav>

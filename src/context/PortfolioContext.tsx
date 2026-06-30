@@ -26,7 +26,7 @@ function reportSupabaseError(operation: string, error: { message: string; code?:
 import type {
   Holding, PriceQuote, FxRates, EnrichedHolding, PortfolioStats,
   Currency, TargetAllocation, UserSettings, Transaction, DerivedPosition, Goal,
-  CashBalance,
+  Account,
 } from '@/types'
 
 interface PortfolioContextValue {
@@ -40,9 +40,11 @@ interface PortfolioContextValue {
   transactions: Transaction[]
   positions: Record<string, DerivedPosition>
   goals: Goal[]
-  cashBalances: CashBalance[]
-  totalCashBase: number
-  cashBalancesError: string | null
+  accounts: Account[]
+  totalCashBase: number        // cash-type accounts, in base (investable buying power)
+  accountsNetBase: number      // all accounts net (credit subtracted), in base
+  netWorthBase: number         // holdings + accountsNetBase, in base
+  accountsError: string | null
   loading: boolean
   refreshHoldings: () => Promise<void>
   refreshPrices: () => Promise<void>
@@ -61,9 +63,10 @@ interface PortfolioContextValue {
   addGoal: (g: Omit<Goal, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => Promise<void>
   updateGoal: (id: string, data: Partial<Goal>) => Promise<void>
   deleteGoal: (id: string) => Promise<void>
-  refreshCashBalances: () => Promise<void>
-  upsertCashBalance: (currency: string, balance: number, notes?: string | null) => Promise<void>
-  deleteCashBalance: (id: string) => Promise<void>
+  refreshAccounts: () => Promise<void>
+  addAccount: (data: Omit<Account, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => Promise<void>
+  updateAccount: (id: string, data: Partial<Account>) => Promise<void>
+  deleteAccount: (id: string) => Promise<void>
   // Apply a buy/sell to the holdings table directly (weighted-avg cost basis).
   // Optionally also write a row to the transaction log.
   applyTrade: (trade: TradeInput, alsoLog?: boolean) => Promise<void>
@@ -91,8 +94,8 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<UserSettings | null>(null)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [goals, setGoals] = useState<Goal[]>([])
-  const [cashBalances, setCashBalances] = useState<CashBalance[]>([])
-  const [cashBalancesError, setCashBalancesError] = useState<string | null>(null)
+  const [accounts, setAccounts] = useState<Account[]>([])
+  const [accountsError, setAccountsError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   const baseCurrency: Currency = (settings?.base_currency as Currency) ?? 'USD'
@@ -107,10 +110,23 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     ? enrichHoldings(holdings, prices, fxRates).filter((h) => h.shares > 0)
     : []
 
-  // Sum cash across all currencies, converted to base.
+  // Cash-type accounts = investable buying power (feeds stats + rebalancer).
   const totalCashBase = fxRates
-    ? cashBalances.reduce((s, c) => s + convertToBase(Number(c.balance) || 0, c.currency, fxRates), 0)
+    ? accounts
+        .filter((a) => a.type === 'cash')
+        .reduce((s, a) => s + convertToBase(Number(a.current_balance) || 0, a.currency, fxRates), 0)
     : 0
+
+  // All accounts net, credit balances subtracted (money owed).
+  const accountsNetBase = fxRates
+    ? accounts.reduce((s, a) => {
+        const v = convertToBase(Number(a.current_balance) || 0, a.currency, fxRates)
+        return s + (a.type === 'credit' ? -v : v)
+      }, 0)
+    : 0
+
+  const holdingsValueBase = enriched.reduce((s, h) => s + h.currentValueBase, 0)
+  const netWorthBase = holdingsValueBase + accountsNetBase
 
   const stats: PortfolioStats | null = (enriched.length > 0 || totalCashBase > 0)
     ? calcPortfolioStats(enriched, baseCurrency, totalCashBase)
@@ -161,30 +177,30 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     setGoals(data ?? [])
   }, [])
 
-  const refreshCashBalances = useCallback(async () => {
+  const refreshAccounts = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     const { data, error } = await supabase
-      .from('cash_balances')
+      .from('accounts')
       .select('*')
       .eq('user_id', user.id)
-      .order('currency')
+      .order('created_at')
     if (error) {
-      console.error('[supabase] Load cash balances failed:', error)
-      setCashBalances([])
-      // Surface as inline state so the dashboard can show a banner.
-      // Most common cause: the cash_balances table doesn't exist yet.
+      console.error('[supabase] Load accounts failed:', error)
+      setAccounts([])
+      // Surface as inline state so the UI can show a banner.
+      // Most common cause: the accounts table doesn't exist yet.
       const isMissingTable = error.code === '42P01' ||
         /relation .* does not exist/i.test(error.message)
-      setCashBalancesError(
+      setAccountsError(
         isMissingTable
-          ? 'The cash_balances table is missing. Re-run supabase-schema.sql in your Supabase SQL editor.'
-          : `Couldn\'t load cash balances: ${error.message}`,
+          ? 'The accounts table is missing. Re-run supabase-schema.sql in your Supabase SQL editor.'
+          : `Couldn\'t load accounts: ${error.message}`,
       )
       return
     }
-    setCashBalancesError(null)
-    setCashBalances(data ?? [])
+    setAccountsError(null)
+    setAccounts(data ?? [])
   }, [])
 
   const refreshTransactions = useCallback(async () => {
@@ -227,11 +243,11 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
       await refreshHoldings()
       await refreshTransactions()
       await refreshGoals()
-      await refreshCashBalances()
+      await refreshAccounts()
       setLoading(false)
     }
     init()
-  }, [fetchSettings, refreshHoldings, refreshTransactions, refreshGoals, refreshCashBalances])
+  }, [fetchSettings, refreshHoldings, refreshTransactions, refreshGoals, refreshAccounts])
 
   useEffect(() => {
     fetchFxRates(baseCurrency)
@@ -367,32 +383,35 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     await refreshGoals()
   }
 
-  // ── Cash CRUD ──────────────────────────────────────────────────────────
-  const upsertCashBalance = async (currency: string, balance: number, notes: string | null = null) => {
+  // ── Account CRUD ───────────────────────────────────────────────────────
+  // Accounts unify cash / bank / credit / wallet balances. Cash-type accounts
+  // feed the rebalancer; all accounts roll up into net worth.
+  const addAccount = async (data: Omit<Account, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      toast.error('Not signed in')
-      throw new Error('Not signed in')
-    }
-    const { error } = await supabase.from('cash_balances').upsert(
-      { user_id: user.id, currency: currency.toUpperCase(), balance, notes, updated_at: new Date().toISOString() },
-      { onConflict: 'user_id,currency' },
-    )
-    if (error) {
-      reportSupabaseError('Save cash balance', error)
-      throw error
-    }
-    toast.success(`Saved ${currency.toUpperCase()} ${balance.toLocaleString()}`)
-    await refreshCashBalances()
+    if (!user) { toast.error('Not signed in'); throw new Error('Not signed in') }
+    const { error } = await supabase.from('accounts').insert({
+      ...data,
+      currency: (data.currency || 'SGD').toUpperCase(),
+      user_id: user.id,
+    })
+    if (error) { reportSupabaseError('Add account', error); throw error }
+    await refreshAccounts()
   }
 
-  const deleteCashBalance = async (id: string) => {
-    const { error } = await supabase.from('cash_balances').delete().eq('id', id)
-    if (error) {
-      reportSupabaseError('Delete cash balance', error)
-      throw error
-    }
-    await refreshCashBalances()
+  const updateAccount = async (id: string, data: Partial<Account>) => {
+    const { error } = await supabase.from('accounts').update({
+      ...data,
+      ...(data.currency ? { currency: data.currency.toUpperCase() } : {}),
+      updated_at: new Date().toISOString(),
+    }).eq('id', id)
+    if (error) { reportSupabaseError('Update account', error); throw error }
+    await refreshAccounts()
+  }
+
+  const deleteAccount = async (id: string) => {
+    const { error } = await supabase.from('accounts').delete().eq('id', id)
+    if (error) { reportSupabaseError('Delete account', error); throw error }
+    await refreshAccounts()
   }
 
   // ── applyTrade ─────────────────────────────────────────────────────────
@@ -498,13 +517,14 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   return (
     <PortfolioContext.Provider value={{
       holdings, enriched, stats, prices, fxRates, targets, settings,
-      transactions, positions, goals, cashBalances, totalCashBase, cashBalancesError,
+      transactions, positions, goals,
+      accounts, totalCashBase, accountsNetBase, netWorthBase, accountsError,
       loading, refreshHoldings, refreshPrices, refreshTransactions,
       addHolding, updateHolding, deleteHolding,
       upsertTarget, deleteTarget, updateSettings,
       addTransaction, addTransactionsBulk, updateTransaction, deleteTransaction,
       refreshGoals, addGoal, updateGoal, deleteGoal,
-      refreshCashBalances, upsertCashBalance, deleteCashBalance,
+      refreshAccounts, addAccount, updateAccount, deleteAccount,
       applyTrade,
     }}>
       {children}

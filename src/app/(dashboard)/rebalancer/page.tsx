@@ -23,9 +23,10 @@ import type { Currency } from '@/types'
 export default function RebalancerPage() {
   const {
     enriched, holdings, targets, prices, fxRates, loading, upsertTarget, deleteTarget, settings,
-    totalCashBase, cashBalances, applyTrade,
+    totalCashBase, accounts, applyTrade,
   } = usePortfolio()
   const base = (settings?.base_currency ?? 'USD') as Currency
+  const cashAccounts = accounts.filter((a) => a.type === 'cash')
 
   const [tradeRec, setTradeRec] = useState<RebalanceRecommendation | null>(null)
   const [recentlyExecuted, setRecentlyExecuted] = useState<Record<string, number>>({})
@@ -256,9 +257,9 @@ export default function RebalancerPage() {
                 value={newCash}
                 onChange={(e) => setNewCash(e.target.value)}
               />
-              {totalCashBase > 0 && cashBalances.length > 1 && (
+              {totalCashBase > 0 && cashAccounts.length > 1 && (
                 <p className="text-[11px] text-muted-foreground">
-                  Cash position: {cashBalances.map((c) => `${formatCurrency(Number(c.balance), c.currency)}`).join(' + ')}
+                  Cash position: {cashAccounts.map((a) => `${formatCurrency(Number(a.current_balance), a.currency)}`).join(' + ')}
                 </p>
               )}
             </div>

@@ -166,6 +166,89 @@ export interface RebalanceRecommendation {
   nativeAmount: number        // |delta| in the ticker's native currency
 }
 
+// ── Personal finance: accounts, categories, spending ──────────────────────
+
+export type AccountType = 'bank' | 'cash' | 'credit' | 'wallet'
+
+export interface Account {
+  id: string
+  user_id: string
+  name: string
+  type: AccountType
+  institution: string | null
+  currency: Currency | string
+  current_balance: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface AccountFormData {
+  name: string
+  type: AccountType
+  institution: string
+  currency: Currency
+  current_balance: string
+}
+
+export type CategoryKind = 'expense' | 'income' | 'transfer'
+
+export interface Category {
+  id: string
+  user_id: string
+  name: string
+  kind: CategoryKind
+  color: string | null
+  icon: string | null
+  parent_id: string | null
+  sort: number
+  created_at: string
+}
+
+export type BankTxnSource = 'csv' | 'email' | 'manual'
+
+export interface BankTransaction {
+  id: string
+  user_id: string
+  account_id: string | null
+  date: string
+  description: string
+  merchant: string | null
+  amount: number              // negative = expense, positive = income
+  currency: Currency | string
+  category_id: string | null
+  source: BankTxnSource
+  external_id: string | null  // dedupe key (csv row hash / gmail message id)
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface BankTransactionFormData {
+  account_id: string
+  date: string
+  description: string
+  merchant: string
+  amount: string              // signed; expense entered as negative
+  currency: Currency
+  category_id: string
+  notes: string
+}
+
+export interface CategorySpend {
+  category_id: string | null
+  name: string
+  amount: number              // absolute spend in base currency
+}
+
+export interface SpendingStats {
+  month: string               // 'YYYY-MM'
+  income: number              // base currency
+  expense: number             // base currency (positive magnitude)
+  net: number                 // income - expense
+  byCategory: CategorySpend[] // expense breakdown, base currency
+}
+
 export const DEFAULT_BENCHMARKS: BenchmarkConfig[] = [
   { ticker: 'SPY', name: 'S&P 500' },
   { ticker: 'QQQ', name: 'NASDAQ 100' },

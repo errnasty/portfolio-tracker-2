@@ -11,9 +11,10 @@ import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Upload, FileText, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react'
 import { formatCurrency, formatShares } from '@/lib/utils'
+import { PosbImport } from '@/components/spending/PosbImport'
 import type { Currency } from '@/types'
 
-type Format = 'ibkr' | 'generic'
+type Format = 'ibkr' | 'generic' | 'posb'
 
 export default function ImportPage() {
   const router = useRouter()
@@ -113,9 +114,9 @@ export default function ImportPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold">Import Transactions</h1>
+        <h1 className="text-2xl md:text-3xl font-bold">Import</h1>
         <p className="text-sm md:text-base text-muted-foreground">
-          Bulk-import buys, sells, dividends and splits from a broker statement
+          Bring in investment trades from a broker, or spending from your POSB bank statement
         </p>
       </div>
 
@@ -123,7 +124,10 @@ export default function ImportPage() {
         <TabsList>
           <TabsTrigger value="ibkr">Interactive Brokers</TabsTrigger>
           <TabsTrigger value="generic">Generic CSV</TabsTrigger>
+          <TabsTrigger value="posb">Bank (POSB)</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="posb"><PosbImport /></TabsContent>
 
         <TabsContent value="ibkr" className="space-y-4 pt-4">
           <Card>
@@ -165,6 +169,8 @@ VWRA,dividend,2024-12-15,0,0,12.45,USD,0,Q4`}</pre>
         </TabsContent>
       </Tabs>
 
+      {format !== 'posb' && (
+      <>
       {/* Upload */}
       <Card>
         <CardContent className="pt-6">
@@ -310,6 +316,8 @@ VWRA,dividend,2024-12-15,0,0,12.45,USD,0,Q4`}</pre>
             </CardContent>
           </Card>
         </>
+      )}
+      </>
       )}
     </div>
   )

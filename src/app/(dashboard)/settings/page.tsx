@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
+import { GmailCard } from '@/components/spending/GmailCard'
 import type { Currency } from '@/types'
 
 const CURRENCIES: { value: Currency; label: string }[] = [
@@ -56,6 +57,8 @@ export default function SettingsPage() {
           </Button>
         </CardContent>
       </Card>
+
+      <GmailCard />
     </div>
   )
 }

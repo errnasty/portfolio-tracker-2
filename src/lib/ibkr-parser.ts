@@ -67,7 +67,7 @@ function parseIbkrDate(s: string): string | null {
   return null
 }
 
-function parseNumber(s: string): number {
+export function parseNumber(s: string): number {
   if (!s) return 0
   const cleaned = s.replace(/[",\s]/g, '')
   const n = parseFloat(cleaned)
