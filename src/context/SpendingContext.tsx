@@ -5,27 +5,33 @@ import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { convertToBase } from '@/lib/calculations'
 import { usePortfolio } from '@/context/PortfolioContext'
-import { DEFAULT_CATEGORIES } from '@/lib/categorize'
-import type { Category, BankTransaction, SpendingStats, FxRates, Currency } from '@/types'
+import { DEFAULT_CATEGORIES, guessCategoryName } from '@/lib/categorize'
+import type { Category, CategoryRule, BankTransaction, SpendingStats, FxRates, Currency } from '@/types'
 
 type BankTxnInsert = Omit<BankTransaction, 'id' | 'user_id' | 'created_at' | 'updated_at'>
 
 interface SpendingContextValue {
   categories: Category[]
   bankTransactions: BankTransaction[]
+  categoryRules: CategoryRule[]
   categoryById: Record<string, Category>
   spendingStats: SpendingStats          // current calendar month, base currency
   loading: boolean
   error: string | null
   refreshCategories: () => Promise<void>
   refreshBankTransactions: () => Promise<void>
+  refreshCategoryRules: () => Promise<void>
   addCategory: (data: { name: string; kind?: Category['kind']; color?: string | null; icon?: string | null }) => Promise<void>
   deleteCategory: (id: string) => Promise<void>
+  addCategoryRule: (matchText: string, categoryId: string, priority?: number) => Promise<void>
+  deleteCategoryRule: (id: string) => Promise<void>
   addBankTransaction: (t: BankTxnInsert) => Promise<void>
   updateBankTransaction: (id: string, data: Partial<BankTransaction>) => Promise<void>
   deleteBankTransaction: (id: string) => Promise<void>
   bulkInsertBankTransactions: (rows: BankTxnInsert[]) => Promise<{ inserted: number }>
   statsForMonth: (ym: string) => SpendingStats
+  // Best category id for a transaction: user rules first, then built-in keywords.
+  categorize: (description: string, merchant?: string | null) => string | null
 }
 
 const SpendingContext = createContext<SpendingContextValue | null>(null)
@@ -41,6 +47,9 @@ function computeStats(
   fxRates: FxRates | null,
 ): SpendingStats {
   const catName = new Map(categories.map((c) => [c.id, c.name]))
+  // Transfers (e.g. top-ups to a brokerage account) move money between your own
+  // accounts — they're neither income nor spending, so exclude them.
+  const transferIds = new Set(categories.filter((c) => c.kind === 'transfer').map((c) => c.id))
   const toBase = (amt: number, cur: string) =>
     fxRates ? convertToBase(amt, cur, fxRates) : amt
 
@@ -50,6 +59,7 @@ function computeStats(
 
   for (const t of txns) {
     if (!t.date.startsWith(ym)) continue
+    if (t.category_id && transferIds.has(t.category_id)) continue
     const base = toBase(Number(t.amount) || 0, t.currency)
     if (base >= 0) {
       income += base
@@ -74,6 +84,7 @@ export function SpendingProvider({ children }: { children: React.ReactNode }) {
   const { fxRates, settings } = usePortfolio()
   const [categories, setCategories] = useState<Category[]>([])
   const [bankTransactions, setBankTransactions] = useState<BankTransaction[]>([])
+  const [categoryRules, setCategoryRules] = useState<CategoryRule[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -119,15 +130,25 @@ export function SpendingProvider({ children }: { children: React.ReactNode }) {
     setBankTransactions(data ?? [])
   }, [])
 
+  const refreshCategoryRules = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data } = await supabase
+      .from('category_rules').select('*').eq('user_id', user.id)
+      .order('priority', { ascending: false })
+    setCategoryRules(data ?? [])
+  }, [])
+
   useEffect(() => {
     async function init() {
       setLoading(true)
       await refreshCategories()
       await refreshBankTransactions()
+      await refreshCategoryRules()
       setLoading(false)
     }
     init()
-  }, [refreshCategories, refreshBankTransactions])
+  }, [refreshCategories, refreshBankTransactions, refreshCategoryRules])
 
   const addCategory: SpendingContextValue['addCategory'] = async ({ name, kind = 'expense', color = null, icon = null }) => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -143,6 +164,23 @@ export function SpendingProvider({ children }: { children: React.ReactNode }) {
     const { error: err } = await supabase.from('categories').delete().eq('id', id)
     if (err) { toast.error(`Delete category failed: ${err.message}`); throw err }
     await Promise.all([refreshCategories(), refreshBankTransactions()])
+  }
+
+  const addCategoryRule = async (matchText: string, categoryId: string, priority = 0) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { error: err } = await supabase.from('category_rules').upsert(
+      { user_id: user.id, match_text: matchText.trim().toLowerCase(), category_id: categoryId, priority },
+      { onConflict: 'user_id,match_text' },
+    )
+    if (err) { toast.error(`Add rule failed: ${err.message}`); throw err }
+    await refreshCategoryRules()
+  }
+
+  const deleteCategoryRule = async (id: string) => {
+    const { error: err } = await supabase.from('category_rules').delete().eq('id', id)
+    if (err) { toast.error(`Delete rule failed: ${err.message}`); throw err }
+    await refreshCategoryRules()
   }
 
   const addBankTransaction = async (t: BankTxnInsert) => {
@@ -186,6 +224,26 @@ export function SpendingProvider({ children }: { children: React.ReactNode }) {
     [categories],
   )
 
+  const catIdByName = useMemo(
+    () => Object.fromEntries(categories.map((c) => [c.name, c.id])) as Record<string, string>,
+    [categories],
+  )
+
+  // User rules sorted by priority, then longest keyword (most specific) first.
+  const sortedRules = useMemo(
+    () => [...categoryRules].sort((a, b) => b.priority - a.priority || b.match_text.length - a.match_text.length),
+    [categoryRules],
+  )
+
+  const categorize = useCallback((description: string, merchant?: string | null): string | null => {
+    const text = `${description ?? ''} ${merchant ?? ''}`.toLowerCase()
+    for (const r of sortedRules) {
+      if (r.match_text && text.includes(r.match_text)) return r.category_id
+    }
+    const g = guessCategoryName(description, merchant)
+    return g ? (catIdByName[g] ?? null) : null
+  }, [sortedRules, catIdByName])
+
   const statsForMonth = useCallback(
     (ym: string) => computeStats(bankTransactions, ym, categories, fxRates),
     [bankTransactions, categories, fxRates],
@@ -201,11 +259,11 @@ export function SpendingProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <SpendingContext.Provider value={{
-      categories, bankTransactions, categoryById, spendingStats, loading, error,
-      refreshCategories, refreshBankTransactions,
-      addCategory, deleteCategory,
+      categories, bankTransactions, categoryRules, categoryById, spendingStats, loading, error,
+      refreshCategories, refreshBankTransactions, refreshCategoryRules,
+      addCategory, deleteCategory, addCategoryRule, deleteCategoryRule,
       addBankTransaction, updateBankTransaction, deleteBankTransaction, bulkInsertBankTransactions,
-      statsForMonth,
+      statsForMonth, categorize,
     }}>
       {children}
     </SpendingContext.Provider>

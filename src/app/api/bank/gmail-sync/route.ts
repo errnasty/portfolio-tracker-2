@@ -95,6 +95,19 @@ export async function POST(req: Request) {
   // Map category guesses → category ids for this user.
   const { data: cats } = await supabase.from('categories').select('id, name').eq('user_id', user.id)
   const catIdByName = new Map((cats ?? []).map((c) => [c.name, c.id]))
+  // User-defined rules run before the built-in keyword matcher.
+  const { data: ruleRows } = await supabase
+    .from('category_rules').select('match_text, category_id, priority').eq('user_id', user.id)
+  const sortedRules = (ruleRows ?? [])
+    .sort((a, b) => b.priority - a.priority || b.match_text.length - a.match_text.length)
+  const categoryFor = (desc: string, merchant: string | null, amount: number): string | null => {
+    const text = `${desc} ${merchant ?? ''}`.toLowerCase()
+    for (const r of sortedRules) {
+      if (r.match_text && text.includes(r.match_text)) return r.category_id
+    }
+    const g = amount < 0 ? guessCategoryName(desc, merchant) : 'Income'
+    return g ? (catIdByName.get(g) ?? null) : null
+  }
   // Default account: first bank/cash account, else null.
   const { data: accts } = await supabase
     .from('accounts').select('id, type').eq('user_id', user.id).order('created_at')
@@ -115,7 +128,6 @@ export async function POST(req: Request) {
     if (!parsed) continue
 
     const date = parsed.date ?? new Date(Number(msg.internalDate)).toISOString().slice(0, 10)
-    const guess = parsed.amount < 0 ? guessCategoryName(parsed.description, parsed.merchant) : 'Income'
     rows.push({
       user_id: user.id,
       account_id: defaultAccount,
@@ -124,7 +136,7 @@ export async function POST(req: Request) {
       merchant: parsed.merchant,
       amount: parsed.amount,
       currency: parsed.currency,
-      category_id: guess ? (catIdByName.get(guess) ?? null) : null,
+      category_id: categoryFor(parsed.description, parsed.merchant, parsed.amount),
       source: 'email',
       external_id: `gmail-${id}`,
       notes: null,

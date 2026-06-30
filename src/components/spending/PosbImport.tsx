@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { usePortfolio } from '@/context/PortfolioContext'
 import { useSpending } from '@/context/SpendingContext'
 import { parsePosbCsv, type BankParseResult } from '@/lib/posb-parser'
-import { guessCategoryName } from '@/lib/categorize'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,7 +16,8 @@ import { formatCurrency } from '@/lib/utils'
 export function PosbImport() {
   const router = useRouter()
   const { accounts } = usePortfolio()
-  const { categories, bulkInsertBankTransactions } = useSpending()
+  const { categories, bulkInsertBankTransactions, categorize } = useSpending()
+  const incomeId = categories.find((c) => c.name === 'Income')?.id
 
   const [filename, setFilename] = useState('')
   const [result, setResult] = useState<BankParseResult | null>(null)
@@ -27,11 +27,6 @@ export function PosbImport() {
   const [importing, setImporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-
-  const catIdByName = useMemo(
-    () => Object.fromEntries(categories.map((c) => [c.name, c.id])) as Record<string, string>,
-    [categories],
-  )
 
   const rows = result?.rows ?? []
   const importable = useMemo(
@@ -57,10 +52,10 @@ export function PosbImport() {
       parsed.rows.forEach((row, i) => {
         if (!row.txn) return
         sel.add(i)
-        if (row.txn.amount < 0) {
-          const g = guessCategoryName(row.txn.description, row.txn.merchant)
-          if (g && catIdByName[g]) guesses[i] = catIdByName[g]
-        }
+        // Dynamic categorize: user rules first, then built-in keywords.
+        const cid = categorize(row.txn.description, row.txn.merchant)
+        if (cid) guesses[i] = cid
+        else if (row.txn.amount >= 0 && incomeId) guesses[i] = incomeId
       })
       setSelected(sel)
       setCats(guesses)

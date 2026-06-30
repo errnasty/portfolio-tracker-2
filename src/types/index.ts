@@ -205,6 +205,15 @@ export interface Category {
   created_at: string
 }
 
+export interface CategoryRule {
+  id: string
+  user_id: string
+  match_text: string
+  category_id: string
+  priority: number
+  created_at: string
+}
+
 export type BankTxnSource = 'csv' | 'email' | 'manual'
 
 export interface BankTransaction {

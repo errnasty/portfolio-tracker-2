@@ -251,6 +251,29 @@ create policy "Users manage own bank transactions"
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+-- User-defined categorization rules (dynamic). Each rule maps a keyword
+-- (matched case-insensitively as a substring of description+merchant) to a
+-- category. Checked before the built-in keyword list, highest priority first.
+create table if not exists category_rules (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid references auth.users not null,
+  match_text  text not null,
+  category_id uuid references categories(id) on delete cascade not null,
+  priority    integer not null default 0,
+  created_at  timestamptz default now(),
+  unique(user_id, match_text)
+);
+
+create index if not exists idx_category_rules_user on category_rules(user_id);
+
+alter table category_rules enable row level security;
+
+drop policy if exists "Users manage own category rules" on category_rules;
+create policy "Users manage own category rules"
+  on category_rules for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
 -- Google OAuth tokens for Gmail alert sync (Phase B). Stores the long-lived
 -- refresh token so the server can mint Gmail access tokens to read DBS/POSB
 -- transaction-alert emails. RLS-own: only the user can read/write their row.

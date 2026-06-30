@@ -5,7 +5,6 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { usePortfolio } from '@/context/PortfolioContext'
 import { useSpending } from '@/context/SpendingContext'
 import { formatCurrency } from '@/lib/utils'
-import { guessCategoryName } from '@/lib/categorize'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -30,7 +29,7 @@ export default function SpendingPage() {
   const { settings, accounts } = usePortfolio()
   const {
     bankTransactions, categories, categoryById, statsForMonth, loading, error,
-    addBankTransaction, updateBankTransaction, deleteBankTransaction,
+    addBankTransaction, updateBankTransaction, deleteBankTransaction, categorize,
   } = useSpending()
   const base = (settings?.base_currency ?? 'USD') as Currency
 
@@ -76,12 +75,9 @@ export default function SpendingPage() {
     const abs = Math.abs(parseFloat(form.amount))
     if (isNaN(abs) || !form.description.trim()) return
     const amount = form.kind === 'expense' ? -abs : abs
-    // Auto-categorize when the user didn't pick a category.
+    // Auto-categorize when the user didn't pick a category (user rules + built-in).
     let category_id: string | null = form.category_id || null
-    if (!category_id && form.kind === 'expense') {
-      const guess = guessCategoryName(form.description, form.merchant)
-      if (guess) category_id = categories.find((c) => c.name === guess)?.id ?? null
-    }
+    if (!category_id) category_id = categorize(form.description, form.merchant)
     setSaving(true)
     try {
       await addBankTransaction({

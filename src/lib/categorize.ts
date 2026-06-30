@@ -20,6 +20,8 @@ export const DEFAULT_CATEGORIES: DefaultCategory[] = [
   { name: 'Entertainment',     kind: 'expense',  color: '#8b5cf6', icon: 'Clapperboard' },
   { name: 'Health',            kind: 'expense',  color: '#f43f5e', icon: 'HeartPulse' },
   { name: 'Travel',            kind: 'expense',  color: '#14b8a6', icon: 'Plane' },
+  { name: 'Education',         kind: 'expense',  color: '#3b82f6', icon: 'GraduationCap' },
+  { name: 'Giving',            kind: 'expense',  color: '#d946ef', icon: 'HandHeart' },
   { name: 'Transfers',         kind: 'transfer', color: '#6b7280', icon: 'ArrowLeftRight' },
   { name: 'Other',             kind: 'expense',  color: '#94a3b8', icon: 'Shapes' },
 ]
@@ -29,50 +31,85 @@ export const DEFAULT_CATEGORIES: DefaultCategory[] = [
 // hit wins, so list the more specific buckets earlier. Tuned for common
 // Singapore merchants / DBS-POSB statement narratives.
 const RULES: { category: string; keywords: string[] }[] = [
+  // Income / money in (checked first so "Incoming PayNow", refunds, NS pay win).
   { category: 'Income', keywords: [
     'salary', 'payroll', 'giro salary', 'sal /', 'interest earned', 'credit interest',
     'refund', 'cashback', 'cash back', 'dividend', 'ang pow', 'reimburse',
+    'incoming paynow', 'send back from paylah', 'mindef saf',
   ] },
+  // Investment / brokerage top-ups → Transfers (kept high so they beat the
+  // generic "PayNow Transfer" catch-all and aren't counted as spending).
   { category: 'Transfers', keywords: [
-    'paynow', 'paylah', 'fund transfer', 'funds transfer', 'i-bank', 'ibank transfer',
-    'giro', 'atm', 'cash withdrawal', 'top up', 'topup', 'transfer to', 'transfer from',
+    'interactive br', 'rec trust', 'ibkr', 'tiger brokers', 'moomoo',
+    'syfe', 'endowus', 'webull',
   ] },
   { category: 'Groceries', keywords: [
-    'fairprice', 'fair price', 'ntuc', 'cold storage', 'sheng siong', 'giant',
-    'prime super', 'redmart', 'dairy farm', 'mustafa', 'don don donki', 'donki',
+    'fairprice', 'fair price', 'ntuc', 'fp xtra', 'finest', 'cold storage', 'sheng siong',
+    'giant', 'prime super', 'redmart', 'dairy farm', 'mustafa', 'don don donki', 'donki',
+    '7-eleven', '7 eleven', 'cheers', 'az supermart', 'supermart', 'lifestylemart',
   ] },
   { category: 'Food & Dining', keywords: [
     'grabfood', 'grab*food', 'grab food', 'foodpanda', 'food panda', 'deliveroo',
     'mcdonald', 'kfc', 'starbucks', 'coffee', 'kopitiam', 'koufu', 'food republic',
     'subway', 'jollibee', 'burger', 'pizza', 'toast box', 'ya kun', 'breadtalk',
     'restaurant', 'dining', 'cafe', 'hawker', 'eatery', 'bakery', 'bubble tea', 'liho',
+    'wingstop', 'popeyes', 'coco ichibanya', 'kajiken', 'playmade', 'mixue', 'mr coconut',
+    'gelato', 'astons', 'sbcd', 'katsu', 'bari bari', 'fu lin', 'dopa dopa', 'llao llao',
+    'udon', 'sushi', 'hup lee', 'kuching kolo', 'kolomee', 'duduxiang', 'xin feng seafood',
+    'fortune food', 'jia xiang wei', 'hot palette', 'darkness dessert', 'joji', 'eccellente',
+    'bhc chicken', 'sanook', 'drop foods', 'cantine', 'hanbaobao', 'yang guo fu', 'ding feng',
+    'nasi padang', 'yew kee', 'huang pu soya', 'fitra chicken', 'ba guo grill', 'shun fa',
+    'maixiang', 'turf n tide', 'ah ching claypot', 'qashier', 'vending', 'nyp sc',
+    'tang xin', 'chateraise', 'homm dessert', 'yeah gelato', '4fingers', 'fr 313',
+    'mami fita', 'sushi gogo', 'from there on', 'turkish lezzet', 'sananook', 'chaoyuan',
   ] },
   { category: 'Transport', keywords: [
-    'grab', 'gojek', 'tada', 'comfortdelgro', 'comfort delgro', 'cdg', 'taxi',
-    'simplygo', 'transitlink', 'transit link', 'ez-link', 'ezlink', 'smrt', 'sbs transit',
-    'shell', 'esso', 'caltex', 'spc', 'petrol', 'parking', 'season parking', 'erp',
+    'helloride', 'bus/mrt', 'simplygo', 'transit', 'grab', 'gojek', 'tada',
+    'comfortdelgro', 'comfort delgro', 'cdg', 'taxi', 'causewaylink', 'transitlink',
+    'ez-link', 'ezlink', 'smrt', 'sbs transit', 'shell', 'esso', 'caltex', 'spc',
+    'petrol', 'parking', 'season parking', 'erp',
   ] },
   { category: 'Bills & Utilities', keywords: [
-    'singtel', 'starhub', 'm1 ', 'simba', 'sp group', 'sp services', 'city gas',
-    'town council', 'conservancy', 'insurance', 'prudential', ' aia', 'ntuc income',
-    'great eastern', 'spotify', 'netflix', 'disney', 'youtube premium', 'google storage',
-    'google one', 'icloud', 'apple.com/bill', 'openai', 'chatgpt', 'adobe', 'subscription',
+    'm1 maxx', 'm1 ', 'singtel', 'starhub', 'simba', 'circles.life', 'circles life',
+    'sp group', 'sp services', 'city gas', 'town council', 'conservancy', 'insurance',
+    'prudential', ' aia', 'ntuc income', 'great eastern', 'spotify', 'netflix', 'disney',
+    'youtube premium', 'google storage', 'google one', 'google*', 'icloud', 'apple.com/bill',
+    'openai', 'chatgpt', 'anthropic', 'claude.ai', 'claude sub', 'canva', 'microsoft',
+    'netlify', 'adobe', 'subscription',
   ] },
   { category: 'Health', keywords: [
-    'clinic', 'hospital', 'polyclinic', 'pharmacy', 'dental', 'dentist', 'unity',
-    'watsons', 'guardian', 'raffles medical', 'healthway', 'medical', 'optical',
+    'clinic', 'hospital', 'polyclinic', 'pharmacy', 'dental', 'dentist', 'neua dental',
+    'unity pharmacy', 'watsons', 'guardian', 'raffles medical', 'healthway', 'medical', 'optical',
   ] },
   { category: 'Travel', keywords: [
     'airbnb', 'agoda', 'booking.com', 'expedia', 'singapore airlines', 'scoot',
     'jetstar', 'airasia', 'emirates', 'hotel', 'klook', 'trip.com', 'changi airport',
   ] },
   { category: 'Entertainment', keywords: [
-    'golden village', 'cathay cineplex', 'shaw theat', 'cinema', 'steam games',
-    'steampowered', 'playstation', 'nintendo', 'sistic', 'ticketmaster', 'spotify',
+    'golden village', 'cathay cineplex', 'shaw theat', 'cinema', 'steam purchase',
+    'steampowered', 'steam ', 'playstation', 'nintendo', 'sistic', 'ticketmaster',
+    'card arena', 'dopamine', 'fever*', 'minecraft',
   ] },
   { category: 'Shopping', keywords: [
     'shopee', 'lazada', 'amazon', 'qoo10', 'uniqlo', 'zalora', 'decathlon', 'ikea',
     'courts', 'challenger', 'apple store', 'taobao', 'aliexpress', 'h&m', 'sephora',
+    'kinokuniya', 'takashimaya', 'g2000', 'floristique', 'flowersandkisses', 'brilliant prints',
+  ] },
+  { category: 'Education', keywords: [
+    'national university of singapor', 'nanyang technological', 'singapore management',
+    'singapore university of tech', 'singapore institute of tech', "s'pore institute of tech",
+    'sutd', 'ntu -', 'smu singapore', 'tuition', 'school fees', 'course fee', 'udemy', 'coursera',
+  ] },
+  { category: 'Giving', keywords: [
+    'faith community baptist', 'fcbc', 'missions faith', 'church', 'donation', 'donate',
+    'offering', 'charity', 'tithe', 'community chest', 'giving.sg',
+  ] },
+  // Generic transfers — LAST, so a merchant keyword above always wins. Pure
+  // peer-to-peer PayNow/GIRO with no merchant match lands here (excluded from spend).
+  { category: 'Transfers', keywords: [
+    'paynow transfer', 'paynow', 'paylah', 'fund transfer', 'funds transfer',
+    'i-bank', 'ibank', 'giro', 'atm', 'cash withdrawal', 'top up', 'topup',
+    'transfer to', 'transfer from',
   ] },
 ]
 

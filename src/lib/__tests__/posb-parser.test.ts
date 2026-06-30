@@ -54,3 +54,36 @@ describe('parsePosbCsv', () => {
     expect(parsePosbCsv('foo,bar\n1,2').headerFound).toBe(false)
   })
 })
+
+// Matches the real digibank export layout (Status + Debit/Credit columns,
+// dd-Mon-yy dates, separate Description + Ref columns).
+const REAL = `Account Details For:,Ernest Ng Savings 244-92015-2
+Statement Date:,30-Jun-26
+Available Balance:,SGD 219.17
+Ledger Balance:,SGD 269.50
+
+Transaction Date,Transaction Type,Description,Transaction Ref1,Transaction Ref2,Transaction Ref3,Status,Debit Amount,Credit Amount
+29-Jun-26,UMC-S,SHOPEE SINGAPORE,SHOPEE SG,5264-7110,000002621,Settled,145.34,
+29-Jun-26,ICT,Incoming,Incoming,From: TAY,OTHR OTH,Settled,,30.00
+28-Jun-26,ITR,INTERACTIVE BR SG- REC TRUST,IBKR,,,Settled,500.00,
+`
+
+describe('parsePosbCsv — real digibank layout', () => {
+  const res = parsePosbCsv(REAL)
+  const txns = res.rows.map((r) => r.txn).filter(Boolean)
+
+  it('parses all rows with correct signs and dates', () => {
+    expect(res.headerFound).toBe(true)
+    expect(txns.length).toBe(3)
+    expect(txns[0]!.amount).toBe(-145.34)
+    expect(txns[1]!.amount).toBe(30)
+    expect(txns[2]!.amount).toBe(-500)
+    expect(txns[0]!.date).toBe('2026-06-29')
+    expect(txns[2]!.date).toBe('2026-06-28')
+  })
+
+  it('keeps the description text used for categorization', () => {
+    expect(txns[0]!.description).toContain('SHOPEE')
+    expect(txns[2]!.description).toContain('INTERACTIVE BR')
+  })
+})
