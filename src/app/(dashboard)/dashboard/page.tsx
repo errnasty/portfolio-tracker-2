@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { AreaChart, Area, ResponsiveContainer } from 'recharts'
+import { AreaChart, Area, Line, ComposedChart, XAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { usePortfolio } from '@/context/PortfolioContext'
 import { useSpending } from '@/context/SpendingContext'
 import { formatCurrency, formatPercent, gainLossColor } from '@/lib/utils'
@@ -92,6 +92,35 @@ export default function DashboardPage() {
     .map(([label, d]) => ({ label, v: valAt(d) }))
     .filter((x) => x.v != null)
     .map((x) => ({ label: x.label, delta: netWorthBase - (x.v as number) }))
+
+  const totalBudget = budgets.reduce((s, b) => s + Number(b.amount), 0)
+
+  // Daily spend + cumulative curve for the current month (from bank txns).
+  const monthDaily = useMemo(() => {
+    const now = new Date()
+    const ym = now.toISOString().slice(0, 7)
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+    const todayDay = now.getDate()
+    const perDay = new Array(daysInMonth).fill(0)
+    for (const t of bankTransactions) {
+      if (!t.date.startsWith(ym)) continue
+      const amt = Number(t.amount)
+      if (amt >= 0) continue
+      const day = parseInt(t.date.slice(8, 10), 10)
+      if (day >= 1 && day <= daysInMonth) perDay[day - 1] += -amt
+    }
+    let run = 0
+    const curve = perDay.map((v, i) => {
+      run += v
+      return {
+        day: i + 1,
+        cum: i + 1 <= todayDay ? Math.round(run * 100) / 100 : null,
+        pace: totalBudget > 0 ? Math.round((totalBudget * (i + 1) / daysInMonth) * 100) / 100 : null,
+      }
+    })
+    const maxDay = Math.max(1, ...perDay)
+    return { perDay, curve, maxDay, todayDay, daysInMonth }
+  }, [bankTransactions, totalBudget])
 
   const topHoldings = [...enriched].sort((a, b) => b.currentValueBase - a.currentValueBase).slice(0, 6)
   const allocHoldings = [...enriched].sort((a, b) => b.currentValueBase - a.currentValueBase).slice(0, 5)
@@ -246,6 +275,47 @@ export default function DashboardPage() {
           </Panel>
         )}
 
+        {bankTransactions.length > 0 && (
+          <Panel label="SPEND_CURVE" tone="cool" right="MTD vs pace" href="/spending" className="md:col-span-2">
+            <div className="p-3.5">
+              <ResponsiveContainer width="100%" height={120}>
+                <ComposedChart data={monthDaily.curve} margin={{ top: 4, right: 6, bottom: 0, left: 0 }}>
+                  <defs>
+                    <linearGradient id="spendCum" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#6aa9ff" stopOpacity={0.3} />
+                      <stop offset="100%" stopColor="#6aa9ff" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="day" tick={{ fontSize: 9 }} stroke="hsl(var(--muted-foreground))" axisLine={false} tickLine={false} interval={6} />
+                  <Tooltip
+                    formatter={(v, n) => [formatCurrency(Number(v), base), n === 'cum' ? 'Spent' : 'Budget pace']}
+                    labelFormatter={(d) => `Day ${d}`}
+                    contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 4, fontSize: 12 }}
+                  />
+                  {totalBudget > 0 && <Line type="monotone" dataKey="pace" stroke="hsl(var(--muted-foreground))" strokeWidth={1} strokeDasharray="3 3" dot={false} isAnimationActive={false} />}
+                  <Area type="monotone" dataKey="cum" stroke="#6aa9ff" strokeWidth={1.4} fill="url(#spendCum)" connectNulls dot={false} isAnimationActive={false} />
+                </ComposedChart>
+              </ResponsiveContainer>
+              {/* daily heatmap */}
+              <div className="mt-3 flex flex-wrap gap-[3px]">
+                {monthDaily.perDay.map((v, i) => {
+                  const intensity = v > 0 ? 0.18 + 0.82 * (v / monthDaily.maxDay) : 0.06
+                  const isToday = i + 1 === monthDaily.todayDay
+                  return (
+                    <div
+                      key={i}
+                      title={`Day ${i + 1} · ${formatCurrency(v, base)}`}
+                      className="h-3.5 w-3.5 rounded-[1px]"
+                      style={{ backgroundColor: `rgba(106,169,255,${intensity})`, outline: isToday ? '1px solid hsl(var(--primary))' : 'none' }}
+                    />
+                  )
+                })}
+              </div>
+              <div className="mt-1.5 flex justify-between text-[9px] text-muted-foreground"><span>day 1</span><span>today · day {monthDaily.todayDay}</span></div>
+            </div>
+          </Panel>
+        )}
+
         {recent.length > 0 && (
           <Panel label="SIGNAL_LOG" right="recent" href="/spending">
             <div>
@@ -327,17 +397,30 @@ export default function DashboardPage() {
           <div className="border-t border-border px-3.5 py-2 text-[10px]"><Link href="/subscriptions" className="text-muted-foreground underline hover:text-foreground">manage →</Link></div>
         </Panel>
       </div>
+
+      {/* command bar */}
+      <div className="flex flex-wrap justify-between gap-2 rounded-sm border border-border bg-background px-4 py-2 text-[11px] text-muted-foreground">
+        <span>
+          <span className="text-primary">▸</span> go:{' '}
+          <Link href="/spending" className="hover:text-foreground">spending</Link> ·{' '}
+          <Link href="/holdings" className="hover:text-foreground">holdings</Link> ·{' '}
+          <Link href="/budgets" className="hover:text-foreground">budgets</Link> ·{' '}
+          <Link href="/subscriptions" className="hover:text-foreground">subs</Link> ·{' '}
+          <Link href="/report" className="hover:text-foreground">report</Link>
+        </span>
+        <span>portfolio + spending · one console</span>
+      </div>
     </div>
   )
 }
 
 function Panel({
-  label, right, tone, href, children,
+  label, right, tone, href, className, children,
 }: {
-  label: string; right?: React.ReactNode; tone?: 'accent' | 'cool' | 'mute'; href?: string; children: React.ReactNode
+  label: string; right?: React.ReactNode; tone?: 'accent' | 'cool' | 'mute'; href?: string; className?: string; children: React.ReactNode
 }) {
   return (
-    <div className="lift border border-border rounded-sm bg-card overflow-hidden">
+    <div className={`lift border border-border rounded-sm bg-card overflow-hidden ${className ?? ''}`}>
       <SectionLabel tone={tone} right={right} href={href}>{label}</SectionLabel>
       {children}
     </div>
