@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { PortfolioProvider } from '@/context/PortfolioContext'
 import { SpendingProvider } from '@/context/SpendingContext'
@@ -9,6 +9,7 @@ import { Sidebar } from '@/components/layout/Sidebar'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
+  const pathname = usePathname()
   const [checking, setChecking] = useState(true)
 
   useEffect(() => {
@@ -37,7 +38,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="flex min-h-screen bg-background">
           <Sidebar />
           <main className="flex-1 pt-12 md:pt-0 md:pl-56">
-            <div className="mx-auto max-w-7xl p-3 sm:p-4 md:p-6 lg:p-8">
+            <div key={pathname} className="mx-auto max-w-7xl p-3 sm:p-4 md:p-6 lg:p-8 animate-fade-up">
               {children}
             </div>
           </main>

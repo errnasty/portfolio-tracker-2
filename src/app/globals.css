@@ -50,6 +50,32 @@
   }
 }
 
+/* ── Motion: transitions & micro-interactions ───────────────────────────── */
+@layer utilities {
+  @keyframes dc-fade-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @keyframes dc-fade-in { from { opacity: 0; } to { opacity: 1; } }
+  /* Route content entrance — keyed by pathname so it re-runs per navigation. */
+  .animate-fade-up { animation: dc-fade-up 0.22s ease-out both; }
+  .animate-fade-in { animation: dc-fade-in 0.2s ease-out both; }
+  /* Clickable panels/rows: subtle lift + accent border (transform/opacity only). */
+  .lift { transition: transform 0.15s ease-out, border-color 0.15s ease-out, background-color 0.15s ease-out; }
+  .lift:hover { transform: translateY(-1px); border-color: hsl(var(--primary) / 0.45); }
+  .lift:active { transform: translateY(0); }
+  /* Press feedback for tappable controls. */
+  .press { transition: transform 0.12s ease-out, opacity 0.12s ease-out, background-color 0.15s ease-out; }
+  .press:active { transform: scale(0.97); }
+}
+
+/* Honor reduced-motion: drop animation + transforms, keep instant. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .lift:hover, .press:active { transform: none !important; }
+}
+
 /* ── Responsive table utilities ─────────────────────────────────────────── */
 /* Wrap a horizontally-scrolling table; the right edge gets a fade gradient
    so users see there's more content when the table overflows. */

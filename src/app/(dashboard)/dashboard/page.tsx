@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { usePortfolio } from '@/context/PortfolioContext'
 import { useSpending } from '@/context/SpendingContext'
 import { formatCurrency, formatPercent, gainLossColor } from '@/lib/utils'
@@ -21,6 +22,7 @@ export default function DashboardPage() {
     spendingStats, bankTransactions, categoryById, budgets, subscriptionSummary,
   } = useSpending()
   const base = (settings?.base_currency ?? 'USD') as Currency
+  const router = useRouter()
 
   const holdingsValue = stats?.holdingsValue ?? 0
   const invested = stats?.totalValue ?? 0
@@ -138,14 +140,14 @@ export default function DashboardPage() {
                 <div className="mt-1.5 text-[12.5px] leading-snug">{a.title}</div>
                 <div className="mt-1 text-[11px] text-muted-foreground leading-relaxed">{a.sub}</div>
                 <Link href={a.href}>
-                  <button className="mt-2 bg-primary px-2.5 py-1 text-[11px] font-bold text-primary-foreground">{a.cta} →</button>
+                  <button className="press mt-2 rounded-sm bg-primary px-2.5 py-1 text-[11px] font-bold text-primary-foreground hover:bg-primary/90">{a.cta} →</button>
                 </Link>
               </div>
             ))}
           </aside>
 
           <main className="min-w-0">
-            <SectionLabel right={`${enriched.length} positions`}>HOLDINGS</SectionLabel>
+            <SectionLabel href="/holdings" right={`${enriched.length} positions`}>HOLDINGS</SectionLabel>
             {topHoldings.length === 0 ? (
               <div className="p-4 text-xs text-muted-foreground">No holdings. <Link href="/holdings" className="underline">Add a position</Link>.</div>
             ) : (
@@ -163,7 +165,7 @@ export default function DashboardPage() {
                   </thead>
                   <tbody className="tabular-nums">
                     {topHoldings.map((h) => (
-                      <tr key={h.id} className="border-t border-border">
+                      <tr key={h.id} onClick={() => router.push('/holdings')} className="border-t border-border cursor-pointer transition-colors hover:bg-accent/40">
                         <td className="px-3.5 py-2 font-bold">{h.ticker}<div className="text-[10px] font-normal text-muted-foreground truncate max-w-[120px]">{h.name ?? '—'}</div></td>
                         <td className="px-2 py-2 text-right whitespace-nowrap">{h.currentPrice > 0 ? formatCurrency(h.currentPrice, h.priceCurrency) : '—'}</td>
                         <td className={`px-2 py-2 text-right ${h.currentPrice > 0 ? gainLossColor(h.dayChange) : 'text-muted-foreground'}`}>{h.currentPrice > 0 ? formatPercent(h.dayChangePct) : '—'}</td>
@@ -187,7 +189,7 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
 
         {topCats.length > 0 && (
-          <Panel label="SPEND_BY_CATEGORY" tone="cool" right="this month">
+          <Panel label="SPEND_BY_CATEGORY" tone="cool" right="this month" href="/spending">
             <div className="p-3.5 space-y-2">
               {topCats.map((c) => {
                 const pct = expense > 0 ? (c.amount / expense) * 100 : 0
@@ -203,7 +205,7 @@ export default function DashboardPage() {
         )}
 
         {recent.length > 0 && (
-          <Panel label="SIGNAL_LOG" right="recent">
+          <Panel label="SIGNAL_LOG" right="recent" href="/spending">
             <div>
               {recent.map((t) => {
                 const inc = Number(t.amount) >= 0
@@ -221,7 +223,7 @@ export default function DashboardPage() {
         )}
 
         {accounts.length > 0 && (
-          <Panel label="ACCOUNTS" tone="cool" right={formatCurrency(accountsNetBase, base)}>
+          <Panel label="ACCOUNTS" tone="cool" right={formatCurrency(accountsNetBase, base)} href="/spending">
             <div>
               {accounts.map((a) => (
                 <div key={a.id} className="grid grid-cols-[1fr_auto] gap-2 border-b border-border last:border-0 px-3.5 py-2 text-[11px]">
@@ -236,7 +238,7 @@ export default function DashboardPage() {
         )}
 
         {allocHoldings.length > 0 && (
-          <Panel label="ALLOCATION" right="% of portfolio">
+          <Panel label="ALLOCATION" right="% of portfolio" href="/analytics">
             <div className="p-3.5 space-y-2">
               {allocHoldings.map((h) => (
                 <div key={h.id}>
@@ -255,7 +257,7 @@ export default function DashboardPage() {
         )}
 
         {budgetRows.length > 0 && (
-          <Panel label="BUDGETS" tone="cool" right="MTD">
+          <Panel label="BUDGETS" tone="cool" right="MTD" href="/budgets">
             <div className="p-3.5 space-y-2.5">
               {budgetRows.map((b) => {
                 const pct = b.limit > 0 ? (b.spent / b.limit) * 100 : 0
@@ -274,7 +276,7 @@ export default function DashboardPage() {
           </Panel>
         )}
 
-        <Panel label="SUBSCRIPTIONS" tone="cool" right="14d auto-sync">
+        <Panel label="SUBSCRIPTIONS" tone="cool" right="14d auto-sync" href="/subscriptions">
           <div className="grid grid-cols-3 gap-3 p-3.5">
             <Mini label="ACTIVE / MO" value={formatCurrency(subscriptionSummary.activeMonthly, base)} />
             <Mini label="CUT / YR" value={formatCurrency(subscriptionSummary.potentialMonthly * 12, base)} tone="text-amber-500" />
@@ -288,13 +290,13 @@ export default function DashboardPage() {
 }
 
 function Panel({
-  label, right, tone, children,
+  label, right, tone, href, children,
 }: {
-  label: string; right?: React.ReactNode; tone?: 'accent' | 'cool' | 'mute'; children: React.ReactNode
+  label: string; right?: React.ReactNode; tone?: 'accent' | 'cool' | 'mute'; href?: string; children: React.ReactNode
 }) {
   return (
-    <div className="border border-border rounded-sm bg-card overflow-hidden">
-      <SectionLabel tone={tone} right={right}>{label}</SectionLabel>
+    <div className="lift border border-border rounded-sm bg-card overflow-hidden">
+      <SectionLabel tone={tone} right={right} href={href}>{label}</SectionLabel>
       {children}
     </div>
   )
