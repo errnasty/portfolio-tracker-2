@@ -244,6 +244,42 @@ export interface BankTransactionFormData {
   notes: string
 }
 
+export interface Budget {
+  id: string
+  user_id: string
+  category_id: string
+  amount: number              // monthly limit, base currency
+  period: 'monthly'
+  created_at: string
+  updated_at: string
+}
+
+export type SubscriptionState = 'active' | 'could_cancel' | 'cancelled'
+
+// Persisted per-merchant cancel state (the savings tracker).
+export interface SubscriptionStatus {
+  id: string
+  user_id: string
+  merchant_key: string
+  status: SubscriptionState
+  label: string | null
+  monthly_amount: number | null
+  updated_at: string
+}
+
+// Derived recurring charge (detected from bank transactions + joined status).
+export interface Subscription {
+  key: string                 // normalized merchant key
+  label: string
+  monthlyAmount: number       // base currency, representative per-month cost
+  annualAmount: number        // monthlyAmount * 12, base
+  occurrences: number
+  months: number              // distinct months seen
+  lastDate: string
+  categoryId: string | null
+  status: SubscriptionState
+}
+
 export interface CategorySpend {
   category_id: string | null
   name: string

@@ -155,6 +155,17 @@ export async function POST(req: Request) {
       const { data, error } = await supabase.from('bank_transactions').insert(fresh).select('id')
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
       inserted = data?.length ?? 0
+      // Keep the account balance connected to synced flows.
+      if (defaultAccount) {
+        const delta = fresh.reduce((sum, r) => sum + (Number(r.amount) || 0), 0)
+        const { data: acc } = await supabase
+          .from('accounts').select('current_balance').eq('id', defaultAccount).single()
+        if (acc) {
+          await supabase.from('accounts')
+            .update({ current_balance: Number(acc.current_balance) + delta, updated_at: new Date().toISOString() })
+            .eq('id', defaultAccount)
+        }
+      }
     }
   }
 

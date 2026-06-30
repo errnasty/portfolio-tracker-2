@@ -6,7 +6,11 @@ import { supabase } from '@/lib/supabase'
 import { convertToBase } from '@/lib/calculations'
 import { usePortfolio } from '@/context/PortfolioContext'
 import { DEFAULT_CATEGORIES, guessCategoryName } from '@/lib/categorize'
-import type { Category, CategoryRule, BankTransaction, SpendingStats, FxRates, Currency } from '@/types'
+import { detectSubscriptions } from '@/lib/subscriptions'
+import type {
+  Category, CategoryRule, BankTransaction, SpendingStats, FxRates, Currency,
+  Subscription, SubscriptionStatus, SubscriptionState, Budget,
+} from '@/types'
 
 type BankTxnInsert = Omit<BankTransaction, 'id' | 'user_id' | 'created_at' | 'updated_at'>
 
@@ -32,6 +36,13 @@ interface SpendingContextValue {
   statsForMonth: (ym: string) => SpendingStats
   // Best category id for a transaction: user rules first, then built-in keywords.
   categorize: (description: string, merchant?: string | null) => string | null
+  subscriptions: Subscription[]
+  subscriptionSummary: { totalMonthly: number; activeMonthly: number; potentialMonthly: number; cancelledMonthly: number }
+  setSubscriptionStatus: (key: string, status: SubscriptionState, opts?: { label?: string; monthlyAmount?: number }) => Promise<void>
+  budgets: Budget[]
+  refreshBudgets: () => Promise<void>
+  upsertBudget: (categoryId: string, amount: number) => Promise<void>
+  deleteBudget: (categoryId: string) => Promise<void>
 }
 
 const SpendingContext = createContext<SpendingContextValue | null>(null)
@@ -81,12 +92,26 @@ function computeStats(
 }
 
 export function SpendingProvider({ children }: { children: React.ReactNode }) {
-  const { fxRates, settings } = usePortfolio()
+  const { fxRates, settings, accounts, updateAccount, refreshAccounts } = usePortfolio()
   const [categories, setCategories] = useState<Category[]>([])
   const [bankTransactions, setBankTransactions] = useState<BankTransaction[]>([])
   const [categoryRules, setCategoryRules] = useState<CategoryRule[]>([])
+  const [subscriptionStatuses, setSubscriptionStatuses] = useState<SubscriptionStatus[]>([])
+  const [budgets, setBudgets] = useState<Budget[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Keep account balances connected to spending: every credit/debit on an
+  // account nudges its stored balance, so income shows up as cash and net
+  // worth/investable cash stay current without manual edits.
+  const adjustAccountBalance = useCallback(async (accountId: string | null, delta: number) => {
+    if (!accountId || !delta) return
+    const acc = accounts.find((a) => a.id === accountId)
+    if (!acc) return
+    try {
+      await updateAccount(accountId, { current_balance: Number(acc.current_balance) + delta })
+    } catch { /* balance is best-effort; transaction already saved */ }
+  }, [accounts, updateAccount])
 
   const refreshCategories = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -154,16 +179,65 @@ export function SpendingProvider({ children }: { children: React.ReactNode }) {
     setCategoryRules(data ?? [])
   }, [])
 
+  const refreshSubscriptionStatuses = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data } = await supabase.from('subscription_status').select('*').eq('user_id', user.id)
+    setSubscriptionStatuses(data ?? [])
+  }, [])
+
+  const refreshBudgets = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data } = await supabase.from('budgets').select('*').eq('user_id', user.id)
+    setBudgets(data ?? [])
+  }, [])
+
   useEffect(() => {
     async function init() {
       setLoading(true)
       await refreshCategories()
       await refreshBankTransactions()
       await refreshCategoryRules()
+      await refreshSubscriptionStatuses()
+      await refreshBudgets()
       setLoading(false)
     }
     init()
-  }, [refreshCategories, refreshBankTransactions, refreshCategoryRules])
+  }, [refreshCategories, refreshBankTransactions, refreshCategoryRules, refreshSubscriptionStatuses, refreshBudgets])
+
+  // Auto-sync Gmail bank alerts once per session (if connected & not synced
+  // recently) so spending stays current without a manual "Sync now".
+  useEffect(() => {
+    if (loading) return
+    let cancelled = false
+    ;(async () => {
+      try { if (window.sessionStorage.getItem('gmail_autosync_done')) return } catch { return }
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data: tok } = await supabase
+        .from('google_tokens').select('last_synced').eq('user_id', user.id).maybeSingle()
+      if (!tok) return // Gmail not connected
+      try { window.sessionStorage.setItem('gmail_autosync_done', '1') } catch { /* ignore */ }
+      // Throttle: skip if synced within the last 6h.
+      if (tok.last_synced && Date.now() - new Date(tok.last_synced).getTime() < 6 * 3600 * 1000) return
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      try {
+        const res = await fetch('/api/bank/gmail-sync', {
+          method: 'POST', headers: { Authorization: `Bearer ${session.access_token}` },
+        })
+        if (!res.ok || cancelled) return
+        const j = await res.json().catch(() => null)
+        if (j?.inserted > 0) {
+          await refreshBankTransactions()
+          await refreshAccounts()
+          toast.success(`Synced ${j.inserted} new transaction${j.inserted === 1 ? '' : 's'} from Gmail`)
+        }
+      } catch { /* silent — manual Sync still available */ }
+    })()
+    return () => { cancelled = true }
+  }, [loading, refreshBankTransactions, refreshAccounts])
 
   const addCategory: SpendingContextValue['addCategory'] = async ({ name, kind = 'expense', color = null, icon = null }) => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -200,24 +274,76 @@ export function SpendingProvider({ children }: { children: React.ReactNode }) {
     await refreshCategoryRules()
   }
 
+  const setSubscriptionStatus = async (
+    key: string, status: SubscriptionState, opts?: { label?: string; monthlyAmount?: number },
+  ) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { error: err } = await supabase.from('subscription_status').upsert(
+      {
+        user_id: user.id, merchant_key: key, status,
+        label: opts?.label ?? null, monthly_amount: opts?.monthlyAmount ?? null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id,merchant_key' },
+    )
+    if (err) { toast.error(`Save failed: ${err.message}`); throw err }
+    await refreshSubscriptionStatuses()
+  }
+
+  const upsertBudget = async (categoryId: string, amount: number) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { error: err } = await supabase.from('budgets').upsert(
+      { user_id: user.id, category_id: categoryId, amount, period: 'monthly', updated_at: new Date().toISOString() },
+      { onConflict: 'user_id,category_id' },
+    )
+    if (err) { toast.error(`Save budget failed: ${err.message}`); throw err }
+    await refreshBudgets()
+  }
+
+  const deleteBudget = async (categoryId: string) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { error: err } = await supabase.from('budgets').delete()
+      .eq('user_id', user.id).eq('category_id', categoryId)
+    if (err) { toast.error(`Delete budget failed: ${err.message}`); throw err }
+    await refreshBudgets()
+  }
+
   const addBankTransaction = async (t: BankTxnInsert) => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     const { error: err } = await supabase.from('bank_transactions').insert({ ...t, user_id: user.id })
     if (err) { toast.error(`Add transaction failed: ${err.message}`); throw err }
+    await adjustAccountBalance(t.account_id, Number(t.amount) || 0)
     await refreshBankTransactions()
   }
 
   const updateBankTransaction = async (id: string, data: Partial<BankTransaction>) => {
+    const prev = bankTransactions.find((t) => t.id === id)
     const { error: err } = await supabase.from('bank_transactions')
       .update({ ...data, updated_at: new Date().toISOString() }).eq('id', id)
     if (err) { toast.error(`Update failed: ${err.message}`); throw err }
+    // Reconcile account balances if the amount or account changed.
+    if (prev) {
+      const newAccount = data.account_id !== undefined ? data.account_id : prev.account_id
+      const newAmount = data.amount !== undefined ? Number(data.amount) : Number(prev.amount)
+      if (newAccount === prev.account_id) {
+        await adjustAccountBalance(prev.account_id, newAmount - Number(prev.amount))
+      } else {
+        await adjustAccountBalance(prev.account_id, -Number(prev.amount))
+        await adjustAccountBalance(newAccount, newAmount)
+      }
+    }
     await refreshBankTransactions()
   }
 
   const deleteBankTransaction = async (id: string) => {
+    const prev = bankTransactions.find((t) => t.id === id)
     const { error: err } = await supabase.from('bank_transactions').delete().eq('id', id)
     if (err) { toast.error(`Delete failed: ${err.message}`); throw err }
+    if (prev) await adjustAccountBalance(prev.account_id, -Number(prev.amount))
     await refreshBankTransactions()
   }
 
@@ -249,6 +375,12 @@ export function SpendingProvider({ children }: { children: React.ReactNode }) {
 
     const { data, error: err } = await supabase.from('bank_transactions').insert(payload).select('id')
     if (err) { toast.error(`Import failed: ${err.message}`); return { inserted: 0 } }
+    // Nudge each affected account's balance by its net imported flow.
+    const byAccount = new Map<string, number>()
+    for (const r of payload) {
+      if (r.account_id) byAccount.set(r.account_id, (byAccount.get(r.account_id) ?? 0) + (Number(r.amount) || 0))
+    }
+    for (const [accId, delta] of byAccount) await adjustAccountBalance(accId, delta)
     await refreshBankTransactions()
     return { inserted: data?.length ?? 0 }
   }
@@ -278,6 +410,33 @@ export function SpendingProvider({ children }: { children: React.ReactNode }) {
     return g ? (catIdByName[g] ?? null) : null
   }, [sortedRules, catIdByName])
 
+  const catNameById = useMemo(
+    () => Object.fromEntries(categories.map((c) => [c.id, c.name])) as Record<string, string>,
+    [categories],
+  )
+
+  const subscriptions = useMemo<Subscription[]>(() => {
+    const statusByKey = new Map(subscriptionStatuses.map((s) => [s.merchant_key, s.status]))
+    return detectSubscriptions(bankTransactions, catNameById, fxRates).map((d) => ({
+      ...d,
+      annualAmount: d.monthlyAmount * 12,
+      status: statusByKey.get(d.key) ?? 'active',
+    }))
+  }, [bankTransactions, catNameById, fxRates, subscriptionStatuses])
+
+  const subscriptionSummary = useMemo(() => {
+    let totalMonthly = 0, activeMonthly = 0, potentialMonthly = 0, cancelledMonthly = 0
+    for (const s of subscriptions) {
+      totalMonthly += s.monthlyAmount
+      if (s.status === 'cancelled') cancelledMonthly += s.monthlyAmount
+      else {
+        activeMonthly += s.monthlyAmount
+        if (s.status === 'could_cancel') potentialMonthly += s.monthlyAmount
+      }
+    }
+    return { totalMonthly, activeMonthly, potentialMonthly, cancelledMonthly }
+  }, [subscriptions])
+
   const statsForMonth = useCallback(
     (ym: string) => computeStats(bankTransactions, ym, categories, fxRates),
     [bankTransactions, categories, fxRates],
@@ -298,6 +457,8 @@ export function SpendingProvider({ children }: { children: React.ReactNode }) {
       addCategory, deleteCategory, addCategoryRule, deleteCategoryRule,
       addBankTransaction, updateBankTransaction, deleteBankTransaction, bulkInsertBankTransactions,
       statsForMonth, categorize,
+      subscriptions, subscriptionSummary, setSubscriptionStatus,
+      budgets, refreshBudgets, upsertBudget, deleteBudget,
     }}>
       {children}
     </SpendingContext.Provider>

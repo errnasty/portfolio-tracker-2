@@ -280,6 +280,49 @@ create policy "Users manage own category rules"
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+-- Monthly budgets per category (amounts in the user's base display currency).
+create table if not exists budgets (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid references auth.users not null,
+  category_id uuid references categories(id) on delete cascade not null,
+  amount      numeric(20, 2) not null default 0,
+  period      text not null default 'monthly' check (period in ('monthly')),
+  created_at  timestamptz default now(),
+  updated_at  timestamptz default now(),
+  unique(user_id, category_id)
+);
+
+alter table budgets enable row level security;
+
+drop policy if exists "Users manage own budgets" on budgets;
+create policy "Users manage own budgets"
+  on budgets for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+-- Subscription cancel-tracking. Subscriptions themselves are derived from
+-- bank_transactions at runtime; this table only persists the per-merchant
+-- status (active / could_cancel / cancelled) so the savings tracker sticks.
+create table if not exists subscription_status (
+  id             uuid primary key default gen_random_uuid(),
+  user_id        uuid references auth.users not null,
+  merchant_key   text not null,
+  status         text not null default 'active'
+                 check (status in ('active', 'could_cancel', 'cancelled')),
+  label          text,
+  monthly_amount numeric(20, 2),
+  updated_at     timestamptz default now(),
+  unique(user_id, merchant_key)
+);
+
+alter table subscription_status enable row level security;
+
+drop policy if exists "Users manage own subscription status" on subscription_status;
+create policy "Users manage own subscription status"
+  on subscription_status for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
 -- Google OAuth tokens for Gmail alert sync (Phase B). Stores the long-lived
 -- refresh token so the server can mint Gmail access tokens to read DBS/POSB
 -- transaction-alert emails. RLS-own: only the user can read/write their row.
