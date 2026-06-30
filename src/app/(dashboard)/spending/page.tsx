@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import Link from 'next/link'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { usePortfolio } from '@/context/PortfolioContext'
 import { useSpending } from '@/context/SpendingContext'
@@ -13,7 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Plus, Trash2, ArrowDownCircle, ArrowUpCircle, Wallet } from 'lucide-react'
+import { Plus, Trash2, ArrowDownCircle, ArrowUpCircle, Wallet, Upload } from 'lucide-react'
 import type { Currency } from '@/types'
 
 const PIE_COLORS = [
@@ -111,9 +112,16 @@ export default function SpendingPage() {
           <h1 className="text-2xl md:text-3xl font-bold">Spending</h1>
           <p className="text-sm md:text-base text-muted-foreground">Track where your money goes</p>
         </div>
-        <Button size="sm" onClick={openAdd} className="self-start sm:self-auto">
-          <Plus className="mr-2 h-4 w-4" /> Add transaction
-        </Button>
+        <div className="flex gap-2 self-start sm:self-auto">
+          <Link href="/import">
+            <Button size="sm" variant="outline">
+              <Upload className="mr-2 h-4 w-4" /> Import CSV
+            </Button>
+          </Link>
+          <Button size="sm" onClick={openAdd}>
+            <Plus className="mr-2 h-4 w-4" /> Add transaction
+          </Button>
+        </div>
       </div>
 
       {error && (
