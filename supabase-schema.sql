@@ -238,10 +238,16 @@ create index if not exists idx_bank_txns_user_date
   on bank_transactions(user_id, date desc);
 create index if not exists idx_bank_txns_user_category
   on bank_transactions(user_id, category_id);
--- Dedupe key: a user never has the same external_id twice (NULLs allowed).
-create unique index if not exists uniq_bank_txns_user_external
-  on bank_transactions(user_id, external_id)
-  where external_id is not null;
+-- Dedupe key: a user never has the same external_id twice. A full unique
+-- constraint (not partial) so it can also serve as an ON CONFLICT target;
+-- NULL external_ids (manual entries) remain distinct and are unaffected.
+drop index if exists uniq_bank_txns_user_external;
+do $$ begin
+  alter table bank_transactions
+    add constraint bank_txns_user_external_key unique (user_id, external_id);
+exception when duplicate_table then null;
+         when duplicate_object then null;
+         when others then null; end $$;
 
 alter table bank_transactions enable row level security;
 

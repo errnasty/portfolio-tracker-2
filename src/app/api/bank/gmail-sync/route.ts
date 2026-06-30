@@ -145,12 +145,17 @@ export async function POST(req: Request) {
 
   let inserted = 0
   if (rows.length > 0) {
-    const { data, error } = await supabase
-      .from('bank_transactions')
-      .upsert(rows, { onConflict: 'user_id,external_id', ignoreDuplicates: true })
-      .select('id')
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    inserted = data?.length ?? 0
+    // Skip messages already imported (dedupe by external_id) without ON CONFLICT.
+    const ids = rows.map((r) => r.external_id as string)
+    const { data: ex } = await supabase
+      .from('bank_transactions').select('external_id').eq('user_id', user.id).in('external_id', ids)
+    const seen = new Set((ex ?? []).map((r) => r.external_id))
+    const fresh = rows.filter((r) => !seen.has(r.external_id as string))
+    if (fresh.length > 0) {
+      const { data, error } = await supabase.from('bank_transactions').insert(fresh).select('id')
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      inserted = data?.length ?? 0
+    }
   }
 
   await supabase.from('google_tokens')

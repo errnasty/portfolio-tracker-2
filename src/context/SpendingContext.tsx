@@ -102,16 +102,31 @@ export function SpendingProvider({ children }: { children: React.ReactNode }) {
     }
     setError(null)
 
-    // Seed defaults for a brand-new user.
-    if ((data ?? []).length === 0) {
-      const payload = DEFAULT_CATEGORIES.map((c, i) => ({
-        user_id: user.id, name: c.name, kind: c.kind, color: c.color, icon: c.icon, sort: i,
-      }))
-      const { data: seeded } = await supabase.from('categories').insert(payload).select('*')
-      setCategories(seeded ?? [])
-      return
+    let cats = data ?? []
+    // Seed a new user, and one-time backfill of defaults added in later versions
+    // (e.g. Giving/Education) so categorize() resolves. The one-time guard means
+    // deleting a default category afterwards sticks (we don't re-add it).
+    let backfilled = false
+    try { backfilled = window.localStorage.getItem('categories_backfill_v2') === '1' } catch { /* ignore */ }
+    if (cats.length === 0 || !backfilled) {
+      const missing = DEFAULT_CATEGORIES.filter((d) => !cats.some((c) => c.name === d.name))
+      if (missing.length > 0) {
+        const payload = missing.map((c) => ({
+          user_id: user.id, name: c.name, kind: c.kind, color: c.color, icon: c.icon,
+          sort: DEFAULT_CATEGORIES.findIndex((x) => x.name === c.name),
+        }))
+        await supabase.from('categories').insert(payload)
+        // Reload regardless of insert outcome — tolerates the unique-constraint
+        // race when two tabs/effects seed at once.
+        const { data: after } = await supabase
+          .from('categories').select('*').eq('user_id', user.id)
+        if (after) cats = after
+      }
+      try { window.localStorage.setItem('categories_backfill_v2', '1') } catch { /* ignore */ }
     }
-    setCategories(data ?? [])
+    setCategories(
+      [...cats].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0) || a.name.localeCompare(b.name)),
+    )
   }, [])
 
   const refreshBankTransactions = useCallback(async () => {
@@ -163,7 +178,9 @@ export function SpendingProvider({ children }: { children: React.ReactNode }) {
   const deleteCategory = async (id: string) => {
     const { error: err } = await supabase.from('categories').delete().eq('id', id)
     if (err) { toast.error(`Delete category failed: ${err.message}`); throw err }
-    await Promise.all([refreshCategories(), refreshBankTransactions()])
+    // Rules for this category are cascade-deleted in the DB; transactions are
+    // set to null (FK). Refresh all three so state can't reference a ghost id.
+    await Promise.all([refreshCategories(), refreshBankTransactions(), refreshCategoryRules()])
   }
 
   const addCategoryRule = async (matchText: string, categoryId: string, priority = 0) => {
@@ -207,13 +224,30 @@ export function SpendingProvider({ children }: { children: React.ReactNode }) {
   const bulkInsertBankTransactions = async (rows: BankTxnInsert[]) => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user || rows.length === 0) return { inserted: 0 }
-    const payload = rows.map((r) => ({ ...r, user_id: user.id }))
-    // Skip rows whose (user_id, external_id) already exists — lets the user
-    // re-import the same statement without creating duplicates.
-    const { data, error: err } = await supabase
-      .from('bank_transactions')
-      .upsert(payload, { onConflict: 'user_id,external_id', ignoreDuplicates: true })
-      .select('id')
+
+    // Re-import safety: skip rows whose external_id already exists for this user.
+    // Done in code (a SELECT + filter) rather than ON CONFLICT, so it doesn't
+    // depend on a specific DB unique constraint.
+    const ids = rows.map((r) => r.external_id).filter((x): x is string => !!x)
+    const existing = new Set<string>()
+    if (ids.length > 0) {
+      const { data: ex } = await supabase
+        .from('bank_transactions').select('external_id').eq('user_id', user.id).in('external_id', ids)
+      for (const r of ex ?? []) if (r.external_id) existing.add(r.external_id)
+    }
+
+    const seenBatch = new Set<string>()
+    const payload = rows
+      .filter((r) => {
+        if (!r.external_id) return true
+        if (existing.has(r.external_id) || seenBatch.has(r.external_id)) return false
+        seenBatch.add(r.external_id)
+        return true
+      })
+      .map((r) => ({ ...r, user_id: user.id }))
+    if (payload.length === 0) { await refreshBankTransactions(); return { inserted: 0 } }
+
+    const { data, error: err } = await supabase.from('bank_transactions').insert(payload).select('id')
     if (err) { toast.error(`Import failed: ${err.message}`); return { inserted: 0 } }
     await refreshBankTransactions()
     return { inserted: data?.length ?? 0 }
