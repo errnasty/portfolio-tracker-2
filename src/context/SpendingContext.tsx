@@ -92,7 +92,7 @@ function computeStats(
 }
 
 export function SpendingProvider({ children }: { children: React.ReactNode }) {
-  const { fxRates, settings, accounts, updateAccount, refreshAccounts } = usePortfolio()
+  const { fxRates, settings, accounts, updateAccount, addAccount, refreshAccounts } = usePortfolio()
   const [categories, setCategories] = useState<Category[]>([])
   const [bankTransactions, setBankTransactions] = useState<BankTransaction[]>([])
   const [categoryRules, setCategoryRules] = useState<CategoryRule[]>([])
@@ -112,6 +112,19 @@ export function SpendingProvider({ children }: { children: React.ReactNode }) {
       await updateAccount(accountId, { current_balance: Number(acc.current_balance) + delta })
     } catch { /* balance is best-effort; transaction already saved */ }
   }, [accounts, updateAccount])
+
+  // Money moved to Interactive Brokers shows up as investable brokerage cash.
+  const isIbkrTransfer = (description: string, merchant?: string | null) =>
+    /interactive br|rec trust|ibkr/i.test(`${description} ${merchant ?? ''}`)
+
+  const creditBrokerageCash = useCallback(async (amount: number, currency: string) => {
+    if (amount <= 0) return
+    const acc = accounts.find((a) => a.type === 'cash' && /interactive|ibkr|brokerage/i.test(`${a.name} ${a.institution ?? ''}`))
+    try {
+      if (acc) await updateAccount(acc.id, { current_balance: Number(acc.current_balance) + amount })
+      else await addAccount({ name: 'Interactive Brokers', type: 'cash', institution: 'Interactive Brokers', currency, current_balance: amount, is_active: true })
+    } catch { /* best-effort */ }
+  }, [accounts, updateAccount, addAccount])
 
   const refreshCategories = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -317,6 +330,9 @@ export function SpendingProvider({ children }: { children: React.ReactNode }) {
     const { error: err } = await supabase.from('bank_transactions').insert({ ...t, user_id: user.id })
     if (err) { toast.error(`Add transaction failed: ${err.message}`); throw err }
     await adjustAccountBalance(t.account_id, Number(t.amount) || 0)
+    if (isIbkrTransfer(t.description, t.merchant) && Number(t.amount) < 0) {
+      await creditBrokerageCash(-Number(t.amount), t.currency)
+    }
     await refreshBankTransactions()
   }
 
@@ -377,10 +393,16 @@ export function SpendingProvider({ children }: { children: React.ReactNode }) {
     if (err) { toast.error(`Import failed: ${err.message}`); return { inserted: 0 } }
     // Nudge each affected account's balance by its net imported flow.
     const byAccount = new Map<string, number>()
+    let ibkrTotal = 0
+    let ibkrCurrency = 'SGD'
     for (const r of payload) {
       if (r.account_id) byAccount.set(r.account_id, (byAccount.get(r.account_id) ?? 0) + (Number(r.amount) || 0))
+      if (isIbkrTransfer(r.description, r.merchant) && Number(r.amount) < 0) {
+        ibkrTotal += -Number(r.amount); ibkrCurrency = r.currency
+      }
     }
     for (const [accId, delta] of byAccount) await adjustAccountBalance(accId, delta)
+    if (ibkrTotal > 0) await creditBrokerageCash(ibkrTotal, ibkrCurrency)
     await refreshBankTransactions()
     return { inserted: data?.length ?? 0 }
   }

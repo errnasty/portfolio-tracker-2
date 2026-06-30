@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Plus, Pencil, Trash2, Search, Loader2 } from 'lucide-react'
 import { TableScroll } from '@/components/ui/table-scroll'
 import { InlineNumberCell } from '@/components/holdings/InlineNumberCell'
+import { CashHoldingsCard } from '@/components/holdings/CashHoldingsCard'
 import { deleteWithUndo } from '@/lib/toast-undo'
 import type { Currency, Holding, HoldingFormData } from '@/types'
 import type { SearchResult } from '@/app/api/search/route'
@@ -203,6 +204,8 @@ export default function HoldingsPage() {
           <Plus className="mr-2 h-4 w-4" /> Add Holding
         </Button>
       </div>
+
+      <CashHoldingsCard />
 
       <Card>
         <CardContent className="p-0">

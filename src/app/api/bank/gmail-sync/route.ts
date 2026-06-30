@@ -166,6 +166,25 @@ export async function POST(req: Request) {
             .eq('id', defaultAccount)
         }
       }
+      // Money sent to Interactive Brokers → brokerage cash account.
+      const ibkrDelta = fresh
+        .filter((r) => /interactive br|rec trust|ibkr/i.test(`${r.description} ${r.merchant ?? ''}`) && Number(r.amount) < 0)
+        .reduce((sum, r) => sum + -(Number(r.amount) || 0), 0)
+      if (ibkrDelta > 0) {
+        const { data: cashAcc } = await supabase
+          .from('accounts').select('id, current_balance')
+          .eq('user_id', user.id).eq('type', 'cash').ilike('name', '%interactive%').limit(1).maybeSingle()
+        if (cashAcc) {
+          await supabase.from('accounts')
+            .update({ current_balance: Number(cashAcc.current_balance) + ibkrDelta, updated_at: new Date().toISOString() })
+            .eq('id', cashAcc.id)
+        } else {
+          await supabase.from('accounts').insert({
+            user_id: user.id, name: 'Interactive Brokers', type: 'cash',
+            institution: 'Interactive Brokers', currency: 'SGD', current_balance: ibkrDelta, is_active: true,
+          })
+        }
+      }
     }
   }
 
