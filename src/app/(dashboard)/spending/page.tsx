@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis } from 'recharts'
 import { usePortfolio } from '@/context/PortfolioContext'
 import { useSpending } from '@/context/SpendingContext'
 import { formatCurrency } from '@/lib/utils'
@@ -26,6 +26,10 @@ const PIE_COLORS = [
 function thisMonth() {
   return new Date().toISOString().slice(0, 7)
 }
+function addMonth(ym: string, delta: number): string {
+  const [y, m] = ym.split('-').map(Number)
+  return new Date(y, m - 1 + delta, 1).toISOString().slice(0, 7)
+}
 
 export default function SpendingPage() {
   const {
@@ -48,6 +52,24 @@ export default function SpendingPage() {
   )
 
   const stats = statsForMonth(month)
+
+  const trend = useMemo(() => {
+    const out: { ym: string; label: string; expense: number }[] = []
+    let ym = month
+    for (let i = 0; i < 6; i++) { out.unshift({ ym, label: ym.slice(5), expense: statsForMonth(ym).expense }); ym = addMonth(ym, -1) }
+    return out
+  }, [statsForMonth, month])
+
+  const movers = useMemo(() => {
+    const cur = statsForMonth(month)
+    const prev = statsForMonth(addMonth(month, -1))
+    const prevMap = new Map(prev.byCategory.map((c) => [c.category_id, c.amount]))
+    return cur.byCategory.map((c) => {
+      const p = prevMap.get(c.category_id) ?? 0
+      const delta = c.amount - p
+      return { name: c.name, delta, deltaPct: p > 0 ? (delta / p) * 100 : (c.amount > 0 ? 100 : 0), hasPrev: p > 0 }
+    }).filter((m) => Math.abs(m.delta) > 0.5).sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)).slice(0, 3)
+  }, [statsForMonth, month])
 
   const filtered = useMemo(() => bankTransactions.filter((t) => {
     if (!t.date.startsWith(month)) return false
@@ -300,6 +322,50 @@ export default function SpendingPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Month-over-month trends */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Trends · last 6 months</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
+            <ResponsiveContainer width="100%" height={160}>
+              <BarChart data={trend} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" axisLine={false} tickLine={false} />
+                <Tooltip
+                  cursor={{ fill: 'hsl(var(--muted) / 0.4)' }}
+                  formatter={(v) => [formatCurrency(Number(v), base), 'Spent']}
+                  contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 4, fontSize: 12 }}
+                />
+                <Bar dataKey="expense" radius={[2, 2, 0, 0]}>
+                  {trend.map((t, i) => <Cell key={i} fill={t.ym === month ? '#6aa9ff' : 'hsl(var(--muted))'} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+            <div>
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">Biggest movers vs last month</div>
+              {movers.length === 0 ? (
+                <div className="text-xs text-muted-foreground">Not enough history yet.</div>
+              ) : (
+                <div className="space-y-1.5">
+                  {movers.map((m) => {
+                    const up = m.delta >= 0
+                    return (
+                      <div key={m.name} className="flex items-center justify-between text-xs">
+                        <span className="truncate">{m.name}</span>
+                        <span className={`tabular-nums whitespace-nowrap ${up ? 'text-[#ff7a59]' : 'text-emerald-400'}`}>
+                          {up ? '▲' : '▼'} {m.hasPrev ? `${m.deltaPct >= 0 ? '+' : ''}${m.deltaPct.toFixed(0)}%` : 'new'} · {formatCurrency(Math.abs(m.delta), base)}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <AccountsCard
         accounts={accounts} netBase={accountsNetBase} base={base} fxRates={fxRates}

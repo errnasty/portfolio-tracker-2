@@ -323,6 +323,29 @@ create policy "Users manage own subscription status"
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+-- Net-worth snapshots: one row per day so Home can plot a trend line. Written
+-- client-side once a day (upsert on user_id+date). All in the user's base
+-- currency at snapshot time.
+create table if not exists networth_snapshots (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid references auth.users not null,
+  date       date not null default current_date,
+  net_worth  numeric(20, 2) not null,
+  currency   text not null default 'USD',
+  created_at timestamptz default now(),
+  unique(user_id, date)
+);
+
+create index if not exists idx_networth_user_date on networth_snapshots(user_id, date);
+
+alter table networth_snapshots enable row level security;
+
+drop policy if exists "Users manage own networth snapshots" on networth_snapshots;
+create policy "Users manage own networth snapshots"
+  on networth_snapshots for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
 -- Google OAuth tokens for Gmail alert sync (Phase B). Stores the long-lived
 -- refresh token so the server can mint Gmail access tokens to read DBS/POSB
 -- transaction-alert emails. RLS-own: only the user can read/write their row.

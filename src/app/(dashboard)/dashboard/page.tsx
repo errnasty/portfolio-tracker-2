@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import { AreaChart, Area, ResponsiveContainer } from 'recharts'
 import { usePortfolio } from '@/context/PortfolioContext'
 import { useSpending } from '@/context/SpendingContext'
 import { formatCurrency, formatPercent, gainLossColor } from '@/lib/utils'
@@ -16,7 +17,7 @@ const PCT = (n: number) => `${n.toFixed(1)}%`
 export default function DashboardPage() {
   const {
     stats, enriched, loading, refreshPrices, settings, targets,
-    accounts, totalCashBase, accountsNetBase, netWorthBase, fxRates,
+    accounts, totalCashBase, accountsNetBase, netWorthBase, netWorthHistory, fxRates,
   } = usePortfolio()
   const {
     spendingStats, bankTransactions, categoryById, budgets, subscriptionSummary,
@@ -73,6 +74,25 @@ export default function DashboardPage() {
       title: `${overBudget.length} over budget`, sub: overBudget.map((o) => o.name).slice(0, 3).join(' · ') })
   }
 
+  // net-worth trend (snapshots + live today point)
+  const sparkData = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10)
+    const pts = netWorthHistory.map((s) => ({ d: s.date, v: Number(s.net_worth) }))
+    if (pts.length && pts[pts.length - 1].d === today) pts[pts.length - 1] = { d: today, v: netWorthBase }
+    else if (netWorthBase > 0) pts.push({ d: today, v: netWorthBase })
+    return pts
+  }, [netWorthHistory, netWorthBase])
+  const valAt = (daysAgo: number): number | null => {
+    const t = new Date(); t.setDate(t.getDate() - daysAgo)
+    const ts = t.toISOString().slice(0, 10)
+    const prior = netWorthHistory.filter((s) => s.date <= ts)
+    return prior.length ? Number(prior[prior.length - 1].net_worth) : null
+  }
+  const deltas = ([['1D', 1], ['7D', 7], ['30D', 30]] as const)
+    .map(([label, d]) => ({ label, v: valAt(d) }))
+    .filter((x) => x.v != null)
+    .map((x) => ({ label: x.label, delta: netWorthBase - (x.v as number) }))
+
   const topHoldings = [...enriched].sort((a, b) => b.currentValueBase - a.currentValueBase).slice(0, 6)
   const allocHoldings = [...enriched].sort((a, b) => b.currentValueBase - a.currentValueBase).slice(0, 5)
   const recent = bankTransactions.slice(0, 8)
@@ -115,6 +135,28 @@ export default function DashboardPage() {
               {loading
                 ? <Skeleton className="mt-2 h-9 w-56" />
                 : <div className="mt-1 text-[28px] sm:text-4xl font-bold tabular-nums leading-none truncate">{formatCurrency(netWorthBase, base)}</div>}
+              {deltas.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px]">
+                  {deltas.map((x) => (
+                    <span key={x.label}><span className="text-muted-foreground">{x.label} </span><span className={gainLossColor(x.delta)}>{x.delta >= 0 ? '+' : ''}{formatCurrency(x.delta, base)}</span></span>
+                  ))}
+                </div>
+              )}
+              {sparkData.length >= 2 && (
+                <div className="mt-2 h-10 w-full max-w-[440px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={sparkData} margin={{ top: 2, bottom: 2, left: 0, right: 0 }}>
+                      <defs>
+                        <linearGradient id="nwSpark" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#6fcf97" stopOpacity={0.35} />
+                          <stop offset="100%" stopColor="#6fcf97" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <Area type="monotone" dataKey="v" stroke="#6fcf97" strokeWidth={1.4} fill="url(#nwSpark)" isAnimationActive={false} dot={false} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 sm:gap-x-8 gap-y-3">
               <Chip label="Invested" value={formatCurrency(holdingsValue, base)}

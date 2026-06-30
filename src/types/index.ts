@@ -58,6 +58,12 @@ export interface PortfolioStats {
   baseCurrency: Currency
 }
 
+export interface NetWorthSnapshot {
+  date: string         // YYYY-MM-DD
+  net_worth: number    // base currency at snapshot time
+  currency: string
+}
+
 export interface CashBalance {
   id: string
   user_id: string

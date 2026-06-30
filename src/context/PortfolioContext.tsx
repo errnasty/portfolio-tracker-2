@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { enrichHoldings, calcPortfolioStats, convertToBase, convertBetween } from '@/lib/calculations'
@@ -26,7 +26,7 @@ function reportSupabaseError(operation: string, error: { message: string; code?:
 import type {
   Holding, PriceQuote, FxRates, EnrichedHolding, PortfolioStats,
   Currency, TargetAllocation, UserSettings, Transaction, DerivedPosition, Goal,
-  Account,
+  Account, NetWorthSnapshot,
 } from '@/types'
 
 interface PortfolioContextValue {
@@ -44,6 +44,7 @@ interface PortfolioContextValue {
   totalCashBase: number        // cash-type accounts, in base (investable buying power)
   accountsNetBase: number      // all accounts net (credit subtracted), in base
   netWorthBase: number         // holdings + accountsNetBase, in base
+  netWorthHistory: NetWorthSnapshot[]   // daily snapshots, ascending by date
   accountsError: string | null
   loading: boolean
   refreshHoldings: () => Promise<void>
@@ -96,6 +97,8 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   const [goals, setGoals] = useState<Goal[]>([])
   const [accounts, setAccounts] = useState<Account[]>([])
   const [accountsError, setAccountsError] = useState<string | null>(null)
+  const [netWorthHistory, setNetWorthHistory] = useState<NetWorthSnapshot[]>([])
+  const snapshotSaved = useRef(false)
   const [loading, setLoading] = useState(true)
 
   const baseCurrency: Currency = (settings?.base_currency as Currency) ?? 'USD'
@@ -127,6 +130,20 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
 
   const holdingsValueBase = enriched.reduce((s, h) => s + h.currentValueBase, 0)
   const netWorthBase = holdingsValueBase + accountsNetBase
+
+  const refreshNetWorthHistory = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const cutoff = new Date()
+    cutoff.setDate(cutoff.getDate() - 120)
+    const { data } = await supabase
+      .from('networth_snapshots')
+      .select('date, net_worth, currency')
+      .eq('user_id', user.id)
+      .gte('date', cutoff.toISOString().slice(0, 10))
+      .order('date')
+    if (data) setNetWorthHistory(data)
+  }, [])
 
   const stats: PortfolioStats | null = (enriched.length > 0 || totalCashBase > 0)
     ? calcPortfolioStats(enriched, baseCurrency, totalCashBase)
@@ -244,10 +261,27 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
       await refreshTransactions()
       await refreshGoals()
       await refreshAccounts()
+      await refreshNetWorthHistory()
       setLoading(false)
     }
     init()
-  }, [fetchSettings, refreshHoldings, refreshTransactions, refreshGoals, refreshAccounts])
+  }, [fetchSettings, refreshHoldings, refreshTransactions, refreshGoals, refreshAccounts, refreshNetWorthHistory])
+
+  // Save today's net-worth snapshot once per session, after data has loaded.
+  useEffect(() => {
+    if (loading || !fxRates || netWorthBase <= 0 || snapshotSaved.current) return
+    snapshotSaved.current = true
+    ;(async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const today = new Date().toISOString().slice(0, 10)
+      await supabase.from('networth_snapshots').upsert(
+        { user_id: user.id, date: today, net_worth: Math.round(netWorthBase * 100) / 100, currency: baseCurrency },
+        { onConflict: 'user_id,date' },
+      )
+      await refreshNetWorthHistory()
+    })()
+  }, [loading, fxRates, netWorthBase, baseCurrency, refreshNetWorthHistory])
 
   useEffect(() => {
     fetchFxRates(baseCurrency)
@@ -518,7 +552,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     <PortfolioContext.Provider value={{
       holdings, enriched, stats, prices, fxRates, targets, settings,
       transactions, positions, goals,
-      accounts, totalCashBase, accountsNetBase, netWorthBase, accountsError,
+      accounts, totalCashBase, accountsNetBase, netWorthBase, netWorthHistory, accountsError,
       loading, refreshHoldings, refreshPrices, refreshTransactions,
       addHolding, updateHolding, deleteHolding,
       upsertTarget, deleteTarget, updateSettings,
