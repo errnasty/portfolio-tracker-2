@@ -51,8 +51,8 @@ export default function LoginPage() {
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
             <TrendingUp className="h-6 w-6" />
           </div>
-          <h1 className="text-2xl font-bold">Portfolio Tracker</h1>
-          <p className="text-sm text-muted-foreground">Track your investments across global markets</p>
+          <h1 className="text-2xl font-bold">Financial tracker</h1>
+          <p className="text-sm text-muted-foreground">Your portfolio and spending, one console</p>
         </div>
 
         <Card>

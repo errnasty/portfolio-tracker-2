@@ -64,6 +64,9 @@
   /* Press feedback for tappable controls. */
   .press { transition: transform 0.12s ease-out, opacity 0.12s ease-out, background-color 0.15s ease-out; }
   .press:active { transform: scale(0.97); }
+  /* Hide scrollbar chrome while keeping scroll (used by the nav rail). */
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
   /* Stagger: direct children fade-up with an incremental delay (self-indexing). */
   @keyframes dc-stagger-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
   .stagger > * { animation: dc-stagger-in 0.28s ease-out both; }

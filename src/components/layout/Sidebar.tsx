@@ -20,7 +20,7 @@ function NavItems({ pathname, labelMode }: { pathname: string; labelMode: 'alway
     ? 'opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100'
     : ''
   return (
-    <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-hidden">
+    <nav className="no-scrollbar flex flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-hidden">
       {NAV_GROUPS.map((g) => (
         <div key={g} className="flex flex-col gap-0.5">
           <div className={cn('whitespace-nowrap px-4 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70', fade)}>
@@ -79,7 +79,7 @@ export function Sidebar() {
         </button>
         <div className="flex items-center gap-2">
           <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-xs font-bold text-primary-foreground">$</div>
-          <span className="text-sm font-semibold">Finance</span>
+          <span className="text-sm font-semibold">Financial tracker</span>
         </div>
         <div className="w-9" />
       </div>
@@ -95,7 +95,7 @@ export function Sidebar() {
       >
         <div className="mb-4 flex items-center gap-3 px-4">
           <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary text-sm font-bold text-primary-foreground">$</div>
-          <span className="whitespace-nowrap font-semibold opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">Finance</span>
+          <span className="whitespace-nowrap font-semibold opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">Financial tracker</span>
         </div>
 
         <NavItems pathname={pathname} labelMode="hover" />
@@ -124,7 +124,7 @@ export function Sidebar() {
         <div className="mb-4 flex items-center justify-between px-2">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">$</div>
-            <span className="font-semibold">Finance</span>
+            <span className="font-semibold">Financial tracker</span>
           </div>
           <button
             aria-label="Close menu"
