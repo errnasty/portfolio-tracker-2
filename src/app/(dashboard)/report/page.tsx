@@ -5,6 +5,7 @@ import { usePortfolio } from '@/context/PortfolioContext'
 import { useSpending } from '@/context/SpendingContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { StatusBar } from '@/components/ui/status-bar'
 import { Printer, ArrowLeft, Download } from 'lucide-react'
 import Link from 'next/link'
 import {
@@ -90,7 +91,7 @@ export default function ReportPage() {
   if (!hasHoldings && bankTransactions.length === 0) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold">Report</h1>
+        <StatusBar screen="REPORT" className="print:hidden" />
         <p className="text-sm text-muted-foreground">Nothing to report yet — add holdings or import spending first.</p>
       </div>
     )
@@ -98,6 +99,7 @@ export default function ReportPage() {
 
   return (
     <div className="space-y-6 print:space-y-3">
+      <StatusBar screen="REPORT" className="print:hidden" />
       {/* Toolbar — hidden in print */}
       <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
         <Link href="/dashboard">

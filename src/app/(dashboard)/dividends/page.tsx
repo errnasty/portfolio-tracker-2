@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { usePortfolio } from '@/context/PortfolioContext'
+import { PageShell } from '@/components/ui/page-shell'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatCurrency, formatPercent } from '@/lib/utils'
@@ -146,26 +147,19 @@ export default function DividendsPage() {
 
   if (!portfolioLoading && enriched.length === 0) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-2xl md:text-3xl font-bold">Dividends</h1>
+      <PageShell screen="DIVIDENDS">
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             Add holdings to see dividend tracking.
           </CardContent>
         </Card>
-      </div>
+      </PageShell>
     )
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold">Dividends</h1>
-        <p className="text-sm md:text-base text-muted-foreground">
-          Trailing income, forward projection, and per-holding yield
-        </p>
-      </div>
-
+    <PageShell screen="DIVIDENDS" footerHints={<span><span className="text-primary">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g h</span> home</span>}>
+    <div className="space-y-4">
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <SummaryCard
           label="Forward 12m income"
@@ -286,6 +280,7 @@ export default function DividendsPage() {
         </CardContent>
       </Card>
     </div>
+    </PageShell>
   )
 }
 
