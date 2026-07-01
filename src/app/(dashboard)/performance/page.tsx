@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { usePortfolio } from '@/context/PortfolioContext'
+import { PageShell } from '@/components/ui/page-shell'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -124,17 +125,16 @@ export default function PerformancePage() {
   const lines = ['Portfolio', ...activeBenchmarks]
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Performance</h1>
-          <p className="text-sm md:text-base text-muted-foreground">Normalised returns (base = 100 at start of period)</p>
-        </div>
-        <Button variant="outline" size="sm" onClick={fetchData} disabled={loading} className="self-start sm:self-auto">
-          <RefreshCw className="mr-2 h-4 w-4" /> Refresh
-        </Button>
-      </div>
-
+    <PageShell
+      screen="PERFORMANCE"
+      statusRight={(
+        <button onClick={fetchData} disabled={loading} className="press flex items-center gap-1 hover:text-foreground disabled:opacity-50">
+          <RefreshCw className="h-3.5 w-3.5" /> refresh
+        </button>
+      )}
+      footerHints={<span><span className="text-primary">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g h</span> home</span>}
+    >
+    <div className="space-y-4">
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-4">
         {/* Period selector */}
@@ -242,5 +242,6 @@ export default function PerformancePage() {
         />
       )}
     </div>
+    </PageShell>
   )
 }

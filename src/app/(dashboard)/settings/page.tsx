@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { usePortfolio } from '@/context/PortfolioContext'
+import { PageShell } from '@/components/ui/page-shell'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -28,12 +29,8 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold">Settings</h1>
-        <p className="text-sm md:text-base text-muted-foreground">Configure your portfolio preferences</p>
-      </div>
-
+    <PageShell screen="SETTINGS" statusRight={<span>base=<span className="text-foreground">{currency}</span></span>}>
+    <div className="space-y-4">
       <Card className="max-w-md">
         <CardHeader>
           <CardTitle className="text-base">Display Currency</CardTitle>
@@ -63,5 +60,6 @@ export default function SettingsPage() {
 
       <GmailCard />
     </div>
+    </PageShell>
   )
 }

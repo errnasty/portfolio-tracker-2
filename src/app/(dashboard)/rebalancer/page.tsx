@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { usePortfolio } from '@/context/PortfolioContext'
+import { PageShell } from '@/components/ui/page-shell'
 import { calcRebalance, type RebalanceMode } from '@/lib/calculations'
 import { formatCurrency, formatPercent, formatShares } from '@/lib/utils'
 import { Wallet, Check } from 'lucide-react'
@@ -88,16 +89,9 @@ export default function RebalancerPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Rebalancer</h1>
-          <p className="text-sm md:text-base text-muted-foreground">
-            {mode === 'buy-only'
-              ? 'Deploy new cash into underweight positions — no sells'
-              : 'Set your target allocations and get buy/sell recommendations'}
-          </p>
-        </div>
+    <PageShell screen="REBALANCER" footerHints={<span><span className="text-primary">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g p</span> planner</span>}>
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-end">
         {/* Mode toggle */}
         <div className="flex gap-1 rounded-md bg-muted p-1 self-start">
           <button
@@ -434,5 +428,6 @@ export default function RebalancerPage() {
         }}
       />
     </div>
+    </PageShell>
   )
 }

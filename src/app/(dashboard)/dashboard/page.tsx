@@ -174,7 +174,6 @@ export default function DashboardPage() {
         <span className="text-foreground">g b</span> budgets ·{' '}
         <span className="text-foreground">g p</span> planner
       </span>
-      <span>press <span className="text-foreground">k</span> for command palette</span>
     </>
   )
 

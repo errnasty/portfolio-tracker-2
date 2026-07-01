@@ -4,6 +4,7 @@ import { usePortfolio } from '@/context/PortfolioContext'
 import { useSpending } from '@/context/SpendingContext'
 import { formatCurrency } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { PageShell } from '@/components/ui/page-shell'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -23,14 +24,12 @@ export default function SubscriptionsPage() {
   const s = subscriptionSummary
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold">Subscriptions</h1>
-        <p className="text-sm md:text-base text-muted-foreground">
-          Recurring charges detected from your spending. Mark what to cut and watch the savings add up.
-        </p>
-      </div>
-
+    <PageShell
+      screen="SUBSCRIPTIONS"
+      statusRight={<span>{subscriptions.length} recurring · <span className="text-amber-400">{formatCurrency(s.potentialMonthly * 12, base)}/yr</span> if cut</span>}
+      footerHints={<span><span className="text-primary">▸</span> <span className="text-foreground">g s</span> spending · <span className="text-foreground">g b</span> budgets</span>}
+    >
+    <div className="space-y-4">
       {/* Savings summary */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <SummaryCard icon={RefreshCcw} title="Active / month" value={formatCurrency(s.activeMonthly, base)}
@@ -111,6 +110,7 @@ export default function SubscriptionsPage() {
         <strong className="text-emerald-400">Cancelled</strong> once you&apos;ve actually cancelled it — your yearly savings update automatically.
       </p>
     </div>
+    </PageShell>
   )
 }
 

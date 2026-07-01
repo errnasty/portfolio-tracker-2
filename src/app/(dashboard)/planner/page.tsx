@@ -223,7 +223,6 @@ export default function PlannerPage() {
   const footerHints = (
     <>
       <span><span className="text-primary">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g r</span> rebalancer · <span className="text-foreground">g h</span> home</span>
-      <span>press <span className="text-foreground">k</span> for command palette</span>
     </>
   )
 

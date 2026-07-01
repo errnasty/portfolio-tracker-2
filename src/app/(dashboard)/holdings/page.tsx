@@ -218,7 +218,6 @@ export default function HoldingsPage() {
   const footerHints = (
     <>
       <span><span className="text-primary">▸</span> <span className="text-foreground">g h</span> home · <span className="text-foreground">g r</span> rebalancer · <span className="text-foreground">g p</span> planner</span>
-      <span>press <span className="text-foreground">k</span> for command palette</span>
     </>
   )
 

@@ -149,7 +149,6 @@ export default function SpendingPage() {
   const footerHints = (
     <>
       <span><span className="text-primary">▸</span> <span className="text-foreground">g h</span> home · <span className="text-foreground">g b</span> budgets · <span className="text-foreground">g o</span> holdings</span>
-      <span>press <span className="text-foreground">k</span> for command palette</span>
     </>
   )
 

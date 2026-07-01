@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { usePortfolio } from '@/context/PortfolioContext'
+import { PageShell } from '@/components/ui/page-shell'
 import { parseIbkrCsv, parseGenericCsv, type ParsedRow, type ParseResult } from '@/lib/ibkr-parser'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -112,14 +113,8 @@ export default function ImportPage() {
   }, [allRows, importableRows])
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold">Import</h1>
-        <p className="text-sm md:text-base text-muted-foreground">
-          Bring in investment trades from a broker, or spending from your POSB bank statement
-        </p>
-      </div>
-
+    <PageShell screen="IMPORT" footerHints={<span><span className="text-primary">▸</span> <span className="text-foreground">g s</span> spending · <span className="text-foreground">g o</span> holdings</span>}>
+    <div className="space-y-4">
       <Tabs value={format} onValueChange={(v) => { setFormat(v as Format); setParseResult(null); setGenericRows(null) }}>
         <TabsList>
           <TabsTrigger value="ibkr">Interactive Brokers</TabsTrigger>
@@ -320,6 +315,7 @@ VWRA,dividend,2024-12-15,0,0,12.45,USD,0,Q4`}</pre>
       </>
       )}
     </div>
+    </PageShell>
   )
 }
 
