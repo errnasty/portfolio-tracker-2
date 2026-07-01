@@ -248,6 +248,9 @@ export default function ReportPage() {
 
         {fiTargetAmount !== null && monthlySavings !== null && (
           <Section title="Financial independence outlook">
+            <p className="text-xs text-muted-foreground -mt-1">
+              Net worth as of today; savings rate and expenses trail {monthLabel}.
+            </p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <SummaryStat
                 label="Years to FI"
