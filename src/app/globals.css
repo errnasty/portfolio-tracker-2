@@ -64,6 +64,17 @@
   /* Press feedback for tappable controls. */
   .press { transition: transform 0.12s ease-out, opacity 0.12s ease-out, background-color 0.15s ease-out; }
   .press:active { transform: scale(0.97); }
+  /* Stagger: children fade-up with incremental delay (set --i on each child). */
+  @keyframes dc-stagger-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .stagger > * { animation: dc-stagger-in 0.28s ease-out both; animation-delay: calc(var(--i, 0) * 40ms); }
+  /* Skeleton shimmer sweep. */
+  @keyframes dc-shimmer { 100% { transform: translateX(100%); } }
+  .shimmer { position: relative; overflow: hidden; }
+  .shimmer::after {
+    content: ''; position: absolute; inset: 0; transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, hsl(var(--foreground) / 0.06), transparent);
+    animation: dc-shimmer 1.4s infinite;
+  }
 }
 
 /* Honor reduced-motion: drop animation + transforms, keep instant. */
@@ -74,7 +85,16 @@
     transition-duration: 0.001ms !important;
   }
   .lift:hover, .press:active { transform: none !important; }
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }
+
+/* ── View Transitions ─────────────────────────────────────────────────────── */
+@keyframes dc-vt-in { from { opacity: 0; transform: translateY(8px); } }
+@keyframes dc-vt-out { to { opacity: 0; transform: translateY(-6px); } }
+::view-transition-old(root) { animation: dc-vt-out 0.18s ease-in both; }
+::view-transition-new(root) { animation: dc-vt-in 0.24s ease-out both; }
+/* Named shared elements (rail, hero numbers, status bar) morph automatically
+   via view-transition-name set inline on those elements. */
 
 /* ── Responsive table utilities ─────────────────────────────────────────── */
 /* Wrap a horizontally-scrolling table; the right edge gets a fade gradient
