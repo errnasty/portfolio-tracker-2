@@ -49,6 +49,8 @@ export function FiForecastTab({ netWorthBase, baseCurrency, enriched, statsForMo
   const [history, setHistory] = useState<Record<string, PriceSeries>>({})
   const [loadingHistory, setLoadingHistory] = useState(false)
 
+  const tickerKey = enriched.map((h) => h.ticker).sort().join(',')
+
   useEffect(() => {
     if (enriched.length === 0) return
     const tickers = enriched.map((h) => h.ticker).join(',')
@@ -58,7 +60,7 @@ export function FiForecastTab({ netWorthBase, baseCurrency, enriched, statsForMo
       .then((data) => setHistory(data.history ?? {}))
       .catch((e) => console.error('FI forecast history fetch failed:', e))
       .finally(() => setLoadingHistory(false))
-  }, [enriched.length]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tickerKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (usedRealHistory || Object.keys(history).length === 0) return
@@ -96,6 +98,18 @@ export function FiForecastTab({ netWorthBase, baseCurrency, enriched, statsForMo
     return yearsToTarget(series, 'p50', target)
   }
 
+  const whatIfYears = useMemo(() => {
+    if (monthlySavings === null || target === null) {
+      return { base: null, saveMore: null, spendLess: null, lowerReturn: null }
+    }
+    return {
+      base: whatIf(0, 0),
+      saveMore: whatIf(1000, 0),
+      spendLess: whatIf(500, 0),
+      lowerReturn: whatIf(0, -1),
+    }
+  }, [netWorthBase, monthlySavings, returnPct, volPct, target]) // eslint-disable-line react-hooks/exhaustive-deps
+
   if (monthlySavings === null || annualExpenses === null || target === null) {
     return (
       <Card>
@@ -111,10 +125,7 @@ export function FiForecastTab({ netWorthBase, baseCurrency, enriched, statsForMo
   const p95Years = yearsToTarget(result!.series, 'p95', target) // optimistic (fastest)
   const p5Years = yearsToTarget(result!.series, 'p5', target)   // pessimistic (slowest)
 
-  const baseYears = whatIf(0, 0)
-  const saveMoreYears = whatIf(1000, 0)
-  const spendLessYears = whatIf(500, 0)
-  const lowerReturnYears = whatIf(0, -1)
+  const { base: baseYears, saveMore: saveMoreYears, spendLess: spendLessYears, lowerReturn: lowerReturnYears } = whatIfYears
   const delta = (a: number | null, b: number | null) => (a === null || b === null ? null : a - b)
 
   return (
@@ -124,10 +135,8 @@ export function FiForecastTab({ netWorthBase, baseCurrency, enriched, statsForMo
           <HeroMetric
             big
             label="Financial independence"
-            value={p95Years ?? 0}
-            format={(n) => p50Years === null
-              ? 'not on track'
-              : `${p50Years.toFixed(1)}y`}
+            value={p50Years ?? 0}
+            format={(n) => (p50Years === null ? 'not on track' : `${n.toFixed(1)}y`)}
             sub={`at ${formatCurrency(monthlySavings, baseCurrency)}/mo savings · ${returnPct}% ${usedRealHistory ? 'real (your portfolio)' : 'assumed'} return`}
           />
           <HeroMetric
@@ -138,10 +147,12 @@ export function FiForecastTab({ netWorthBase, baseCurrency, enriched, statsForMo
           />
           <HeroMetric
             label="Range"
-            value={p95Years ?? 0}
-            format={(n) => (p5Years === null
-              ? `${n.toFixed(1)}y – 40y+`
-              : `${n.toFixed(1)} – ${p5Years.toFixed(1)}y`)}
+            value={p5Years ?? 0}
+            format={(n) => (p95Years === null
+              ? '—'
+              : p5Years === null
+                ? `${p95Years.toFixed(1)}y – 40y+`
+                : `${p95Years.toFixed(1)} – ${n.toFixed(1)}y`)}
             sub="5th – 95th percentile"
           />
         </HeroBand>
