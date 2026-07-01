@@ -64,6 +64,10 @@ export default function ReportPage() {
   const spend = statsForMonth(month)
   const savingsRate = spend.income > 0 ? (spend.net / spend.income) * 100 : 0
 
+  // Fixed 7%/15% return/vol assumptions, not real-history-derived — this is a
+  // static point-in-time snapshot for print/export, unlike the interactive
+  // Planner FI tab (FiForecastTab.tsx) which defaults to the user's actual
+  // portfolio CAGR/volatility when enough history is available.
   const monthlySavings = trailingMonthlyNetSavings(statsForMonth, month, 3)
   const annualExpenses = trailingAnnualExpenses(statsForMonth, month, 12)
   const fiTargetAmount = fiTarget(annualExpenses, 4)
