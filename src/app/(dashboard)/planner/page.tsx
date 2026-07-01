@@ -3,6 +3,8 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { usePortfolio } from '@/context/PortfolioContext'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { PageShell } from '@/components/ui/page-shell'
+import { HeroBand, HeroMetric } from '@/components/ui/hero-band'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { BreakdownChart } from '@/components/analytics/BreakdownChart'
@@ -208,14 +210,51 @@ export default function PlannerPage() {
   const hasPlannerData = plannerEnriched.length > 0 && totalValue > 0
   const missingPriceCount = plannerTickers.filter((t) => !mergedPrices[t]).length
   const totalPct = positions.reduce((s, p) => s + (p.pct || 0), 0)
+  const currentTotal = stats?.totalValue ?? 0
+  const vsCurrent = totalValue - currentTotal
+
+  const statusRight = (
+    <span className="flex items-center gap-4">
+      <span>positions <span className="text-foreground">{positions.length}</span></span>
+      <span>alloc <span className={Math.abs(totalPct - 100) > 0.05 ? 'text-amber-400' : 'text-foreground'}>{totalPct.toFixed(0)}%</span></span>
+    </span>
+  )
+
+  const footerHints = (
+    <>
+      <span><span className="text-primary">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g r</span> rebalancer · <span className="text-foreground">g h</span> home</span>
+      <span>press <span className="text-foreground">k</span> for command palette</span>
+    </>
+  )
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold">Planner</h1>
-        <p className="text-sm md:text-base text-muted-foreground">
-          Build a hypothetical portfolio and see its statistics side-by-side with your real one.
-        </p>
+    <PageShell screen="PLANNER" statusRight={statusRight} footerHints={footerHints}>
+    <div className="space-y-4">
+      <div className="overflow-hidden rounded-lg border border-border bg-card">
+        <HeroBand>
+          <HeroMetric
+            big
+            vtName="hero-planned"
+            label={`Planned portfolio · ${baseCurrency}`}
+            value={totalValue}
+            format={(n) => formatCurrency(n, baseCurrency)}
+            delta={currentTotal > 0 ? [
+              <span key="d"><span className="text-muted-foreground">vs current </span><span className={vsCurrent >= 0 ? 'text-emerald-400' : 'text-[#ff7a59]'}>{vsCurrent >= 0 ? '+' : ''}{formatCurrency(vsCurrent, baseCurrency)}</span></span>,
+            ] : undefined}
+          />
+          <HeroMetric
+            label="Positions"
+            value={positions.length}
+            format={(n) => `${Math.round(n)}`}
+            sub="planned holdings"
+          />
+          <HeroMetric
+            label="Allocation"
+            value={totalPct}
+            format={(n) => `${n.toFixed(0)}%`}
+            sub={Math.abs(totalPct - 100) > 0.05 ? 'not normalized' : 'of 100%'}
+          />
+        </HeroBand>
       </div>
 
       <PlannerEditor
@@ -438,6 +477,7 @@ export default function PlannerPage() {
         </>
       )}
     </div>
+    </PageShell>
   )
 }
 
