@@ -12,6 +12,8 @@ import {
   geographicBreakdown, sectorBreakdown, currencyBreakdown,
   concentrationMetrics, lookThroughStocks,
 } from '@/lib/analytics'
+import { monteCarlo } from '@/lib/projection'
+import { trailingMonthlyNetSavings, trailingAnnualExpenses, fiTarget, yearsToTarget } from '@/lib/fi'
 import { formatCurrency, formatPercent, gainLossColor } from '@/lib/utils'
 import type { TickerAnalytics } from '@/app/api/analytics/route'
 import type { Currency } from '@/types'
@@ -61,6 +63,21 @@ export default function ReportPage() {
 
   const spend = statsForMonth(month)
   const savingsRate = spend.income > 0 ? (spend.net / spend.income) * 100 : 0
+
+  const monthlySavings = trailingMonthlyNetSavings(statsForMonth, month, 3)
+  const annualExpenses = trailingAnnualExpenses(statsForMonth, month, 12)
+  const fiTargetAmount = fiTarget(annualExpenses, 4)
+  const fiResult = (monthlySavings !== null && fiTargetAmount !== null)
+    ? monteCarlo({
+        startingValue: netWorthBase,
+        monthlyContribution: monthlySavings,
+        expectedAnnualReturnPct: 7,
+        expectedAnnualVolPct: 15,
+        months: 480,
+      }, fiTargetAmount)
+    : null
+  const fiYears = fiResult ? yearsToTarget(fiResult.series, 'p50', fiTargetAmount!) : null
+
   const monthTxns = useMemo(
     () => bankTransactions.filter((t) => t.date.startsWith(month)).sort((a, b) => (a.date < b.date ? 1 : -1)),
     [bankTransactions, month],
@@ -223,6 +240,23 @@ export default function ReportPage() {
               </Section>
             </div>
           </>
+        )}
+
+        {fiTargetAmount !== null && monthlySavings !== null && (
+          <Section title="Financial independence outlook">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <SummaryStat
+                label="Years to FI"
+                value={fiYears === null ? 'not on track' : `${fiYears.toFixed(1)}y`}
+              />
+              <SummaryStat label="Success probability" value={`${(fiResult!.successRate * 100).toFixed(0)}%`} />
+              <SummaryStat label="FI target (4% SWR)" value={formatCurrency(fiTargetAmount, base)} />
+              <SummaryStat
+                label="Progress"
+                value={`${Math.min(100, (netWorthBase / fiTargetAmount) * 100).toFixed(1)}%`}
+              />
+            </div>
+          </Section>
         )}
 
         <p className="text-[10px] text-muted-foreground border-t border-border pt-2">
