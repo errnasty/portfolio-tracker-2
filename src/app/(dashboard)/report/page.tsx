@@ -33,7 +33,7 @@ function download(filename: string, content: string) {
 }
 
 export default function ReportPage() {
-  const { enriched, stats, settings, transactions } = usePortfolio()
+  const { enriched, stats, settings, transactions, netWorthBase, accountsNetBase } = usePortfolio()
   const { statsForMonth, bankTransactions, categoryById } = useSpending()
   const base = (settings?.base_currency ?? 'USD') as Currency
   const [analytics, setAnalytics] = useState<Record<string, TickerAnalytics>>({})
@@ -52,6 +52,7 @@ export default function ReportPage() {
   }, [enriched.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const hasHoldings = enriched.length > 0
+  const holdingsValueBase = enriched.reduce((s, h) => s + h.currentValueBase, 0)
   const geo = hasHoldings ? geographicBreakdown(enriched, analytics) : []
   const sec = hasHoldings ? sectorBreakdown(enriched, analytics) : []
   const cur = hasHoldings ? currencyBreakdown(enriched, analytics) : []
@@ -119,6 +120,15 @@ export default function ReportPage() {
           <h1 className="text-2xl md:text-3xl font-bold">Monthly Finance Report</h1>
           <p className="text-sm text-muted-foreground">{monthLabel} · generated {today} · base currency {base}</p>
         </div>
+
+        {/* Net worth (financial + portfolio combined) */}
+        <Section title="Net worth">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <SummaryStat label="Net worth" value={formatCurrency(netWorthBase, base)} />
+            <SummaryStat label="Cash & accounts" value={formatCurrency(accountsNetBase, base)} />
+            <SummaryStat label="Portfolio value" value={formatCurrency(holdingsValueBase, base)} />
+          </div>
+        </Section>
 
         {/* Spending summary */}
         <Section title={`Spending · ${monthLabel}`}>
