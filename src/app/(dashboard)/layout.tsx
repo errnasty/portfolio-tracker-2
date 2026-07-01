@@ -6,6 +6,8 @@ import { supabase } from '@/lib/supabase'
 import { PortfolioProvider } from '@/context/PortfolioContext'
 import { SpendingProvider } from '@/context/SpendingContext'
 import { Sidebar } from '@/components/layout/Sidebar'
+import { ViewTransitionProvider } from '@/components/motion/ViewTransitionProvider'
+import { KeyboardProvider } from '@/components/layout/KeyboardProvider'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -35,14 +37,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <PortfolioProvider>
       <SpendingProvider>
-        <div className="flex min-h-screen bg-background">
-          <Sidebar />
-          <main className="flex-1 pt-12 md:pt-0 md:pl-56">
-            <div key={pathname} className="mx-auto max-w-7xl p-3 sm:p-4 md:p-6 lg:p-8 animate-fade-up">
-              {children}
+        <ViewTransitionProvider>
+          <KeyboardProvider>
+            <div className="flex min-h-screen bg-background">
+              <Sidebar />
+              <main className="flex-1 pt-12 md:pl-14 md:pt-0">
+                <div key={pathname} className="mx-auto max-w-7xl animate-fade-up p-3 sm:p-4 md:p-6 lg:p-8">
+                  {children}
+                </div>
+              </main>
             </div>
-          </main>
-        </div>
+          </KeyboardProvider>
+        </ViewTransitionProvider>
       </SpendingProvider>
     </PortfolioProvider>
   )

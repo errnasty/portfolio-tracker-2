@@ -5,6 +5,8 @@ import { usePortfolio } from '@/context/PortfolioContext'
 import { useSpending } from '@/context/SpendingContext'
 import { formatCurrency } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { PageShell } from '@/components/ui/page-shell'
+import { HeroBand, HeroMetric } from '@/components/ui/hero-band'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Target } from 'lucide-react'
@@ -50,22 +52,41 @@ export default function BudgetsPage() {
   const totalSpent = expenseCats.reduce((s, c) => s + (spentThisMonth.get(c.id) ?? 0), 0)
   const remaining = totalBudget - totalSpent
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold">Budgets</h1>
-        <p className="text-sm md:text-base text-muted-foreground">
-          Set a monthly limit per category. Spending tracks against it automatically.
-        </p>
-      </div>
+  const usedPct = totalBudget > 0 ? Math.min(100, (totalSpent / totalBudget) * 100) : 0
 
-      <div className="grid gap-3 grid-cols-3">
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total budget</CardTitle></CardHeader>
-          <CardContent><div className="text-lg md:text-2xl font-bold tabular-nums">{formatCurrency(totalBudget, base)}</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Spent this month</CardTitle></CardHeader>
-          <CardContent><div className="text-lg md:text-2xl font-bold tabular-nums">{formatCurrency(totalSpent, base)}</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Remaining</CardTitle></CardHeader>
-          <CardContent><div className={`text-lg md:text-2xl font-bold tabular-nums ${remaining >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{formatCurrency(remaining, base)}</div></CardContent></Card>
+  return (
+    <PageShell
+      screen="BUDGETS"
+      statusRight={<span>{month} · {expenseCats.length} categories</span>}
+      footerHints={<span><span className="text-primary">▸</span> <span className="text-foreground">g s</span> spending · <span className="text-foreground">g h</span> home</span>}
+    >
+    <div className="space-y-4">
+      <div className="overflow-hidden rounded-lg border border-border bg-card">
+        <HeroBand>
+          <HeroMetric
+            big
+            label="Spent this month"
+            value={totalSpent}
+            format={(n) => formatCurrency(n, base)}
+            sub={totalBudget > 0 ? <>of {formatCurrency(totalBudget, base)} budget</> : 'no budgets set'}
+          >
+            <div className="mt-3 h-1.5 overflow-hidden rounded-[1px] bg-muted">
+              <div className={usedPct >= 100 ? 'h-full bg-red-400' : 'h-full bg-sky-400'} style={{ width: `${usedPct}%` }} />
+            </div>
+          </HeroMetric>
+          <HeroMetric
+            label="Remaining"
+            value={remaining}
+            format={(n) => formatCurrency(n, base)}
+            delta={[<span key="r" className={remaining >= 0 ? 'text-emerald-400' : 'text-red-400'}>{remaining >= 0 ? 'on track' : 'over budget'}</span>]}
+          />
+          <HeroMetric
+            label="Total budget"
+            value={totalBudget}
+            format={(n) => formatCurrency(n, base)}
+            sub="monthly limit"
+          />
+        </HeroBand>
       </div>
 
       <Card>
@@ -94,6 +115,7 @@ export default function BudgetsPage() {
         </CardContent>
       </Card>
     </div>
+    </PageShell>
   )
 }
 

@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { usePortfolio } from '@/context/PortfolioContext'
 import { formatCurrency, formatPercent, formatShares, gainLossColor, gainLossBg } from '@/lib/utils'
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,6 +11,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Plus, Pencil, Trash2, Search, Loader2 } from 'lucide-react'
+import { PageShell } from '@/components/ui/page-shell'
+import { HeroBand, HeroMetric } from '@/components/ui/hero-band'
+import { SectionLabel } from '@/components/ui/section-label'
 import { TableScroll } from '@/components/ui/table-scroll'
 import { InlineNumberCell } from '@/components/holdings/InlineNumberCell'
 import { CashHoldingsCard } from '@/components/holdings/CashHoldingsCard'
@@ -193,22 +195,67 @@ export default function HoldingsPage() {
 
   const canSave = form.ticker.trim() && form.shares && form.cost_basis_per_share && !saving
 
+  // Portfolio aggregates for the hero band.
+  const priced = enriched.filter((h) => h.currentPrice > 0)
+  const totalValue = enriched.reduce((s, h) => s + h.currentValueBase, 0)
+  const todayChange = priced.reduce((s, h) => s + h.dayChange, 0)
+  const prevValue = totalValue - todayChange
+  const todayPct = prevValue > 0 ? (todayChange / prevValue) * 100 : 0
+  const unrealised = priced.reduce((s, h) => s + h.gainLoss, 0)
+  const costBasis = totalValue - unrealised
+  const totalRetPct = costBasis > 0 ? (unrealised / costBasis) * 100 : 0
+  const signed = (n: number) => `${n >= 0 ? '+' : ''}${formatCurrency(n, base)}`
+
+  const statusRight = (
+    <span className="flex items-center gap-4">
+      <span>positions <span className="text-foreground">{enriched.length}</span></span>
+      <button onClick={openAdd} className="press flex items-center gap-1 hover:text-foreground">
+        <Plus className="h-3.5 w-3.5" /> add
+      </button>
+    </span>
+  )
+
+  const footerHints = (
+    <>
+      <span><span className="text-primary">▸</span> <span className="text-foreground">g h</span> home · <span className="text-foreground">g r</span> rebalancer · <span className="text-foreground">g p</span> planner</span>
+    </>
+  )
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Holdings</h1>
-          <p className="text-sm md:text-base text-muted-foreground">Manage your portfolio positions</p>
-        </div>
-        <Button onClick={openAdd} className="self-start sm:self-auto">
-          <Plus className="mr-2 h-4 w-4" /> Add Holding
-        </Button>
+    <PageShell screen="HOLDINGS" statusRight={statusRight} footerHints={footerHints}>
+    <div className="space-y-4">
+      <div className="overflow-hidden rounded-lg border border-border bg-card">
+        <HeroBand>
+          <HeroMetric
+            big
+            vtName="hero-invested"
+            label={`Total invested · ${base}`}
+            value={totalValue}
+            format={(n) => formatCurrency(n, base)}
+            delta={[
+              <span key="u"><span className="text-muted-foreground">unrealised </span><span className={gainLossColor(unrealised)}>{signed(unrealised)}</span></span>,
+              <span key="r"><span className="text-muted-foreground">return </span><span className={gainLossColor(unrealised)}>{formatPercent(totalRetPct)}</span></span>,
+            ]}
+          />
+          <HeroMetric
+            label="Today"
+            value={todayChange}
+            format={signed}
+            delta={[<span key="p" className={gainLossColor(todayChange)}>{formatPercent(todayPct)}</span>]}
+          />
+          <HeroMetric
+            label="Total return"
+            value={unrealised}
+            format={signed}
+            delta={[<span key="p" className={gainLossColor(unrealised)}>{formatPercent(totalRetPct)}</span>]}
+          />
+        </HeroBand>
       </div>
 
       <CashHoldingsCard />
 
-      <Card>
-        <CardContent className="p-0">
+      <div className="overflow-hidden rounded-lg border border-border bg-card">
+        <SectionLabel right="[+] add">POSITIONS</SectionLabel>
           {loading ? (
             <div className="space-y-3 p-6">
               {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
@@ -309,8 +356,7 @@ export default function HoldingsPage() {
             </Table>
             </TableScroll>
           )}
-        </CardContent>
-      </Card>
+      </div>
 
       {/* Add / Edit dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
@@ -395,5 +441,6 @@ export default function HoldingsPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </PageShell>
   )
 }

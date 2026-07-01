@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { usePortfolio } from '@/context/PortfolioContext'
+import { PageShell } from '@/components/ui/page-shell'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -128,26 +129,17 @@ export default function TransactionsPage() {
   const canSave = !!form.ticker.trim() && !!form.date && !saving
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Transactions</h1>
-          <p className="text-sm md:text-base text-muted-foreground">
-            Optional ledger of buys, sells, dividends and splits — independent of your holdings
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Link href="/import">
-            <Button variant="outline" className="self-start sm:self-auto">
-              <Upload className="mr-2 h-4 w-4" /> Import CSV
-            </Button>
-          </Link>
-          <Button onClick={openAdd} className="self-start sm:self-auto">
-            <Plus className="mr-2 h-4 w-4" /> Add Transaction
-          </Button>
-        </div>
-      </div>
-
+    <PageShell
+      screen="TRANSACTIONS"
+      statusRight={(
+        <span className="flex items-center gap-4">
+          <Link href="/import" className="flex items-center gap-1 hover:text-foreground"><Upload className="h-3.5 w-3.5" /> import</Link>
+          <button onClick={openAdd} className="press flex items-center gap-1 hover:text-foreground"><Plus className="h-3.5 w-3.5" /> add</button>
+        </span>
+      )}
+      footerHints={<span><span className="text-primary">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g s</span> spending</span>}
+    >
+    <div className="space-y-4">
       {/* Filters */}
       <div className="flex flex-wrap gap-3 items-end">
         <div className="space-y-1">
@@ -399,5 +391,6 @@ export default function TransactionsPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </PageShell>
   )
 }

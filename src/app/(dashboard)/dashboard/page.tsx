@@ -2,13 +2,14 @@
 
 import Link from 'next/link'
 import { useMemo } from 'react'
-import { useRouter } from 'next/navigation'
 import { AreaChart, Area, Line, ComposedChart, XAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { usePortfolio } from '@/context/PortfolioContext'
 import { useSpending } from '@/context/SpendingContext'
 import { formatCurrency, formatPercent, gainLossColor } from '@/lib/utils'
 import { SectionLabel } from '@/components/ui/section-label'
-import { Skeleton } from '@/components/ui/skeleton'
+import { PageShell } from '@/components/ui/page-shell'
+import { HeroBand, HeroMetric } from '@/components/ui/hero-band'
+import { ActivityRow } from '@/components/ui/stat-row'
 import { RefreshCw, Upload } from 'lucide-react'
 import type { Currency } from '@/types'
 
@@ -23,7 +24,6 @@ export default function DashboardPage() {
     spendingStats, bankTransactions, categoryById, budgets, subscriptionSummary,
   } = useSpending()
   const base = (settings?.base_currency ?? 'USD') as Currency
-  const router = useRouter()
 
   const holdingsValue = stats?.holdingsValue ?? 0
   const invested = stats?.totalValue ?? 0
@@ -38,7 +38,7 @@ export default function DashboardPage() {
   )
   const drift = useMemo(() => {
     const totalEq = enriched.reduce((s, h) => s + h.currentValueBase, 0)
-    if (totalEq <= 0) return [] as { ticker: string; cur: number; target: number; d: number }[]
+    if (totalEq <= 0) return [] as { ticker: string; cur: number; target: number; d: number; out: boolean }[]
     return targets.map((t) => {
       const h = enriched.find((e) => e.ticker === t.ticker)
       const cur = ((h?.currentValueBase ?? 0) / totalEq) * 100
@@ -73,6 +73,7 @@ export default function DashboardPage() {
     actions.push({ sev: 'med', tag: 'BUDGET', href: '/budgets', cta: 'ADJUST',
       title: `${overBudget.length} over budget`, sub: overBudget.map((o) => o.name).slice(0, 3).join(' · ') })
   }
+  const topActions = actions.slice(0, 3)
 
   // net-worth trend (snapshots + live today point)
   const sparkData = useMemo(() => {
@@ -94,6 +95,7 @@ export default function DashboardPage() {
     .map((x) => ({ label: x.label, delta: netWorthBase - (x.v as number) }))
 
   const totalBudget = budgets.reduce((s, b) => s + Number(b.amount), 0)
+  const spentPct = totalBudget > 0 ? Math.min(100, (expense / totalBudget) * 100) : 0
 
   // Daily spend + cumulative curve for the current month (from bank txns).
   const monthDaily = useMemo(() => {
@@ -122,9 +124,7 @@ export default function DashboardPage() {
     return { perDay, curve, maxDay, todayDay, daysInMonth }
   }, [bankTransactions, totalBudget])
 
-  const topHoldings = [...enriched].sort((a, b) => b.currentValueBase - a.currentValueBase).slice(0, 6)
   const allocHoldings = [...enriched].sort((a, b) => b.currentValueBase - a.currentValueBase).slice(0, 5)
-  const recent = bankTransactions.slice(0, 8)
   const topCats = spendingStats.byCategory.slice(0, 6)
   const budgetRows = budgets
     .map((b) => ({ name: categoryById[b.category_id]?.name ?? '—', spent: spentByCat.get(b.category_id) ?? 0, limit: Number(b.amount) }))
@@ -133,51 +133,74 @@ export default function DashboardPage() {
   const fxLine = fxRates ? Object.entries(fxRates.rates).filter(([k]) => k !== fxRates.base).slice(0, 2)
     .map(([k, v]) => `${fxRates.base}/${k} ${Number(v).toFixed(3)}`).join(' · ') : '—'
 
+  // Unified activity feed: lead with the top drift alert, then recent txns. Capped at 6.
+  type Act = { tone: 'up' | 'down' | 'cool' | 'warn'; when: string; text: string; amount: React.ReactNode }
+  const activity: Act[] = []
+  if (drift.length > 0) {
+    activity.push({ tone: 'down', when: 'now', text: `${drift[0].ticker} breached rebalance band`, amount: `${drift[0].d >= 0 ? '+' : ''}${PCT(drift[0].d)}` })
+  }
+  for (const t of bankTransactions.slice(0, 6)) {
+    const inc = Number(t.amount) >= 0
+    activity.push({
+      tone: inc ? 'up' : 'cool',
+      when: t.date.slice(5),
+      text: t.description,
+      amount: <span className={inc ? 'text-emerald-400' : 'text-[#ff7a59]'}>{inc ? '+' : ''}{formatCurrency(Number(t.amount), t.currency)}</span>,
+    })
+  }
+  const feed = activity.slice(0, 6)
+
   const sevColor = (s: Action['sev']) => s === 'high' ? 'border-l-[#ff7a59]' : 'border-l-amber-500'
   const sevText = (s: Action['sev']) => s === 'high' ? 'text-[#ff7a59]' : 'text-amber-500'
 
+  const statusRight = (
+    <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
+      <span>base=<span className="text-foreground">{base}</span></span>
+      <span className="hidden sm:inline">FX <span className="text-foreground">{fxLine}</span></span>
+      <span>positions <span className="text-foreground">{enriched.length}</span></span>
+      <Link href="/import" className="flex items-center gap-1 hover:text-foreground"><Upload className="h-3.5 w-3.5" /> import</Link>
+      <button onClick={refreshPrices} disabled={loading} className="press flex items-center gap-1 hover:text-foreground disabled:opacity-50">
+        <RefreshCw className="h-3.5 w-3.5" /> refresh
+      </button>
+    </span>
+  )
+
+  const footerHints = (
+    <>
+      <span>
+        <span className="text-primary">▸</span>{' '}
+        <span className="text-foreground">g s</span> spending ·{' '}
+        <span className="text-foreground">g o</span> holdings ·{' '}
+        <span className="text-foreground">g b</span> budgets ·{' '}
+        <span className="text-foreground">g p</span> planner
+      </span>
+    </>
+  )
+
   return (
-    <div className="space-y-4">
+    <PageShell screen="HOME" statusRight={statusRight} footerHints={footerHints}>
+      <div className="space-y-4">
 
-      {/* ── GLANCE (full-bleed console) ─────────────────────────────────── */}
-      <div className="-mx-3 -mt-3 sm:-mx-4 sm:-mt-4 md:-mx-6 md:-mt-6 lg:-mx-8 lg:-mt-8 border-b border-border bg-card">
-
-        {/* status bar */}
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 border-b border-border bg-background px-3 sm:px-4 py-2 text-[11px]">
-          <span className="font-bold text-primary">PTRK ▸ home</span>
-          <span className="text-muted-foreground">base=<span className="text-foreground">{base}</span></span>
-          <span className="hidden sm:inline text-muted-foreground">FX <span className="text-foreground">{fxLine}</span></span>
-          <span className="text-muted-foreground">positions <span className="text-foreground">{enriched.length}</span></span>
-          <span className="ml-auto flex items-center gap-3">
-            <Link href="/import" className="flex items-center gap-1 text-muted-foreground hover:text-foreground"><Upload className="h-3.5 w-3.5" /> import</Link>
-            <button onClick={refreshPrices} disabled={loading} className="flex items-center gap-1 text-muted-foreground hover:text-foreground disabled:opacity-50">
-              <RefreshCw className="h-3.5 w-3.5" /> refresh
-            </button>
-          </span>
-        </div>
-
-        {/* net worth hero */}
-        <div className="border-b border-border p-4 sm:p-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="min-w-0">
-              <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">NET_WORTH · {base}</div>
-              {loading
-                ? <Skeleton className="mt-2 h-9 w-56" />
-                : <div className="mt-1 text-[28px] sm:text-4xl font-bold tabular-nums leading-none truncate">{formatCurrency(netWorthBase, base)}</div>}
-              {deltas.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px]">
-                  {deltas.map((x) => (
-                    <span key={x.label}><span className="text-muted-foreground">{x.label} </span><span className={gainLossColor(x.delta)}>{x.delta >= 0 ? '+' : ''}{formatCurrency(x.delta, base)}</span></span>
-                  ))}
-                </div>
-              )}
+        {/* ── Console card: hero + attention + activity ──────────────────── */}
+        <div className="overflow-hidden rounded-lg border border-border bg-card">
+          <HeroBand>
+            <HeroMetric
+              big
+              vtName="hero-net-worth"
+              label={`Net worth · ${base}`}
+              value={netWorthBase}
+              format={(n) => formatCurrency(n, base)}
+              delta={deltas.map((x) => (
+                <span key={x.label}><span className="text-muted-foreground">{x.label} </span><span className={gainLossColor(x.delta)}>{x.delta >= 0 ? '+' : ''}{formatCurrency(x.delta, base)}</span></span>
+              ))}
+            >
               {sparkData.length >= 2 && (
-                <div className="mt-2 h-10 w-full max-w-[440px]">
+                <div className="mt-5 h-11 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={sparkData} margin={{ top: 2, bottom: 2, left: 0, right: 0 }}>
                       <defs>
                         <linearGradient id="nwSpark" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#6fcf97" stopOpacity={0.35} />
+                          <stop offset="0%" stopColor="#6fcf97" stopOpacity={0.32} />
                           <stop offset="100%" stopColor="#6fcf97" stopOpacity={0} />
                         </linearGradient>
                       </defs>
@@ -186,231 +209,190 @@ export default function DashboardPage() {
                   </ResponsiveContainer>
                 </div>
               )}
+            </HeroMetric>
+
+            <HeroMetric
+              label="Invested"
+              value={holdingsValue}
+              format={(n) => formatCurrency(n, base)}
+              delta={stats ? [<span key="l" className={gainLossColor(stats.totalGainLoss)}>{formatPercent(stats.totalGainLossPct)} lifetime</span>] : undefined}
+              sub={`Cash ${formatCurrency(totalCashBase, base)}`}
+            />
+
+            <HeroMetric
+              label="Spent this month"
+              value={expense}
+              format={(n) => formatCurrency(n, base)}
+              sub={totalBudget > 0 ? <>of {formatCurrency(totalBudget, base)} budget</> : undefined}
+            >
+              <div className="mt-3 h-1.5 overflow-hidden rounded-[1px] bg-muted">
+                <div className={spentPct >= 100 ? 'h-full bg-[#ff7a59]' : 'h-full bg-sky-400'} style={{ width: `${spentPct}%` }} />
+              </div>
+              <div className="mt-3 flex justify-between text-xs">
+                <span className="text-muted-foreground">saved this month</span>
+                <span className={`font-semibold tabular-nums ${gainLossColor(net)}`}>{net >= 0 ? '+' : ''}{formatCurrency(net, base)} · {savingsRate.toFixed(0)}%</span>
+              </div>
+            </HeroMetric>
+          </HeroBand>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2">
+            {/* Needs attention — capped at 3 */}
+            <div className="border-b border-border lg:border-b-0 lg:border-r">
+              <SectionLabel right={topActions.length ? `${topActions.length} of ${actions.length}` : 'clear'}>NEEDS YOUR ATTENTION</SectionLabel>
+              {topActions.length === 0 ? (
+                <div className="p-5 text-xs text-muted-foreground">Nothing needs attention. Clean books.</div>
+              ) : topActions.map((a, i) => (
+                <div key={i} className={`border-b border-l-2 border-border ${sevColor(a.sev)} p-4 last:border-b-0`}>
+                  <div className={`text-[10px] font-bold tracking-[0.14em] ${sevText(a.sev)}`}>{a.sev === 'high' ? '! ' : '~ '}{a.tag}</div>
+                  <div className="font-sans mt-2 text-[15px] leading-snug text-foreground">{a.title}</div>
+                  <div className="mt-1 text-xs leading-relaxed text-muted-foreground">{a.sub}</div>
+                  <Link href={a.href}>
+                    <button className="press mt-3 rounded-sm bg-primary px-3 py-1.5 text-[11px] font-bold text-primary-foreground hover:bg-primary/90">{a.cta} →</button>
+                  </Link>
+                </div>
+              ))}
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 sm:gap-x-8 gap-y-3">
-              <Chip label="Invested" value={formatCurrency(holdingsValue, base)}
-                sub={stats ? formatPercent(stats.totalGainLossPct) : ''} subClass={stats ? gainLossColor(stats.totalGainLoss) : ''} href="/holdings" />
-              <Chip label="Cash" value={formatCurrency(totalCashBase, base)} sub="investable" href="/holdings" />
-              <Chip label="MTD net" value={formatCurrency(net, base)} subClass={gainLossColor(net)} sub={`${savingsRate.toFixed(0)}% saved`} href="/spending" />
-              <Chip label="Subs" value={`${formatCurrency(subscriptionSummary.activeMonthly, base)}/mo`}
-                sub={subscriptionSummary.potentialMonthly > 0 ? `${formatCurrency(subscriptionSummary.potentialMonthly, base)} to cut` : 'reviewed'}
-                subClass={subscriptionSummary.potentialMonthly > 0 ? 'text-amber-500' : ''} href="/subscriptions" />
+
+            {/* Activity — last events, capped at 6 */}
+            <div>
+              <SectionLabel tone="cool" right="last events">ACTIVITY</SectionLabel>
+              {feed.length === 0 ? (
+                <div className="p-5 text-xs text-muted-foreground">No recent activity.</div>
+              ) : feed.map((a, i) => (
+                <ActivityRow key={i} tone={a.tone} when={a.when} text={a.text} amount={a.amount} />
+              ))}
+              <div className="flex items-center justify-between border-t border-border px-5 py-2.5 text-[11px]">
+                <span className="text-muted-foreground"><span className="text-emerald-400">●</span> income <span className="text-[#ff7a59]">●</span> alert <span className="text-sky-400">●</span> spend</span>
+                <Link href="/spending" className="text-muted-foreground underline hover:text-foreground">all activity →</Link>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* action queue + holdings */}
-        <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr]">
-          <aside className="border-b lg:border-b-0 lg:border-r border-border bg-[hsl(225_17%_5%)]">
-            <SectionLabel right={actions.length ? `${actions.length} pending` : 'clear'}>ACTION_QUEUE</SectionLabel>
-            {actions.length === 0 ? (
-              <div className="p-4 text-xs text-muted-foreground">Nothing needs attention. Clean books.</div>
-            ) : actions.map((a, i) => (
-              <div key={i} className={`border-b border-l-2 border-border ${sevColor(a.sev)} p-3.5`}>
-                <div className={`text-[10px] font-bold tracking-[0.1em] ${sevText(a.sev)}`}>{a.sev === 'high' ? '! ' : '~ '}{a.tag}</div>
-                <div className="mt-1.5 text-[12.5px] leading-snug">{a.title}</div>
-                <div className="mt-1 text-[11px] text-muted-foreground leading-relaxed">{a.sub}</div>
-                <Link href={a.href}>
-                  <button className="press mt-2 rounded-sm bg-primary px-2.5 py-1 text-[11px] font-bold text-primary-foreground hover:bg-primary/90">{a.cta} →</button>
-                </Link>
-              </div>
-            ))}
-          </aside>
+        {/* ── DETAILS (below the fold) ──────────────────────────────────── */}
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
 
-          <main className="min-w-0">
-            <SectionLabel href="/holdings" right={`${enriched.length} positions`}>HOLDINGS</SectionLabel>
-            {topHoldings.length === 0 ? (
-              <div className="p-4 text-xs text-muted-foreground">No holdings. <Link href="/holdings" className="underline">Add a position</Link>.</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-[11px]">
-                  <thead>
-                    <tr className="bg-background text-muted-foreground">
-                      <th className="px-3.5 py-2 text-left font-medium text-[10px] tracking-[0.06em]">SYM</th>
-                      <th className="px-2 py-2 text-right font-medium text-[10px] tracking-[0.06em]">PX</th>
-                      <th className="px-2 py-2 text-right font-medium text-[10px] tracking-[0.06em]">Δ1D</th>
-                      <th className="px-2 py-2 text-right font-medium text-[10px] tracking-[0.06em]">VALUE</th>
-                      <th className="px-2 py-2 text-right font-medium text-[10px] tracking-[0.06em] hidden sm:table-cell">%</th>
-                      <th className="px-3.5 py-2 text-right font-medium text-[10px] tracking-[0.06em]">RET</th>
-                    </tr>
-                  </thead>
-                  <tbody className="tabular-nums">
-                    {topHoldings.map((h) => (
-                      <tr key={h.id} onClick={() => router.push('/holdings')} className="border-t border-border cursor-pointer transition-colors hover:bg-accent/40">
-                        <td className="px-3.5 py-2 font-bold">{h.ticker}<div className="text-[10px] font-normal text-muted-foreground truncate max-w-[120px]">{h.name ?? '—'}</div></td>
-                        <td className="px-2 py-2 text-right whitespace-nowrap">{h.currentPrice > 0 ? formatCurrency(h.currentPrice, h.priceCurrency) : '—'}</td>
-                        <td className={`px-2 py-2 text-right ${h.currentPrice > 0 ? gainLossColor(h.dayChange) : 'text-muted-foreground'}`}>{h.currentPrice > 0 ? formatPercent(h.dayChangePct) : '—'}</td>
-                        <td className="px-2 py-2 text-right whitespace-nowrap">{formatCurrency(h.currentValueBase, base)}</td>
-                        <td className="px-2 py-2 text-right text-muted-foreground hidden sm:table-cell">{h.allocationPct.toFixed(1)}%</td>
-                        <td className={`px-3.5 py-2 text-right ${gainLossColor(h.gainLoss)}`}>{formatPercent(h.gainLossPct)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            <div className="border-t border-border px-3.5 py-2 text-[11px]">
-              <Link href="/holdings" className="text-muted-foreground underline hover:text-foreground">view all holdings →</Link>
-            </div>
-          </main>
-        </div>
-      </div>
-
-      {/* ── DETAILS (scroll down) — responsive, stacks on mobile ────────── */}
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-
-        {topCats.length > 0 && (
-          <Panel label="SPEND_BY_CATEGORY" tone="cool" right="this month" href="/spending">
-            <div className="p-3.5 space-y-2">
-              {topCats.map((c) => {
-                const pct = expense > 0 ? (c.amount / expense) * 100 : 0
-                return (
-                  <div key={c.category_id ?? 'uncat'}>
-                    <div className="flex justify-between text-[11px]"><span className="truncate">{c.name}</span><span className="tabular-nums text-muted-foreground whitespace-nowrap">{formatCurrency(c.amount, base)} · {pct.toFixed(0)}%</span></div>
-                    <div className="mt-1 h-[5px] bg-muted"><div className="h-full bg-sky-400" style={{ width: `${pct}%` }} /></div>
-                  </div>
-                )
-              })}
-            </div>
-          </Panel>
-        )}
-
-        {bankTransactions.length > 0 && (
-          <Panel label="SPEND_CURVE" tone="cool" right="MTD vs pace" href="/spending" className="md:col-span-2">
-            <div className="p-3.5">
-              <ResponsiveContainer width="100%" height={120}>
-                <ComposedChart data={monthDaily.curve} margin={{ top: 4, right: 6, bottom: 0, left: 0 }}>
-                  <defs>
-                    <linearGradient id="spendCum" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#6aa9ff" stopOpacity={0.3} />
-                      <stop offset="100%" stopColor="#6aa9ff" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="day" tick={{ fontSize: 9 }} stroke="hsl(var(--muted-foreground))" axisLine={false} tickLine={false} interval={6} />
-                  <Tooltip
-                    formatter={(v, n) => [formatCurrency(Number(v), base), n === 'cum' ? 'Spent' : 'Budget pace']}
-                    labelFormatter={(d) => `Day ${d}`}
-                    contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 4, fontSize: 12 }}
-                  />
-                  {totalBudget > 0 && <Line type="monotone" dataKey="pace" stroke="hsl(var(--muted-foreground))" strokeWidth={1} strokeDasharray="3 3" dot={false} isAnimationActive={false} />}
-                  <Area type="monotone" dataKey="cum" stroke="#6aa9ff" strokeWidth={1.4} fill="url(#spendCum)" connectNulls dot={false} isAnimationActive={false} />
-                </ComposedChart>
-              </ResponsiveContainer>
-              {/* daily heatmap */}
-              <div className="mt-3 flex flex-wrap gap-[3px]">
-                {monthDaily.perDay.map((v, i) => {
-                  const intensity = v > 0 ? 0.18 + 0.82 * (v / monthDaily.maxDay) : 0.06
-                  const isToday = i + 1 === monthDaily.todayDay
+          {topCats.length > 0 && (
+            <Panel label="SPEND_BY_CATEGORY" tone="cool" right="this month" href="/spending">
+              <div className="space-y-2 p-3.5">
+                {topCats.map((c) => {
+                  const pct = expense > 0 ? (c.amount / expense) * 100 : 0
                   return (
-                    <div
-                      key={i}
-                      title={`Day ${i + 1} · ${formatCurrency(v, base)}`}
-                      className="h-3.5 w-3.5 rounded-[1px]"
-                      style={{ backgroundColor: `rgba(106,169,255,${intensity})`, outline: isToday ? '1px solid hsl(var(--primary))' : 'none' }}
-                    />
+                    <div key={c.category_id ?? 'uncat'}>
+                      <div className="flex justify-between text-[11px]"><span className="truncate">{c.name}</span><span className="whitespace-nowrap tabular-nums text-muted-foreground">{formatCurrency(c.amount, base)} · {pct.toFixed(0)}%</span></div>
+                      <div className="mt-1 h-[5px] bg-muted"><div className="h-full bg-sky-400" style={{ width: `${pct}%` }} /></div>
+                    </div>
                   )
                 })}
               </div>
-              <div className="mt-1.5 flex justify-between text-[9px] text-muted-foreground"><span>day 1</span><span>today · day {monthDaily.todayDay}</span></div>
-            </div>
-          </Panel>
-        )}
+            </Panel>
+          )}
 
-        {recent.length > 0 && (
-          <Panel label="SIGNAL_LOG" right="recent" href="/spending">
-            <div>
-              {recent.map((t) => {
-                const inc = Number(t.amount) >= 0
-                return (
-                  <div key={t.id} className="grid grid-cols-[auto_1fr_auto] items-center gap-2 px-3.5 py-1.5 text-[11px] odd:bg-white/[0.015]">
-                    <span className="text-muted-foreground tabular-nums">{t.date.slice(5)}</span>
-                    <span className="truncate">{t.description}</span>
-                    <span className={`tabular-nums whitespace-nowrap ${inc ? 'text-emerald-400' : 'text-[#ff7a59]'}`}>{inc ? '+' : ''}{formatCurrency(Number(t.amount), t.currency)}</span>
-                  </div>
-                )
-              })}
-              <div className="border-t border-border px-3.5 py-2 text-[10px]"><Link href="/spending" className="text-muted-foreground underline hover:text-foreground">full log →</Link></div>
-            </div>
-          </Panel>
-        )}
-
-        {accounts.length > 0 && (
-          <Panel label="ACCOUNTS" tone="cool" right={formatCurrency(accountsNetBase, base)} href="/spending">
-            <div>
-              {accounts.map((a) => (
-                <div key={a.id} className="grid grid-cols-[1fr_auto] gap-2 border-b border-border last:border-0 px-3.5 py-2 text-[11px]">
-                  <div className="min-w-0"><div className="truncate">{a.name}</div><div className="text-[10px] text-muted-foreground truncate">{a.institution || a.type} · {a.currency}</div></div>
-                  <div className={`tabular-nums self-center font-medium whitespace-nowrap ${a.type === 'credit' && Number(a.current_balance) > 0 ? 'text-[#ff7a59]' : ''}`}>
-                    {a.type === 'credit' && Number(a.current_balance) > 0 ? '-' : ''}{formatCurrency(Number(a.current_balance), a.currency)}
-                  </div>
+          {bankTransactions.length > 0 && (
+            <Panel label="SPEND_CURVE" tone="cool" right="MTD vs pace" href="/spending" className="md:col-span-2">
+              <div className="p-3.5">
+                <ResponsiveContainer width="100%" height={120}>
+                  <ComposedChart data={monthDaily.curve} margin={{ top: 4, right: 6, bottom: 0, left: 0 }}>
+                    <defs>
+                      <linearGradient id="spendCum" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#6aa9ff" stopOpacity={0.3} />
+                        <stop offset="100%" stopColor="#6aa9ff" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="day" tick={{ fontSize: 9 }} stroke="hsl(var(--muted-foreground))" axisLine={false} tickLine={false} interval={6} />
+                    <Tooltip
+                      formatter={(v, n) => [formatCurrency(Number(v), base), n === 'cum' ? 'Spent' : 'Budget pace']}
+                      labelFormatter={(d) => `Day ${d}`}
+                      contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 4, fontSize: 12 }}
+                    />
+                    {totalBudget > 0 && <Line type="monotone" dataKey="pace" stroke="hsl(var(--muted-foreground))" strokeWidth={1} strokeDasharray="3 3" dot={false} isAnimationActive={false} />}
+                    <Area type="monotone" dataKey="cum" stroke="#6aa9ff" strokeWidth={1.4} fill="url(#spendCum)" connectNulls dot={false} isAnimationActive={false} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+                <div className="mt-3 flex flex-wrap gap-[3px]">
+                  {monthDaily.perDay.map((v, i) => {
+                    const intensity = v > 0 ? 0.18 + 0.82 * (v / monthDaily.maxDay) : 0.06
+                    const isToday = i + 1 === monthDaily.todayDay
+                    return (
+                      <div
+                        key={i}
+                        title={`Day ${i + 1} · ${formatCurrency(v, base)}`}
+                        className="h-3.5 w-3.5 rounded-[1px]"
+                        style={{ backgroundColor: `rgba(106,169,255,${intensity})`, outline: isToday ? '1px solid hsl(var(--primary))' : 'none' }}
+                      />
+                    )
+                  })}
                 </div>
-              ))}
-            </div>
-          </Panel>
-        )}
+                <div className="mt-1.5 flex justify-between text-[9px] text-muted-foreground"><span>day 1</span><span>today · day {monthDaily.todayDay}</span></div>
+              </div>
+            </Panel>
+          )}
 
-        {allocHoldings.length > 0 && (
-          <Panel label="ALLOCATION" right="% of portfolio" href="/analytics">
-            <div className="p-3.5 space-y-2">
-              {allocHoldings.map((h) => (
-                <div key={h.id}>
-                  <div className="flex justify-between text-[11px]"><span>{h.ticker}</span><span className="tabular-nums text-muted-foreground">{h.allocationPct.toFixed(1)}%</span></div>
-                  <div className="mt-1 h-[5px] bg-muted"><div className="h-full bg-primary" style={{ width: `${h.allocationPct}%` }} /></div>
-                </div>
-              ))}
-              {totalCashBase > 0 && invested > 0 && (
-                <div>
-                  <div className="flex justify-between text-[11px]"><span>Cash</span><span className="tabular-nums text-muted-foreground">{((totalCashBase / invested) * 100).toFixed(1)}%</span></div>
-                  <div className="mt-1 h-[5px] bg-muted"><div className="h-full bg-sky-400" style={{ width: `${(totalCashBase / invested) * 100}%` }} /></div>
-                </div>
-              )}
-            </div>
-          </Panel>
-        )}
-
-        {budgetRows.length > 0 && (
-          <Panel label="BUDGETS" tone="cool" right="MTD" href="/budgets">
-            <div className="p-3.5 space-y-2.5">
-              {budgetRows.map((b) => {
-                const pct = b.limit > 0 ? (b.spent / b.limit) * 100 : 0
-                const col = pct > 100 ? 'bg-[#ff7a59]' : pct > 80 ? 'bg-amber-500' : 'bg-sky-400'
-                return (
-                  <div key={b.name}>
-                    <div className="flex justify-between text-[11px]"><span className="truncate">{b.name}</span><span className="tabular-nums text-muted-foreground whitespace-nowrap">{formatCurrency(b.spent, base)} / {formatCurrency(b.limit, base)}</span></div>
-                    <div className="mt-1 h-[5px] bg-muted relative">
-                      <div className={`absolute inset-y-0 left-0 ${col}`} style={{ width: `${Math.min(100, pct)}%` }} />
-                      <div className="absolute -top-0.5 -bottom-0.5 w-px bg-foreground" style={{ left: '100%' }} />
+          {accounts.length > 0 && (
+            <Panel label="ACCOUNTS" tone="cool" right={formatCurrency(accountsNetBase, base)} href="/spending">
+              <div>
+                {accounts.map((a) => (
+                  <div key={a.id} className="grid grid-cols-[1fr_auto] gap-2 border-b border-border px-3.5 py-2 text-[11px] last:border-0">
+                    <div className="min-w-0"><div className="truncate">{a.name}</div><div className="truncate text-[10px] text-muted-foreground">{a.institution || a.type} · {a.currency}</div></div>
+                    <div className={`self-center whitespace-nowrap font-medium tabular-nums ${a.type === 'credit' && Number(a.current_balance) > 0 ? 'text-[#ff7a59]' : ''}`}>
+                      {a.type === 'credit' && Number(a.current_balance) > 0 ? '-' : ''}{formatCurrency(Number(a.current_balance), a.currency)}
                     </div>
                   </div>
-                )
-              })}
+                ))}
+              </div>
+            </Panel>
+          )}
+
+          {allocHoldings.length > 0 && (
+            <Panel label="ALLOCATION" right="% of portfolio" href="/analytics">
+              <div className="space-y-2 p-3.5">
+                {allocHoldings.map((h) => (
+                  <div key={h.id}>
+                    <div className="flex justify-between text-[11px]"><span>{h.ticker}</span><span className="tabular-nums text-muted-foreground">{h.allocationPct.toFixed(1)}%</span></div>
+                    <div className="mt-1 h-[5px] bg-muted"><div className="h-full bg-primary" style={{ width: `${h.allocationPct}%` }} /></div>
+                  </div>
+                ))}
+                {totalCashBase > 0 && invested > 0 && (
+                  <div>
+                    <div className="flex justify-between text-[11px]"><span>Cash</span><span className="tabular-nums text-muted-foreground">{((totalCashBase / invested) * 100).toFixed(1)}%</span></div>
+                    <div className="mt-1 h-[5px] bg-muted"><div className="h-full bg-sky-400" style={{ width: `${(totalCashBase / invested) * 100}%` }} /></div>
+                  </div>
+                )}
+              </div>
+            </Panel>
+          )}
+
+          {budgetRows.length > 0 && (
+            <Panel label="BUDGETS" tone="cool" right="MTD" href="/budgets">
+              <div className="space-y-2.5 p-3.5">
+                {budgetRows.map((b) => {
+                  const pct = b.limit > 0 ? (b.spent / b.limit) * 100 : 0
+                  const col = pct > 100 ? 'bg-[#ff7a59]' : pct > 80 ? 'bg-amber-500' : 'bg-sky-400'
+                  return (
+                    <div key={b.name}>
+                      <div className="flex justify-between text-[11px]"><span className="truncate">{b.name}</span><span className="whitespace-nowrap tabular-nums text-muted-foreground">{formatCurrency(b.spent, base)} / {formatCurrency(b.limit, base)}</span></div>
+                      <div className="relative mt-1 h-[5px] bg-muted">
+                        <div className={`absolute inset-y-0 left-0 ${col}`} style={{ width: `${Math.min(100, pct)}%` }} />
+                        <div className="absolute -bottom-0.5 -top-0.5 w-px bg-foreground" style={{ left: '100%' }} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </Panel>
+          )}
+
+          <Panel label="SUBSCRIPTIONS" tone="cool" right="14d auto-sync" href="/subscriptions">
+            <div className="grid grid-cols-3 gap-3 p-3.5">
+              <Mini label="ACTIVE / MO" value={formatCurrency(subscriptionSummary.activeMonthly, base)} />
+              <Mini label="CUT / YR" value={formatCurrency(subscriptionSummary.potentialMonthly * 12, base)} tone="text-amber-500" />
+              <Mini label="SAVED / YR" value={formatCurrency(subscriptionSummary.cancelledMonthly * 12, base)} tone="text-emerald-400" />
             </div>
+            <div className="border-t border-border px-3.5 py-2 text-[10px]"><Link href="/subscriptions" className="text-muted-foreground underline hover:text-foreground">manage →</Link></div>
           </Panel>
-        )}
-
-        <Panel label="SUBSCRIPTIONS" tone="cool" right="14d auto-sync" href="/subscriptions">
-          <div className="grid grid-cols-3 gap-3 p-3.5">
-            <Mini label="ACTIVE / MO" value={formatCurrency(subscriptionSummary.activeMonthly, base)} />
-            <Mini label="CUT / YR" value={formatCurrency(subscriptionSummary.potentialMonthly * 12, base)} tone="text-amber-500" />
-            <Mini label="SAVED / YR" value={formatCurrency(subscriptionSummary.cancelledMonthly * 12, base)} tone="text-emerald-400" />
-          </div>
-          <div className="border-t border-border px-3.5 py-2 text-[10px]"><Link href="/subscriptions" className="text-muted-foreground underline hover:text-foreground">manage →</Link></div>
-        </Panel>
+        </div>
       </div>
-
-      {/* command bar */}
-      <div className="flex flex-wrap justify-between gap-2 rounded-sm border border-border bg-background px-4 py-2 text-[11px] text-muted-foreground">
-        <span>
-          <span className="text-primary">▸</span> go:{' '}
-          <Link href="/spending" className="hover:text-foreground">spending</Link> ·{' '}
-          <Link href="/holdings" className="hover:text-foreground">holdings</Link> ·{' '}
-          <Link href="/budgets" className="hover:text-foreground">budgets</Link> ·{' '}
-          <Link href="/subscriptions" className="hover:text-foreground">subs</Link> ·{' '}
-          <Link href="/report" className="hover:text-foreground">report</Link>
-        </span>
-        <span>portfolio + spending · one console</span>
-      </div>
-    </div>
+    </PageShell>
   )
 }
 
@@ -420,33 +402,18 @@ function Panel({
   label: string; right?: React.ReactNode; tone?: 'accent' | 'cool' | 'mute'; href?: string; className?: string; children: React.ReactNode
 }) {
   return (
-    <div className={`lift border border-border rounded-sm bg-card overflow-hidden ${className ?? ''}`}>
+    <div className={`lift overflow-hidden rounded-lg border border-border bg-card ${className ?? ''}`}>
       <SectionLabel tone={tone} right={right} href={href}>{label}</SectionLabel>
       {children}
     </div>
   )
 }
 
-function Chip({
-  label, value, sub, subClass, href,
-}: {
-  label: string; value: string; sub?: string; subClass?: string; href?: string
-}) {
-  const inner = (
-    <div className="min-w-0">
-      <div className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground">{label}</div>
-      <div className="text-sm font-semibold tabular-nums truncate">{value}</div>
-      {sub ? <div className={`text-[10px] truncate ${subClass ?? 'text-muted-foreground'}`}>{sub}</div> : null}
-    </div>
-  )
-  return href ? <Link href={href} className="block hover:opacity-80">{inner}</Link> : inner
-}
-
 function Mini({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
     <div className="min-w-0">
-      <div className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground truncate">{label}</div>
-      <div className={`text-sm font-semibold tabular-nums truncate ${tone ?? ''}`}>{value}</div>
+      <div className="truncate text-[10px] uppercase tracking-[0.1em] text-muted-foreground">{label}</div>
+      <div className={`truncate text-sm font-semibold tabular-nums ${tone ?? ''}`}>{value}</div>
     </div>
   )
 }

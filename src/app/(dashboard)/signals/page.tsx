@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { usePortfolio } from '@/context/PortfolioContext'
+import { PageShell } from '@/components/ui/page-shell'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -97,41 +98,30 @@ export default function SignalsPage() {
 
   if (!portfolioLoading && enriched.length === 0) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-2xl md:text-3xl font-bold">Signals</h1>
+      <PageShell screen="SIGNALS">
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             Add holdings to monitor valuation signals.
           </CardContent>
         </Card>
-      </div>
+      </PageShell>
     )
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
-            <Bell className="h-6 w-6 text-primary" /> Valuation signals
-          </h1>
-          <p className="text-sm md:text-base text-muted-foreground">
-            Monitors P/E, momentum, drawdowns and yield across your holdings.
-            Fires plain-English alerts when valuations get stretched or assets look extended.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {refreshedAt && (
-            <span className="text-[11px] text-muted-foreground">
-              Updated {refreshedAt.toLocaleTimeString()}
-            </span>
-          )}
-          <Button size="sm" variant="outline" onClick={fetchMetrics} disabled={loading}>
-            <RefreshCw className={`mr-1 h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
-          </Button>
-        </div>
-      </div>
-
+    <PageShell
+      screen="SIGNALS"
+      statusRight={(
+        <span className="flex items-center gap-3">
+          {refreshedAt && <span>updated {refreshedAt.toLocaleTimeString()}</span>}
+          <button onClick={fetchMetrics} disabled={loading} className="press flex items-center gap-1 hover:text-foreground disabled:opacity-50">
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} /> refresh
+          </button>
+        </span>
+      )}
+      footerHints={<span><span className="text-primary">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g h</span> home</span>}
+    >
+    <div className="space-y-4">
       {/* Counts strip */}
       <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
         <CountChip severity="critical" count={counts.critical} />
@@ -298,6 +288,7 @@ export default function SignalsPage() {
         </CardContent>
       </Card>
     </div>
+    </PageShell>
   )
 }
 

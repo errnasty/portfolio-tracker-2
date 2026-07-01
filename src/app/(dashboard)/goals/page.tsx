@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { usePortfolio } from '@/context/PortfolioContext'
+import { PageShell } from '@/components/ui/page-shell'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -90,19 +91,12 @@ export default function GoalsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Goals</h1>
-          <p className="text-sm md:text-base text-muted-foreground">
-            Will I make it? Monte Carlo projections from your current portfolio
-          </p>
-        </div>
-        <Button onClick={openAdd} className="self-start sm:self-auto">
-          <Plus className="mr-2 h-4 w-4" /> Add Goal
-        </Button>
-      </div>
-
+    <PageShell
+      screen="GOALS"
+      statusRight={<button onClick={openAdd} className="press flex items-center gap-1 hover:text-foreground"><Plus className="h-3.5 w-3.5" /> add goal</button>}
+      footerHints={<span><span className="text-primary">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g p</span> planner</span>}
+    >
+    <div className="space-y-4">
       {loading ? (
         <Skeleton className="h-64 w-full" />
       ) : goals.length === 0 ? (
@@ -201,6 +195,7 @@ export default function GoalsPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </PageShell>
   )
 }
 

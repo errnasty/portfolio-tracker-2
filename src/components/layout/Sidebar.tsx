@@ -1,73 +1,59 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import {
-  LayoutDashboard, Wallet, Repeat, Briefcase, TrendingUp, Sliders, LogOut, Settings,
-  PieChart, Activity, Menu, X, Beaker, ListChecks, Coins, Target, FileText, Bell,
-  ChevronDown, ChevronRight, PiggyBank,
-} from 'lucide-react'
+import { LogOut, Menu, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
-import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/layout/ThemeToggle'
-
-type NavLink = { href: string; label: string; icon: React.ElementType }
-type NavGroup = { label: string; icon: React.ElementType; children: NavLink[] }
-type NavEntry = NavLink | NavGroup
-type NavSection = { label?: string; items: NavEntry[] }
-
-const isGroup = (e: NavEntry): e is NavGroup => 'children' in e
-
-const PORTFOLIO_GROUP: NavGroup = {
-  label: 'Portfolio', icon: Briefcase, children: [
-    { href: '/holdings', label: 'Holdings', icon: Briefcase },
-    { href: '/performance', label: 'Performance', icon: TrendingUp },
-    { href: '/analytics', label: 'Analytics', icon: PieChart },
-    { href: '/risk', label: 'Risk', icon: Activity },
-    { href: '/transactions', label: 'Transactions', icon: ListChecks },
-    { href: '/dividends', label: 'Dividends', icon: Coins },
-    { href: '/rebalancer', label: 'Rebalancer', icon: Sliders },
-    { href: '/planner', label: 'Planner', icon: Beaker },
-    { href: '/signals', label: 'Signals', icon: Bell },
-    { href: '/report', label: 'Report', icon: FileText },
-  ],
-}
-
-const SECTIONS: NavSection[] = [
-  { items: [{ href: '/dashboard', label: 'Home', icon: LayoutDashboard }] },
-  {
-    label: 'Money', items: [
-      { href: '/spending', label: 'Spending', icon: Wallet },
-      { href: '/subscriptions', label: 'Subscriptions', icon: Repeat },
-      { href: '/budgets', label: 'Budgets', icon: PiggyBank },
-    ],
-  },
-  { label: 'Invest', items: [PORTFOLIO_GROUP] },
-  {
-    label: 'Plan', items: [
-      { href: '/goals', label: 'Goals', icon: Target },
-      { href: '/settings', label: 'Settings', icon: Settings },
-    ],
-  },
-]
-
-const portfolioHrefs = PORTFOLIO_GROUP.children.map((c) => c.href)
+import { TLink } from '@/components/motion/TLink'
+import { NAV_GROUPS, routesByGroup } from '@/lib/nav-registry'
 
 function linkActive(pathname: string, href: string): boolean {
   return href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(href)
+}
+
+// Grouped nav links. `labelMode="hover"` fades labels in only when the rail is
+// expanded (desktop); `"always"` keeps them visible (mobile drawer).
+function NavItems({ pathname, labelMode }: { pathname: string; labelMode: 'always' | 'hover' }) {
+  const fade = labelMode === 'hover'
+    ? 'opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100'
+    : ''
+  return (
+    <nav className="no-scrollbar flex flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-hidden">
+      {NAV_GROUPS.map((g) => (
+        <div key={g} className="flex flex-col gap-0.5">
+          <div className={cn('whitespace-nowrap px-4 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70', fade)}>
+            {g}
+          </div>
+          {routesByGroup(g).map(({ href, label, icon: Icon }) => {
+            const active = linkActive(pathname, href)
+            return (
+              <TLink
+                key={href}
+                href={href}
+                className={cn(
+                  'flex items-center gap-3 rounded-md px-4 py-2.5 text-sm transition-colors',
+                  active ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                )}
+              >
+                <Icon className="h-5 w-5 shrink-0" />
+                <span className={cn('whitespace-nowrap', fade)}>{label}</span>
+              </TLink>
+            )
+          })}
+        </div>
+      ))}
+    </nav>
+  )
 }
 
 export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const inPortfolio = portfolioHrefs.some((h) => pathname.startsWith(h))
-  const [portfolioOpen, setPortfolioOpen] = useState(inPortfolio)
 
   useEffect(() => { setMobileOpen(false) }, [pathname])
-  useEffect(() => { if (inPortfolio) setPortfolioOpen(true) }, [inPortfolio])
 
   useEffect(() => {
     if (typeof document === 'undefined') return
@@ -80,56 +66,10 @@ export function Sidebar() {
     router.push('/login')
   }
 
-  const linkClass = (active: boolean, indent = false) => cn(
-    'flex items-center gap-3 rounded-md px-2 py-2.5 text-sm transition-colors',
-    indent && 'pl-9 py-2',
-    active
-      ? 'bg-primary text-primary-foreground'
-      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-  )
-
-  const renderEntry = (entry: NavEntry) => {
-    if (!isGroup(entry)) {
-      const active = linkActive(pathname, entry.href)
-      const Icon = entry.icon
-      return (
-        <Link key={entry.href} href={entry.href} className={linkClass(active)}>
-          <Icon className="h-5 w-5 shrink-0" />
-          <span>{entry.label}</span>
-        </Link>
-      )
-    }
-    const GroupIcon = entry.icon
-    const Chevron = portfolioOpen ? ChevronDown : ChevronRight
-    return (
-      <div key={entry.label} className="flex flex-col">
-        <button
-          onClick={() => setPortfolioOpen((o) => !o)}
-          aria-expanded={portfolioOpen}
-          className={cn(
-            'flex items-center gap-3 rounded-md px-2 py-2.5 text-sm transition-colors',
-            inPortfolio && !portfolioOpen ? 'text-foreground'
-              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-          )}
-        >
-          <GroupIcon className="h-5 w-5 shrink-0" />
-          <span className="flex-1 text-left">{entry.label}</span>
-          <Chevron className="h-4 w-4 shrink-0" />
-        </button>
-        {portfolioOpen && entry.children.map(({ href, label, icon: Icon }) => (
-          <Link key={href} href={href} className={linkClass(linkActive(pathname, href), true)}>
-            <Icon className="h-4 w-4 shrink-0" />
-            <span>{label}</span>
-          </Link>
-        ))}
-      </div>
-    )
-  }
-
   return (
     <>
       {/* Mobile top bar with hamburger */}
-      <div className="fixed top-0 left-0 right-0 z-40 flex h-12 items-center justify-between border-b border-border bg-card px-3 md:hidden">
+      <div className="fixed left-0 right-0 top-0 z-40 flex h-12 items-center justify-between border-b border-border bg-card px-3 md:hidden">
         <button
           aria-label="Open menu"
           onClick={() => setMobileOpen(true)}
@@ -138,8 +78,8 @@ export function Sidebar() {
           <Menu className="h-5 w-5" />
         </button>
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground text-xs font-bold">$</div>
-          <span className="text-sm font-semibold">Finance</span>
+          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-xs font-bold text-primary-foreground">$</div>
+          <span className="text-sm font-semibold">Financial tracker</span>
         </div>
         <div className="w-9" />
       </div>
@@ -148,49 +88,64 @@ export function Sidebar() {
         <div className="fixed inset-0 z-40 bg-black/60 md:hidden" onClick={() => setMobileOpen(false)} aria-hidden />
       )}
 
+      {/* Desktop: slim icon rail that expands to labels on hover/focus. */}
+      <aside
+        className="group fixed left-0 top-0 z-50 hidden h-full w-14 flex-col border-r border-border bg-card py-4 transition-[width] duration-200 hover:w-56 focus-within:w-56 md:flex"
+        style={{ viewTransitionName: 'rail' } as React.CSSProperties}
+      >
+        <div className="mb-4 flex items-center gap-3 px-4">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary text-sm font-bold text-primary-foreground">$</div>
+          <span className="whitespace-nowrap font-semibold opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">Financial tracker</span>
+        </div>
+
+        <NavItems pathname={pathname} labelMode="hover" />
+
+        <div className="mt-auto flex flex-col gap-2 px-2 pt-2">
+          <div className="opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+            <ThemeToggle />
+          </div>
+          <button
+            onClick={handleSignOut}
+            className="flex items-center gap-3 rounded-md px-2 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
+            <LogOut className="h-5 w-5 shrink-0" />
+            <span className="whitespace-nowrap opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">Sign out</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* Mobile drawer */}
       <aside
         className={cn(
-          'fixed left-0 top-0 z-50 flex h-full w-56 flex-col border-r border-border bg-card py-4 px-4 transition-transform duration-200 md:translate-x-0',
+          'fixed left-0 top-0 z-50 flex h-full w-64 flex-col border-r border-border bg-card px-2 py-4 transition-transform duration-200 md:hidden',
           mobileOpen ? 'translate-x-0' : '-translate-x-full',
         )}
       >
-        <div className="mb-5 flex items-center justify-between px-2">
+        <div className="mb-4 flex items-center justify-between px-2">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold shrink-0">$</div>
-            <span className="font-semibold">Finance</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">$</div>
+            <span className="font-semibold">Financial tracker</span>
           </div>
           <button
             aria-label="Close menu"
             onClick={() => setMobileOpen(false)}
-            className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-accent md:hidden"
+            className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-accent"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <nav className="flex flex-1 flex-col gap-1 w-full overflow-y-auto">
-          {SECTIONS.map((section, i) => (
-            <div key={section.label ?? `s${i}`} className="flex flex-col gap-1">
-              {section.label && (
-                <div className="px-2 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                  {section.label}
-                </div>
-              )}
-              {section.items.map(renderEntry)}
-            </div>
-          ))}
-        </nav>
+        <NavItems pathname={pathname} labelMode="always" />
 
-        <div className="mt-auto space-y-2 pt-2">
+        <div className="mt-auto flex flex-col gap-2 px-2 pt-2">
           <ThemeToggle />
-          <Button
-            variant="ghost" size="sm"
-            className="flex w-full items-center gap-3 justify-start px-2 text-muted-foreground"
+          <button
             onClick={handleSignOut}
+            className="flex items-center gap-3 rounded-md px-2 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
           >
             <LogOut className="h-5 w-5 shrink-0" />
             <span>Sign out</span>
-          </Button>
+          </button>
         </div>
       </aside>
     </>

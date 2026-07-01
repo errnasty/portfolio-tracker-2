@@ -7,6 +7,8 @@ import { usePortfolio } from '@/context/PortfolioContext'
 import { useSpending } from '@/context/SpendingContext'
 import { formatCurrency } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { PageShell } from '@/components/ui/page-shell'
+import { HeroBand, HeroMetric } from '@/components/ui/hero-band'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,7 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { AccountsCard } from '@/components/spending/AccountsCard'
-import { Plus, Trash2, ArrowDownCircle, ArrowUpCircle, Wallet, Upload } from 'lucide-react'
+import { Plus, Trash2, Upload } from 'lucide-react'
 import type { Currency } from '@/types'
 
 const PIE_COLORS = [
@@ -131,76 +133,60 @@ export default function SpendingPage() {
     updateBankTransaction(id, { category_id: value || null })
   }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Spending</h1>
-          <p className="text-sm md:text-base text-muted-foreground">Track where your money goes</p>
-        </div>
-        <div className="flex gap-2 self-start sm:self-auto">
-          <Link href="/import">
-            <Button size="sm" variant="outline">
-              <Upload className="mr-2 h-4 w-4" /> Import CSV
-            </Button>
-          </Link>
-          <Button size="sm" onClick={openAdd}>
-            <Plus className="mr-2 h-4 w-4" /> Add transaction
-          </Button>
-        </div>
-      </div>
+  const savingsRate = stats.income > 0 ? (stats.net / stats.income) * 100 : 0
+  const prevExpense = trend.length >= 2 ? trend[trend.length - 2].expense : 0
+  const momDelta = stats.expense - prevExpense
+  const momPct = prevExpense > 0 ? (momDelta / prevExpense) * 100 : 0
 
+  const statusRight = (
+    <span className="flex items-center gap-4">
+      <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="h-6 w-[130px] border-0 bg-transparent px-0 text-[11px] text-foreground focus-visible:ring-0" />
+      <Link href="/import" className="flex items-center gap-1 hover:text-foreground"><Upload className="h-3.5 w-3.5" /> import</Link>
+      <button onClick={openAdd} className="press flex items-center gap-1 hover:text-foreground"><Plus className="h-3.5 w-3.5" /> add</button>
+    </span>
+  )
+
+  const footerHints = (
+    <>
+      <span><span className="text-primary">▸</span> <span className="text-foreground">g h</span> home · <span className="text-foreground">g b</span> budgets · <span className="text-foreground">g o</span> holdings</span>
+    </>
+  )
+
+  return (
+    <PageShell screen="SPENDING" statusRight={statusRight} footerHints={footerHints}>
+    <div className="space-y-4">
       {error && (
         <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-400">
           {error}
         </div>
       )}
 
-      {/* Summary */}
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Spent</CardTitle>
-            <ArrowDownCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {loading ? <Skeleton className="h-7 w-24" /> : (
-              <div className="text-lg md:text-2xl font-bold tabular-nums">{formatCurrency(stats.expense, base)}</div>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Income</CardTitle>
-            <ArrowUpCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {loading ? <Skeleton className="h-7 w-24" /> : (
-              <div className="text-lg md:text-2xl font-bold tabular-nums text-emerald-400">{formatCurrency(stats.income, base)}</div>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Net</CardTitle>
-            <Wallet className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {loading ? <Skeleton className="h-7 w-24" /> : (
-              <div className={`text-lg md:text-2xl font-bold tabular-nums ${stats.net >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                {formatCurrency(stats.net, base)}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Month</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="h-9" />
-          </CardContent>
-        </Card>
+      {/* Hero */}
+      <div className="overflow-hidden rounded-lg border border-border bg-card">
+        <HeroBand>
+          <HeroMetric
+            big
+            vtName="hero-spent"
+            label={`Spent · ${month}`}
+            value={stats.expense}
+            format={(n) => formatCurrency(n, base)}
+            delta={prevExpense > 0 ? [
+              <span key="m"><span className="text-muted-foreground">vs last month </span><span className={momDelta <= 0 ? 'text-emerald-400' : 'text-[#ff7a59]'}>{momDelta >= 0 ? '+' : ''}{momPct.toFixed(0)}%</span></span>,
+            ] : undefined}
+          />
+          <HeroMetric
+            label="Income"
+            value={stats.income}
+            format={(n) => formatCurrency(n, base)}
+            sub="this month"
+          />
+          <HeroMetric
+            label="Net saved"
+            value={stats.net}
+            format={(n) => `${n >= 0 ? '+' : ''}${formatCurrency(n, base)}`}
+            delta={[<span key="r" className={stats.net >= 0 ? 'text-emerald-400' : 'text-red-400'}>{savingsRate.toFixed(0)}% savings rate</span>]}
+          />
+        </HeroBand>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -434,5 +420,6 @@ export default function SpendingPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </PageShell>
   )
 }

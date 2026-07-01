@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { usePortfolio } from '@/context/PortfolioContext'
+import { PageShell } from '@/components/ui/page-shell'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -79,29 +80,19 @@ export default function RiskPage() {
 
   if (!portfolioLoading && enriched.length === 0) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-2xl font-semibold">Risk &amp; Performance</h1>
+      <PageShell screen="RISK">
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             Add some holdings to see risk metrics.
           </CardContent>
         </Card>
-      </div>
+      </PageShell>
     )
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h1 className="text-xl md:text-2xl font-semibold">Risk &amp; Performance</h1>
-          <p className="text-xs md:text-sm text-muted-foreground">
-            Sharpe, drawdown, beta, and other risk-adjusted return metrics.
-          </p>
-        </div>
-      </div>
-
+    <PageShell screen="RISK" footerHints={<span><span className="text-primary">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g h</span> home</span>}>
+    <div className="space-y-4">
       {/* Controls — wrap on mobile */}
       <Card>
         <CardContent className="p-3 md:p-4">
@@ -409,5 +400,6 @@ export default function RiskPage() {
         </>
       )}
     </div>
+    </PageShell>
   )
 }

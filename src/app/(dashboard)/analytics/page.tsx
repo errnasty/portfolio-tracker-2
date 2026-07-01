@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { usePortfolio } from '@/context/PortfolioContext'
+import { PageShell } from '@/components/ui/page-shell'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { BreakdownChart } from '@/components/analytics/BreakdownChart'
@@ -46,14 +47,13 @@ export default function AnalyticsPage() {
 
   if (!portfolioLoading && enriched.length === 0) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-2xl font-semibold">Analytics</h1>
+      <PageShell screen="ANALYTICS">
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             Add some holdings to see portfolio analytics.
           </CardContent>
         </Card>
-      </div>
+      </PageShell>
     )
   }
 
@@ -66,24 +66,12 @@ export default function AnalyticsPage() {
   const lookThrough = lookThroughStocks(enriched, analytics)
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Analytics</h1>
-          <p className="text-sm text-muted-foreground">
-            Deep dive into your portfolio composition and risk exposure.
-          </p>
-        </div>
-        {stats && (
-          <div className="text-right">
-            <div className="text-xs text-muted-foreground">Total value</div>
-            <div className="text-lg font-semibold tabular-nums">
-              {formatCurrency(stats.totalValue, baseCurrency)}
-            </div>
-          </div>
-        )}
-      </div>
-
+    <PageShell
+      screen="ANALYTICS"
+      statusRight={stats ? <span>value <span className="text-foreground">{formatCurrency(stats.totalValue, baseCurrency)}</span> · {enriched.length} positions</span> : undefined}
+      footerHints={<span><span className="text-primary">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g h</span> home</span>}
+    >
+    <div className="space-y-4">
       {loading && Object.keys(analytics).length === 0 ? (
         <div className="grid gap-4 md:grid-cols-2">
           <Skeleton className="h-80" />
@@ -190,5 +178,6 @@ export default function AnalyticsPage() {
         </>
       )}
     </div>
+    </PageShell>
   )
 }
