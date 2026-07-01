@@ -12,6 +12,8 @@ import {
   geographicBreakdown, sectorBreakdown, currencyBreakdown,
   concentrationMetrics, lookThroughStocks,
 } from '@/lib/analytics'
+import { monteCarlo } from '@/lib/projection'
+import { trailingMonthlyNetSavings, trailingAnnualExpenses, fiTarget, yearsToTarget } from '@/lib/fi'
 import { formatCurrency, formatPercent, gainLossColor } from '@/lib/utils'
 import type { TickerAnalytics } from '@/app/api/analytics/route'
 import type { Currency } from '@/types'
@@ -33,7 +35,7 @@ function download(filename: string, content: string) {
 }
 
 export default function ReportPage() {
-  const { enriched, stats, settings, transactions } = usePortfolio()
+  const { enriched, stats, settings, transactions, netWorthBase, accountsNetBase } = usePortfolio()
   const { statsForMonth, bankTransactions, categoryById } = useSpending()
   const base = (settings?.base_currency ?? 'USD') as Currency
   const [analytics, setAnalytics] = useState<Record<string, TickerAnalytics>>({})
@@ -52,6 +54,7 @@ export default function ReportPage() {
   }, [enriched.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const hasHoldings = enriched.length > 0
+  const holdingsValueBase = enriched.reduce((s, h) => s + h.currentValueBase, 0)
   const geo = hasHoldings ? geographicBreakdown(enriched, analytics) : []
   const sec = hasHoldings ? sectorBreakdown(enriched, analytics) : []
   const cur = hasHoldings ? currencyBreakdown(enriched, analytics) : []
@@ -60,6 +63,25 @@ export default function ReportPage() {
 
   const spend = statsForMonth(month)
   const savingsRate = spend.income > 0 ? (spend.net / spend.income) * 100 : 0
+
+  // Fixed 7%/15% return/vol assumptions, not real-history-derived — this is a
+  // static point-in-time snapshot for print/export, unlike the interactive
+  // Planner FI tab (FiForecastTab.tsx) which defaults to the user's actual
+  // portfolio CAGR/volatility when enough history is available.
+  const monthlySavings = trailingMonthlyNetSavings(statsForMonth, month, 3)
+  const annualExpenses = trailingAnnualExpenses(statsForMonth, month, 12)
+  const fiTargetAmount = fiTarget(annualExpenses, 4)
+  const fiResult = (monthlySavings !== null && fiTargetAmount !== null)
+    ? monteCarlo({
+        startingValue: netWorthBase,
+        monthlyContribution: monthlySavings,
+        expectedAnnualReturnPct: 7,
+        expectedAnnualVolPct: 15,
+        months: 480,
+      }, fiTargetAmount)
+    : null
+  const fiYears = fiResult ? yearsToTarget(fiResult.series, 'p50', fiTargetAmount!) : null
+
   const monthTxns = useMemo(
     () => bankTransactions.filter((t) => t.date.startsWith(month)).sort((a, b) => (a.date < b.date ? 1 : -1)),
     [bankTransactions, month],
@@ -119,6 +141,15 @@ export default function ReportPage() {
           <h1 className="text-2xl md:text-3xl font-bold">Monthly Finance Report</h1>
           <p className="text-sm text-muted-foreground">{monthLabel} · generated {today} · base currency {base}</p>
         </div>
+
+        {/* Net worth (financial + portfolio combined) */}
+        <Section title="Net worth">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <SummaryStat label="Net worth" value={formatCurrency(netWorthBase, base)} />
+            <SummaryStat label="Cash & accounts" value={formatCurrency(accountsNetBase, base)} />
+            <SummaryStat label="Portfolio value" value={formatCurrency(holdingsValueBase, base)} />
+          </div>
+        </Section>
 
         {/* Spending summary */}
         <Section title={`Spending · ${monthLabel}`}>
@@ -213,6 +244,26 @@ export default function ReportPage() {
               </Section>
             </div>
           </>
+        )}
+
+        {fiTargetAmount !== null && monthlySavings !== null && (
+          <Section title="Financial independence outlook">
+            <p className="text-xs text-muted-foreground -mt-1">
+              Net worth as of today; savings rate and expenses trail {monthLabel}.
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <SummaryStat
+                label="Years to FI"
+                value={fiYears === null ? 'not on track' : `${fiYears.toFixed(1)}y`}
+              />
+              <SummaryStat label="Success probability" value={`${(fiResult!.successRate * 100).toFixed(0)}%`} />
+              <SummaryStat label="FI target (4% SWR)" value={formatCurrency(fiTargetAmount, base)} />
+              <SummaryStat
+                label="Progress"
+                value={`${Math.min(100, (netWorthBase / fiTargetAmount) * 100).toFixed(1)}%`}
+              />
+            </div>
+          </Section>
         )}
 
         <p className="text-[10px] text-muted-foreground border-t border-border pt-2">
