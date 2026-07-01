@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { usePortfolio } from '@/context/PortfolioContext'
+import { useSpending } from '@/context/SpendingContext'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PageShell } from '@/components/ui/page-shell'
 import { HeroBand, HeroMetric } from '@/components/ui/hero-band'
@@ -13,6 +14,7 @@ import { LookThroughStocksCard } from '@/components/analytics/LookThroughStocksC
 import { PlannerEditor } from '@/components/planner/PlannerEditor'
 import { ComparisonBars, ConcentrationComparison } from '@/components/planner/PlannerComparison'
 import { PlannerBacktest } from '@/components/planner/PlannerBacktest'
+import { FiForecastTab } from '@/components/planner/FiForecastTab'
 import {
   geographicBreakdown,
   sectorBreakdown,
@@ -60,7 +62,9 @@ export default function PlannerPage() {
     fxRates,
     prices: currentPrices,
     loading: portfolioLoading,
+    netWorthBase,
   } = usePortfolio()
+  const { statsForMonth } = useSpending()
   const baseCurrency: Currency = (settings?.base_currency as Currency) ?? 'USD'
 
   const [positions, setPositions] = useState<PlannedPosition[]>([])
@@ -266,42 +270,50 @@ export default function PlannerPage() {
         canCopyFromCurrent={currentEnriched.length > 0}
       />
 
-      {!hasPlannerData ? (
-        <Card>
-          <CardContent className="py-12 text-center text-sm text-muted-foreground">
-            Add at least one position with a non-zero allocation to see analytics.
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          {(loadingPrices || loadingAnalytics) && (
-            <div className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
-              <div className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-              {loadingPrices ? 'Fetching prices…' : 'Fetching ETF composition (may take a moment)…'}
-            </div>
-          )}
-          {missingPriceCount > 0 && !loadingPrices && (
-            <div className="rounded-md border border-amber-400/30 bg-amber-400/5 px-3 py-2 text-xs text-amber-400">
-              {missingPriceCount} ticker{missingPriceCount === 1 ? '' : 's'} missing price data — implied share counts unavailable for those.
-            </div>
-          )}
-          {Math.abs(totalPct - 100) > 0.05 && (
-            <div className="rounded-md border border-amber-400/30 bg-amber-400/5 px-3 py-2 text-xs text-amber-400">
-              Allocations sum to {totalPct.toFixed(2)}% — analytics treat the planned weights as-is.
-              Click <em>Normalize</em> to scale them to 100%.
-            </div>
-          )}
+      <Tabs defaultValue="fi" className="w-full">
+        <TabsList>
+          <TabsTrigger value="fi">Financial Independence</TabsTrigger>
+          <TabsTrigger value="composition">Composition</TabsTrigger>
+          <TabsTrigger value="comparison">vs Current</TabsTrigger>
+          <TabsTrigger value="lookthrough">Look-through</TabsTrigger>
+          <TabsTrigger value="backtest">Backtest</TabsTrigger>
+        </TabsList>
 
-          <Tabs defaultValue="composition" className="w-full">
-            <TabsList>
-              <TabsTrigger value="composition">Composition</TabsTrigger>
-              <TabsTrigger value="comparison">vs Current</TabsTrigger>
-              <TabsTrigger value="lookthrough">Look-through</TabsTrigger>
-              <TabsTrigger value="backtest">Backtest</TabsTrigger>
-            </TabsList>
+        <TabsContent value="fi" className="space-y-4 pt-4">
+          <FiForecastTab
+            netWorthBase={netWorthBase}
+            baseCurrency={baseCurrency}
+            enriched={currentEnriched}
+            statsForMonth={statsForMonth}
+          />
+        </TabsContent>
 
-            {/* ── Composition tab: planner-only pies + concentration ───── */}
-            <TabsContent value="composition" className="space-y-4 pt-4">
+        <TabsContent value="composition" className="space-y-4 pt-4">
+          {!hasPlannerData ? (
+            <Card>
+              <CardContent className="py-12 text-center text-sm text-muted-foreground">
+                Add at least one position with a non-zero allocation to see analytics.
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              {(loadingPrices || loadingAnalytics) && (
+                <div className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
+                  <div className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  {loadingPrices ? 'Fetching prices…' : 'Fetching ETF composition (may take a moment)…'}
+                </div>
+              )}
+              {missingPriceCount > 0 && !loadingPrices && (
+                <div className="rounded-md border border-amber-400/30 bg-amber-400/5 px-3 py-2 text-xs text-amber-400">
+                  {missingPriceCount} ticker{missingPriceCount === 1 ? '' : 's'} missing price data — implied share counts unavailable for those.
+                </div>
+              )}
+              {Math.abs(totalPct - 100) > 0.05 && (
+                <div className="rounded-md border border-amber-400/30 bg-amber-400/5 px-3 py-2 text-xs text-amber-400">
+                  Allocations sum to {totalPct.toFixed(2)}% — analytics treat the planned weights as-is.
+                  Click <em>Normalize</em> to scale them to 100%.
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <div className="text-sm text-muted-foreground">
                   Stats for the planned portfolio
@@ -351,65 +363,80 @@ export default function PlannerPage() {
                   />
                 </div>
               )}
-            </TabsContent>
+            </>
+          )}
+        </TabsContent>
 
-            {/* ── Comparison tab: paired bars + diffed metrics ─────────── */}
-            <TabsContent value="comparison" className="space-y-4 pt-4">
-              {currentEnriched.length === 0 ? (
-                <Card>
-                  <CardContent className="py-10 text-center text-sm text-muted-foreground">
-                    You don&apos;t have any real holdings yet — add some on the Holdings page to enable comparison.
-                  </CardContent>
-                </Card>
-              ) : (
-                <>
-                  <ComparisonSummary
-                    currentTotal={stats?.totalValue ?? 0}
-                    plannedTotal={totalValue}
-                    baseCurrency={baseCurrency}
-                  />
-                  <ConcentrationComparison rows={cmpConcentration} />
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <ComparisonBars
-                      title="Geographic — Current vs Planned"
-                      description="Look-through country exposure shifts"
-                      rows={cmpGeo}
-                      baseCurrency={baseCurrency}
-                    />
-                    <ComparisonBars
-                      title="Sector — Current vs Planned"
-                      description="Look-through sector exposure shifts"
-                      rows={cmpSectors}
-                      baseCurrency={baseCurrency}
-                    />
-                    <ComparisonBars
-                      title="Currency — Current vs Planned"
-                      description="Underlying-currency exposure shifts"
-                      rows={cmpCurrencies}
-                      baseCurrency={baseCurrency}
-                    />
-                    <ComparisonBars
-                      title="Asset Type — Current vs Planned"
-                      rows={cmpAssets}
-                      baseCurrency={baseCurrency}
-                    />
-                  </div>
-                </>
-              )}
-            </TabsContent>
-
-            {/* ── Backtest tab: historical simulation ──────────────────── */}
-            <TabsContent value="backtest" className="space-y-4 pt-4">
-              <PlannerBacktest
-                positions={positions}
-                currentEnriched={currentEnriched}
-                startingValue={totalValue > 0 ? totalValue : undefined}
+        <TabsContent value="comparison" className="space-y-4 pt-4">
+          {!hasPlannerData || currentEnriched.length === 0 ? (
+            <Card>
+              <CardContent className="py-10 text-center text-sm text-muted-foreground">
+                You don&apos;t have any real holdings yet — add some on the Holdings page to enable comparison.
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              <ComparisonSummary
+                currentTotal={stats?.totalValue ?? 0}
+                plannedTotal={totalValue}
                 baseCurrency={baseCurrency}
               />
-            </TabsContent>
+              <ConcentrationComparison rows={cmpConcentration} />
+              <div className="grid gap-4 md:grid-cols-2">
+                <ComparisonBars
+                  title="Geographic — Current vs Planned"
+                  description="Look-through country exposure shifts"
+                  rows={cmpGeo}
+                  baseCurrency={baseCurrency}
+                />
+                <ComparisonBars
+                  title="Sector — Current vs Planned"
+                  description="Look-through sector exposure shifts"
+                  rows={cmpSectors}
+                  baseCurrency={baseCurrency}
+                />
+                <ComparisonBars
+                  title="Currency — Current vs Planned"
+                  description="Underlying-currency exposure shifts"
+                  rows={cmpCurrencies}
+                  baseCurrency={baseCurrency}
+                />
+                <ComparisonBars
+                  title="Asset Type — Current vs Planned"
+                  rows={cmpAssets}
+                  baseCurrency={baseCurrency}
+                />
+              </div>
+            </>
+          )}
+        </TabsContent>
 
-            {/* ── Look-through tab: stock-level exposure of planner ────── */}
-            <TabsContent value="lookthrough" className="space-y-4 pt-4">
+        <TabsContent value="backtest" className="space-y-4 pt-4">
+          {!hasPlannerData ? (
+            <Card>
+              <CardContent className="py-12 text-center text-sm text-muted-foreground">
+                Add at least one position with a non-zero allocation to see analytics.
+              </CardContent>
+            </Card>
+          ) : (
+            <PlannerBacktest
+              positions={positions}
+              currentEnriched={currentEnriched}
+              startingValue={totalValue > 0 ? totalValue : undefined}
+              baseCurrency={baseCurrency}
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="lookthrough" className="space-y-4 pt-4">
+          {!hasPlannerData ? (
+            <Card>
+              <CardContent className="py-12 text-center text-sm text-muted-foreground">
+                Add at least one position with a non-zero allocation to see analytics.
+              </CardContent>
+            </Card>
+          ) : (
+            <>
               <LookThroughStocksCard
                 stocks={plannerLookThrough.stocks}
                 coveragePct={plannerLookThrough.coveragePct}
@@ -471,10 +498,10 @@ export default function PlannerPage() {
                   </div>
                 </CardContent>
               </Card>
-            </TabsContent>
-          </Tabs>
-        </>
-      )}
+            </>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
     </PageShell>
   )
