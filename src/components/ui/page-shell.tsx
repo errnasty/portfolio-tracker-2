@@ -10,7 +10,7 @@ export function PageShell({ screen, statusRight, footerHints, children }: {
   children: React.ReactNode
 }) {
   return (
-    <div className="animate-fade-up">
+    <div>
       <StatusBar screen={screen} right={statusRight} />
       <div className="stagger">{children}</div>
       {footerHints != null && (

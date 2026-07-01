@@ -64,9 +64,15 @@
   /* Press feedback for tappable controls. */
   .press { transition: transform 0.12s ease-out, opacity 0.12s ease-out, background-color 0.15s ease-out; }
   .press:active { transform: scale(0.97); }
-  /* Stagger: children fade-up with incremental delay (set --i on each child). */
+  /* Stagger: direct children fade-up with an incremental delay (self-indexing). */
   @keyframes dc-stagger-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-  .stagger > * { animation: dc-stagger-in 0.28s ease-out both; animation-delay: calc(var(--i, 0) * 40ms); }
+  .stagger > * { animation: dc-stagger-in 0.28s ease-out both; }
+  .stagger > *:nth-child(2) { animation-delay: 45ms; }
+  .stagger > *:nth-child(3) { animation-delay: 90ms; }
+  .stagger > *:nth-child(4) { animation-delay: 135ms; }
+  .stagger > *:nth-child(5) { animation-delay: 180ms; }
+  .stagger > *:nth-child(6) { animation-delay: 225ms; }
+  .stagger > *:nth-child(n+7) { animation-delay: 270ms; }
   /* Skeleton shimmer sweep. */
   @keyframes dc-shimmer { 100% { transform: translateX(100%); } }
   .shimmer { position: relative; overflow: hidden; }
