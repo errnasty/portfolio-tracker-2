@@ -257,6 +257,33 @@ create policy "Users manage own bank transactions"
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+-- Payee grouping + review queue (added 2026-07). payee_key is a stable
+-- per-counterparty key (mobile:9989 / acct:0152 / name:...); needs_review flags
+-- rows the email parser was unsure about or that look like duplicates.
+alter table bank_transactions add column if not exists payee_key   text;
+alter table bank_transactions add column if not exists needs_review boolean not null default false;
+create index if not exists idx_bank_txns_user_review
+  on bank_transactions(user_id, needs_review) where needs_review;
+create index if not exists idx_bank_txns_user_payeekey
+  on bank_transactions(user_id, payee_key);
+
+-- Friendly names for masked payees, keyed by payee_key. Resolved at render time
+-- so a rename propagates to all past + future rows.
+create table if not exists payee_aliases (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid references auth.users not null,
+  payee_key  text not null,
+  alias      text not null,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  unique(user_id, payee_key)
+);
+create index if not exists idx_payee_aliases_user on payee_aliases(user_id);
+alter table payee_aliases enable row level security;
+drop policy if exists "Users manage own payee aliases" on payee_aliases;
+create policy "Users manage own payee aliases" on payee_aliases for all
+  using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
 -- User-defined categorization rules (dynamic). Each rule maps a keyword
 -- (matched case-insensitively as a substring of description+merchant) to a
 -- category. Checked before the built-in keyword list, highest priority first.

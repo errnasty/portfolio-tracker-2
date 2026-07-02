@@ -9,7 +9,7 @@ import { DEFAULT_CATEGORIES, guessCategoryName } from '@/lib/categorize'
 import { detectSubscriptions } from '@/lib/subscriptions'
 import type {
   Category, CategoryRule, BankTransaction, SpendingStats, FxRates, Currency,
-  Subscription, SubscriptionStatus, SubscriptionState, Budget,
+  Subscription, SubscriptionStatus, SubscriptionState, Budget, PayeeAlias,
 } from '@/types'
 
 type BankTxnInsert = Omit<BankTransaction, 'id' | 'user_id' | 'created_at' | 'updated_at'>
@@ -43,6 +43,10 @@ interface SpendingContextValue {
   refreshBudgets: () => Promise<void>
   upsertBudget: (categoryId: string, amount: number) => Promise<void>
   deleteBudget: (categoryId: string) => Promise<void>
+  payeeAliases: PayeeAlias[]
+  refreshPayeeAliases: () => Promise<void>
+  upsertPayeeAlias: (payeeKey: string, alias: string) => Promise<void>
+  resolveDescription: (t: BankTransaction) => string
 }
 
 const SpendingContext = createContext<SpendingContextValue | null>(null)
@@ -98,6 +102,7 @@ export function SpendingProvider({ children }: { children: React.ReactNode }) {
   const [categoryRules, setCategoryRules] = useState<CategoryRule[]>([])
   const [subscriptionStatuses, setSubscriptionStatuses] = useState<SubscriptionStatus[]>([])
   const [budgets, setBudgets] = useState<Budget[]>([])
+  const [payeeAliases, setPayeeAliases] = useState<PayeeAlias[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -206,6 +211,24 @@ export function SpendingProvider({ children }: { children: React.ReactNode }) {
     setBudgets(data ?? [])
   }, [])
 
+  const refreshPayeeAliases = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data } = await supabase.from('payee_aliases').select('*').eq('user_id', user.id)
+    setPayeeAliases(data ?? [])
+  }, [])
+
+  const upsertPayeeAlias = async (payeeKey: string, alias: string) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { error: err } = await supabase.from('payee_aliases').upsert(
+      { user_id: user.id, payee_key: payeeKey, alias: alias.trim(), updated_at: new Date().toISOString() },
+      { onConflict: 'user_id,payee_key' },
+    )
+    if (err) { toast.error(`Save name failed: ${err.message}`); throw err }
+    await refreshPayeeAliases()
+  }
+
   useEffect(() => {
     async function init() {
       setLoading(true)
@@ -214,10 +237,11 @@ export function SpendingProvider({ children }: { children: React.ReactNode }) {
       await refreshCategoryRules()
       await refreshSubscriptionStatuses()
       await refreshBudgets()
+      await refreshPayeeAliases()
       setLoading(false)
     }
     init()
-  }, [refreshCategories, refreshBankTransactions, refreshCategoryRules, refreshSubscriptionStatuses, refreshBudgets])
+  }, [refreshCategories, refreshBankTransactions, refreshCategoryRules, refreshSubscriptionStatuses, refreshBudgets, refreshPayeeAliases])
 
   // Auto-sync Gmail bank alerts once per session (if connected & not synced
   // recently) so spending stays current without a manual "Sync now".
@@ -437,6 +461,16 @@ export function SpendingProvider({ children }: { children: React.ReactNode }) {
     [categories],
   )
 
+  const aliasByKey = useMemo(
+    () => Object.fromEntries(payeeAliases.map((a) => [a.payee_key, a.alias])) as Record<string, string>,
+    [payeeAliases],
+  )
+
+  const resolveDescription = useCallback(
+    (t: BankTransaction) => (t.payee_key ? aliasByKey[t.payee_key] : undefined) || t.description,
+    [aliasByKey],
+  )
+
   const subscriptions = useMemo<Subscription[]>(() => {
     const statusByKey = new Map(subscriptionStatuses.map((s) => [s.merchant_key, s.status]))
     return detectSubscriptions(bankTransactions, catNameById, fxRates).map((d) => ({
@@ -481,6 +515,7 @@ export function SpendingProvider({ children }: { children: React.ReactNode }) {
       statsForMonth, categorize,
       subscriptions, subscriptionSummary, setSubscriptionStatus,
       budgets, refreshBudgets, upsertBudget, deleteBudget,
+      payeeAliases, refreshPayeeAliases, upsertPayeeAlias, resolveDescription,
     }}>
       {children}
     </SpendingContext.Provider>

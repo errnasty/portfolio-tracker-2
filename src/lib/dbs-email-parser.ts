@@ -13,6 +13,8 @@ export interface ParsedEmailTxn {
   merchant: string | null
   amount: number               // signed
   currency: string
+  payeeKey: string | null      // stable grouping key (see derivePayeeKey)
+  confidence: 'high' | 'low'   // 'low' when no counterparty could be extracted
 }
 
 function stripHtml(s: string): string {
@@ -43,20 +45,55 @@ function findDate(text: string): string | null {
   return null
 }
 
-// Pull a counterparty after a label (From/To/at/merchant). The body is a single
-// line after stripHtml, so we stop the capture at the next field label or
-// punctuation to avoid swallowing the rest of the email.
-const STOP = '(?=\\s+(?:to|from|on|ref|dear|thank|didn|via|account|your)\\b|[.,;]|$)'
-function extractField(text: string, labels: string[]): string | null {
+// Stop capture at the next field label, trailing boilerplate, or punctuation.
+const STOP = '(?=\\s+(?:to|from|on|ref|dear|thank|didn|via|account|your|if|kindly|please)\\b|[.,;]|$)'
+
+// Values that are never a real counterparty.
+function rejectValue(v: string): boolean {
+  return !v
+    || /^your\b/i.test(v)
+    || /your\b[\s\S]*account ending/i.test(v)
+    || /view transaction|login|digibank/i.test(v)
+}
+
+// Pull a counterparty after a label. `strict` requires a colon (real field
+// lines like "To:"), which structurally skips decoys ("refer to your",
+// "To view details"). `loose` allows a bare word ("at NTUC", "from JOHN").
+// We scan ALL matches and return the first that isn't a rejected value, so one
+// decoy no longer aborts the search.
+function extractField(text: string, labels: string[], mode: 'strict' | 'loose'): string | null {
+  const sep = mode === 'strict' ? ':\\s*' : '\\s+'
   for (const label of labels) {
-    const re = new RegExp(`\\b${label}[:\\s]+([A-Za-z0-9][\\s\\S]{1,60}?)${STOP}`, 'i')
-    const m = text.match(re)
-    if (m) {
+    const re = new RegExp(`\\b${label}${sep}([A-Za-z0-9][\\s\\S]{1,80}?)${STOP}`, 'ig')
+    for (const m of text.matchAll(re)) {
       const v = m[1].trim().replace(/\s+/g, ' ')
-      if (v && !/^your\b/i.test(v)) return v
+      if (!rejectValue(v)) return v
     }
   }
   return null
+}
+
+// Drop a trailing "(MOBILE ending 9989)" / "(account ending 0152)" /
+// "A/C ending 0152" so the merchant is just the name (keeps category-rule
+// substring matching stable).
+export function cleanMerchant(raw: string): string {
+  return raw
+    .replace(/\s*\((?:mobile|account|a\/c)\s+ending\s+\d+\)\s*$/i, '')
+    .replace(/\s+(?:a\/c|account)\s+ending\s+\d+\s*$/i, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+// Stable per-payee grouping key. Mobile-ending is the most stable identifier
+// (masked names vary run to run), then account-ending, then a normalized name.
+export function derivePayeeKey(raw: string | null): string | null {
+  if (!raw) return null
+  const mobile = raw.match(/mobile\s+ending\s+(\d{3,})/i)
+  if (mobile) return `mobile:${mobile[1]}`
+  const acct = raw.match(/(?:account|a\/c)\s+ending\s+(\d{3,})/i)
+  if (acct) return `acct:${acct[1]}`
+  const name = cleanMerchant(raw).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+  return name ? `name:${name}` : null
 }
 
 const CUR_MAP: Record<string, string> = { 'S$': 'SGD', 'US$': 'USD', '$': 'SGD' }
@@ -76,19 +113,23 @@ export function parseDbsAlert(subject: string, body: string): ParsedEmailTxn | n
   const amount = isCredit ? magnitude : -magnitude
 
   // Credit = money in → counterparty is the sender (From). Debit = money out →
-  // recipient/merchant (To / at).
-  const merchant = isCredit
-    ? extractField(text, ['from', 'at'])
-    : extractField(text, ['to', 'at', 'merchant'])
-  const description = merchant
-    ? `${isCredit ? 'Received from' : 'Paid'} ${merchant}`
-    : subject.trim() || 'DBS transaction alert'
+  // recipient (To). Colon-anchored field lines first, then bare-word forms.
+  const counterparty =
+    extractField(text, isCredit ? ['from'] : ['to'], 'strict') ??
+    extractField(text, isCredit ? ['from', 'at'] : ['at', 'merchant'], 'loose')
+
+  const confidence: 'high' | 'low' = counterparty ? 'high' : 'low'
+  const description = counterparty
+    ? counterparty.slice(0, 300)
+    : (subject.trim() || 'DBS transaction alert')
 
   return {
     date: findDate(text),
-    description: description.slice(0, 300),
-    merchant,
+    description,
+    merchant: counterparty ? cleanMerchant(counterparty) : null,
     amount,
     currency,
+    payeeKey: derivePayeeKey(counterparty),
+    confidence,
   }
 }

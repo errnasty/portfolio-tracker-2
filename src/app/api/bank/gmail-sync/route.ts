@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { parseDbsAlert } from '@/lib/dbs-email-parser'
 import { guessCategoryName } from '@/lib/categorize'
+import { findFuzzyDuplicate } from '@/lib/txn-dedupe'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -139,6 +140,8 @@ export async function POST(req: Request) {
       category_id: categoryFor(parsed.description, parsed.merchant, parsed.amount),
       source: 'email',
       external_id: `gmail-${id}`,
+      payee_key: parsed.payeeKey,
+      needs_review: parsed.confidence === 'low',
       notes: null,
     })
   }
@@ -151,6 +154,31 @@ export async function POST(req: Request) {
       .from('bank_transactions').select('external_id').eq('user_id', user.id).in('external_id', ids)
     const seen = new Set((ex ?? []).map((r) => r.external_id))
     const fresh = rows.filter((r) => !seen.has(r.external_id as string))
+
+    // Soft fuzzy-dedup: alert + confirmation of the same transaction share
+    // date+amount+payee_key. Flag (needs_review) rather than drop, so a genuine
+    // same-day repeat payment is never silently lost.
+    const dupDates = Array.from(new Set(fresh.map((r) => r.date as string)))
+    let priorRows: { id: string; date: string; amount: number; payee_key: string | null }[] = []
+    if (dupDates.length > 0) {
+      const { data: prior } = await supabase
+        .from('bank_transactions')
+        .select('id, date, amount, payee_key')
+        .eq('user_id', user.id)
+        .in('date', dupDates)
+      priorRows = prior ?? []
+    }
+    const batchSeen: { date: string; amount: number; payee_key: string | null }[] = []
+    for (const r of fresh) {
+      const cand = { date: r.date as string, amount: Number(r.amount), payee_key: (r.payee_key ?? null) as string | null }
+      const dup = findFuzzyDuplicate(cand, [...priorRows, ...batchSeen])
+      if (dup) {
+        r.needs_review = true
+        r.notes = `possible duplicate of ${(dup as { id?: string }).id ?? 'existing transaction'}`
+      }
+      batchSeen.push(cand)
+    }
+
     if (fresh.length > 0) {
       const { data, error } = await supabase.from('bank_transactions').insert(fresh).select('id')
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })

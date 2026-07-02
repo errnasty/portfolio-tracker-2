@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { AccountsCard } from '@/components/spending/AccountsCard'
+import { ReviewQueueCard } from '@/components/spending/ReviewQueueCard'
 import { Plus, Trash2, Upload } from 'lucide-react'
 import type { Currency } from '@/types'
 
@@ -40,13 +41,14 @@ export default function SpendingPage() {
   } = usePortfolio()
   const {
     bankTransactions, categories, categoryById, statsForMonth, loading, error,
-    addBankTransaction, updateBankTransaction, deleteBankTransaction, categorize,
+    addBankTransaction, updateBankTransaction, deleteBankTransaction, categorize, resolveDescription,
   } = useSpending()
   const base = (settings?.base_currency ?? 'USD') as Currency
 
   const [month, setMonth] = useState(thisMonth())
   const [accountFilter, setAccountFilter] = useState('all')
   const [catFilter, setCatFilter] = useState('all')
+  const [sortBy, setSortBy] = useState<'date' | 'payee'>('date')
 
   const accountName = useMemo(
     () => Object.fromEntries(accounts.map((a) => [a.id, a.name])) as Record<string, string>,
@@ -80,6 +82,11 @@ export default function SpendingPage() {
     if (catFilter !== 'all' && catFilter !== 'uncat' && t.category_id !== catFilter) return false
     return true
   }), [bankTransactions, month, accountFilter, catFilter])
+
+  const sorted = useMemo(() => {
+    if (sortBy !== 'payee') return filtered
+    return [...filtered].sort((a, b) => resolveDescription(a).localeCompare(resolveDescription(b)))
+  }, [filtered, sortBy, resolveDescription])
 
   const pieData = stats.byCategory.slice(0, 9).map((c) => ({ name: c.name, value: parseFloat(c.amount.toFixed(2)) }))
 
@@ -246,6 +253,13 @@ export default function SpendingPage() {
                     {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
+                <Select value={sortBy} onValueChange={(v) => setSortBy(v as 'date' | 'payee')}>
+                  <SelectTrigger className="h-8 w-[120px] text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="date">Sort: Date</SelectItem>
+                    <SelectItem value="payee">Sort: Payee</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </CardHeader>
@@ -268,13 +282,13 @@ export default function SpendingPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((t) => {
+                  {sorted.map((t) => {
                     const isIncome = Number(t.amount) >= 0
                     return (
                       <TableRow key={t.id}>
                         <TableCell className="py-2 text-xs whitespace-nowrap">{t.date}</TableCell>
                         <TableCell className="py-2">
-                          <div className="text-sm truncate max-w-[220px]">{t.description}</div>
+                          <div className="text-sm truncate max-w-[220px]">{resolveDescription(t)}</div>
                           {t.account_id && accountName[t.account_id] && (
                             <div className="text-[10px] text-muted-foreground">{accountName[t.account_id]}</div>
                           )}
@@ -308,6 +322,8 @@ export default function SpendingPage() {
           </CardContent>
         </Card>
       </div>
+
+      <ReviewQueueCard />
 
       {/* Month-over-month trends */}
       <Card>
