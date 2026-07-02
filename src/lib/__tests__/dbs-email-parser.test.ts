@@ -42,7 +42,33 @@ describe('parseDbsAlert', () => {
     expect(r!.currency).toBe('SGD')
     expect(r!.date).toBe('2026-06-29')
     expect(r!.merchant).toBe('TAY KAI YUN CHARMAINE')
-    expect(r!.description).toBe('Received from TAY KAI YUN CHARMAINE')
+    expect(r!.description).toBe('TAY KAI YUN CHARMAINE')
+    expect(r!.payeeKey).toBe('name:tay-kai-yun-charmaine')
+  })
+
+  it('parses the PayNow outgoing confirmation → To: becomes description', () => {
+    const r = parseDbsAlert(
+      'DBS PayNow Transaction Completed',
+      'Dear Customer, We refer to your PAYNOW dated 02 Jul. We are pleased to confirm ' +
+      'that the transaction was completed. Date & Time: 02 Jul 14:55 (SGT) Amount: SGD53.00 ' +
+      'From: Ernest Ng Savings A/C ending 0152 ' +
+      'To: MX TAX CHXX KIAXX &/XX MX TAX HUAXX REX (MOBILE ending 9989) ' +
+      'If unauthorised, please call our DBS hotline. To view transaction details, please login to digibank. ' +
+      'Thank you for banking with us.',
+    )
+    expect(r).not.toBeNull()
+    expect(r!.amount).toBe(-53)
+    expect(r!.currency).toBe('SGD')
+    expect(r!.description).toBe('MX TAX CHXX KIAXX &/XX MX TAX HUAXX REX (MOBILE ending 9989)')
+    expect(r!.merchant).toBe('MX TAX CHXX KIAXX &/XX MX TAX HUAXX REX')
+    expect(r!.payeeKey).toBe('mobile:9989')
+    expect(r!.confidence).toBe('high')
+  })
+
+  it('flags low confidence when no counterparty is found', () => {
+    const r = parseDbsAlert('GIRO deduction alert', 'A GIRO deduction of SGD 88.00 was made on 03 Jul 2026.')
+    expect(r!.confidence).toBe('low')
+    expect(r!.payeeKey).toBeNull()
   })
 
   it('returns null for non-transaction emails', () => {
