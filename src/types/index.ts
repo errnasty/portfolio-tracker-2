@@ -235,6 +235,17 @@ export interface BankTransaction {
   source: BankTxnSource
   external_id: string | null  // dedupe key (csv row hash / gmail message id)
   notes: string | null
+  payee_key?: string | null   // stable per-payee grouping key
+  needs_review?: boolean       // parser low-confidence or possible duplicate
+  created_at: string
+  updated_at: string
+}
+
+export interface PayeeAlias {
+  id: string
+  user_id: string
+  payee_key: string
+  alias: string
   created_at: string
   updated_at: string
 }
