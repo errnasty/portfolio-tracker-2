@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseDbsAlert } from '../dbs-email-parser'
+import { parseDbsAlert, cleanMerchant, derivePayeeKey } from '../dbs-email-parser'
 
 describe('parseDbsAlert', () => {
   it('parses a card debit alert', () => {
@@ -52,5 +52,32 @@ describe('parseDbsAlert', () => {
   it('leaves date null when absent (caller fills from message date)', () => {
     const r = parseDbsAlert('Alert', 'Transaction of SGD 8.80 at KOPITIAM')
     expect(r!.date).toBeNull()
+  })
+})
+
+describe('cleanMerchant', () => {
+  it('strips a trailing (MOBILE ending NNNN)', () => {
+    expect(cleanMerchant('MX TAX HUAXX REX (MOBILE ending 9989)')).toBe('MX TAX HUAXX REX')
+  })
+  it('strips a trailing A/C ending', () => {
+    expect(cleanMerchant('Ernest Ng Savings A/C ending 0152')).toBe('Ernest Ng Savings')
+  })
+  it('leaves a plain name untouched', () => {
+    expect(cleanMerchant('NTUC FAIRPRICE')).toBe('NTUC FAIRPRICE')
+  })
+})
+
+describe('derivePayeeKey', () => {
+  it('prefers mobile-ending', () => {
+    expect(derivePayeeKey('MX TAX REX (MOBILE ending 9989)')).toBe('mobile:9989')
+  })
+  it('falls back to account-ending', () => {
+    expect(derivePayeeKey('Some Biz account ending 0152')).toBe('acct:0152')
+  })
+  it('falls back to a normalized name', () => {
+    expect(derivePayeeKey('TAY KAI YUN CHARMAINE')).toBe('name:tay-kai-yun-charmaine')
+  })
+  it('returns null for empty input', () => {
+    expect(derivePayeeKey(null)).toBeNull()
   })
 })

@@ -59,6 +59,29 @@ function extractField(text: string, labels: string[]): string | null {
   return null
 }
 
+// Drop a trailing "(MOBILE ending 9989)" / "(account ending 0152)" /
+// "A/C ending 0152" so the merchant is just the name (keeps category-rule
+// substring matching stable).
+export function cleanMerchant(raw: string): string {
+  return raw
+    .replace(/\s*\((?:mobile|account|a\/c)\s+ending\s+\d+\)\s*$/i, '')
+    .replace(/\s+(?:a\/c|account)\s+ending\s+\d+\s*$/i, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+// Stable per-payee grouping key. Mobile-ending is the most stable identifier
+// (masked names vary run to run), then account-ending, then a normalized name.
+export function derivePayeeKey(raw: string | null): string | null {
+  if (!raw) return null
+  const mobile = raw.match(/mobile\s+ending\s+(\d{3,})/i)
+  if (mobile) return `mobile:${mobile[1]}`
+  const acct = raw.match(/(?:account|a\/c)\s+ending\s+(\d{3,})/i)
+  if (acct) return `acct:${acct[1]}`
+  const name = cleanMerchant(raw).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+  return name ? `name:${name}` : null
+}
+
 const CUR_MAP: Record<string, string> = { 'S$': 'SGD', 'US$': 'USD', '$': 'SGD' }
 
 export function parseDbsAlert(subject: string, body: string): ParsedEmailTxn | null {
