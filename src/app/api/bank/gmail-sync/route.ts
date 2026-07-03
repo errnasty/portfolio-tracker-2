@@ -76,10 +76,19 @@ export async function POST(req: Request) {
       refresh_token: tok.refresh_token, grant_type: 'refresh_token',
     }),
   })
+  const tokenJson = await tokenRes.json().catch(() => ({} as Record<string, unknown>))
   if (!tokenRes.ok) {
-    return NextResponse.json({ error: 'Failed to refresh Google token. Reconnect Gmail.' }, { status: 502 })
+    const detail = `${tokenJson.error ?? ''} ${tokenJson.error_description ?? ''}`.trim()
+    return NextResponse.json(
+      { error: `Failed to refresh Google token (${tokenRes.status})${detail ? `: ${detail}` : ''}. Reconnect Gmail.` },
+      { status: 502 },
+    )
   }
-  const accessToken = (await tokenRes.json()).access_token as string
+  const accessToken = tokenJson.access_token as string
+  // Scopes actually attached to this access token. Google returns these on
+  // refresh; if gmail.readonly is absent, the stored refresh token predates the
+  // Gmail grant (reconnect needed) even though the account shows the permission.
+  const grantedScope = (tokenJson.scope as string | undefined) ?? ''
 
   // 2) List candidate messages.
   const since = tok.last_synced
@@ -90,7 +99,18 @@ export async function POST(req: Request) {
     `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${q}&maxResults=100`,
     { headers: { Authorization: `Bearer ${accessToken}` } },
   )
-  if (!listRes.ok) return NextResponse.json({ error: 'Gmail list failed' }, { status: 502 })
+  if (!listRes.ok) {
+    const body = await listRes.text().catch(() => '')
+    console.error('gmail-sync list failed', { status: listRes.status, grantedScope, body: body.slice(0, 500) })
+    const hasGmailScope = /gmail\.readonly|mail\.google\.com/.test(grantedScope)
+    const hint = !hasGmailScope
+      ? 'Stored Google token is missing Gmail read access — disconnect and reconnect Gmail, keeping the "Read your email" permission checked.'
+      : `Gmail API returned ${listRes.status}: ${body.slice(0, 300)}`
+    return NextResponse.json(
+      { error: `Gmail list failed. ${hint}`, status: listRes.status, grantedScope },
+      { status: 502 },
+    )
+  }
   const messages: { id: string }[] = (await listRes.json()).messages ?? []
 
   // Map category guesses → category ids for this user.
