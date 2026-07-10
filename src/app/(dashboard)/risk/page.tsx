@@ -80,7 +80,7 @@ export default function RiskPage() {
 
   if (!portfolioLoading && enriched.length === 0) {
     return (
-      <PageShell screen="RISK">
+      <PageShell screen="Invest" title="Risk">
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             Add some holdings to see risk metrics.
@@ -91,7 +91,7 @@ export default function RiskPage() {
   }
 
   return (
-    <PageShell screen="RISK" footerHints={<span><span className="text-primary">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g h</span> home</span>}>
+    <PageShell screen="Invest" title="Risk" footerHints={<span><span className="text-[var(--accent)]">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g h</span> home</span>}>
     <div className="space-y-4">
       {/* Controls — wrap on mobile */}
       <Card>
@@ -207,9 +207,9 @@ export default function RiskPage() {
                           : 'Negative — losing to risk-free'
                   }
                   hintColor={
-                    metrics.sharpeRatio > 1 ? 'text-emerald-400'
+                    metrics.sharpeRatio > 1 ? 'text-up'
                       : metrics.sharpeRatio > 0 ? 'text-yellow-400'
-                        : 'text-red-400'
+                        : 'text-down'
                   }
                 />
                 <MetricCard
@@ -375,7 +375,7 @@ export default function RiskPage() {
                           <td className="p-2 text-right tabular-nums">
                             {(m.annualizedVol * 100).toFixed(1)}%
                           </td>
-                          <td className="p-2 text-right tabular-nums text-red-400">
+                          <td className="p-2 text-right tabular-nums text-down">
                             {(m.maxDrawdownPct * 100).toFixed(1)}%
                           </td>
                           <td className="p-2 text-right tabular-nums hidden sm:table-cell">

@@ -32,8 +32,8 @@ export function ErrorFallback({ error, reset, bare = false }: Props) {
 
   const content = (
     <div className="mx-auto max-w-md text-center space-y-4">
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10">
-        <AlertOctagon className="h-6 w-6 text-red-400" />
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-down/10">
+        <AlertOctagon className="h-6 w-6 text-down" />
       </div>
       <div className="space-y-1">
         <h1 className="text-xl font-semibold">Something went wrong</h1>

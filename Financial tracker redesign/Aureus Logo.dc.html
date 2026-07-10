@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@300;400;500;600&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; background: #6b6b68; }
+  * { box-sizing: border-box; }
+</style>
+</helmet>
+
+<div style="min-height:100vh; padding:64px 72px 120px; background:#6b6b68; font-family:'Hanken Grotesk',system-ui,sans-serif;">
+
+  <div style="margin-bottom:48px;">
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:#dcdad4;">Aureus · brand mark</div>
+    <h1 style="font-family:'Spectral',serif; font-weight:400; font-size:40px; color:#fdfcf9; margin:12px 0 8px;">The laureate</h1>
+    <p style="font-size:15px; color:#e6e4de; max-width:600px; margin:0;">A classical marble head — the emperor / deity of the aureus. Charcoal on light, gold on dark, and radiate for hero moments.</p>
+  </div>
+
+  <div style="display:flex; flex-wrap:wrap; gap:32px; align-items:flex-start;">
+
+    <!-- radiate hero mark -->
+    <div style="background:#0B0C0F; border-radius:20px; padding:44px; display:flex; flex-direction:column; align-items:center; gap:22px; width:360px;">
+      <div style="position:relative; width:260px; height:260px; display:flex; align-items:center; justify-content:center;">
+        <svg viewBox="0 0 600 600" style="position:absolute; width:120%; height:120%;">
+          <sc-for list="{{ rays }}" as="r" hint-placeholder-count="150">
+            <line x1="{{ r.x1 }}" y1="{{ r.y1 }}" x2="{{ r.x2 }}" y2="{{ r.y2 }}" stroke="#C6A96A" stroke-width="{{ r.w }}" stroke-opacity="{{ r.o }}"/>
+          </sc-for>
+        </svg>
+        <div style="position:absolute; width:220px; height:220px; border-radius:50%; background:radial-gradient(circle, rgba(198,169,106,0.24), transparent 62%);"></div>
+        <img src="assets/face-gold.png" alt="Aureus" style="position:relative; z-index:2; width:180px; filter:drop-shadow(0 14px 30px rgba(150,110,40,0.5));">
+      </div>
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:#8B8C93;">Radiate mark · hero</div>
+    </div>
+
+    <!-- lockups -->
+    <div style="display:flex; flex-direction:column; gap:24px;">
+      <div style="background:#F6F3EC; border-radius:20px; padding:38px 48px; display:flex; align-items:center; gap:20px;">
+        <img src="assets/face-ink.png" alt="Aureus" style="height:64px; width:auto; display:block;">
+        <div style="line-height:1;">
+          <div style="font-family:'Spectral',serif; font-size:38px; color:#1B1A16; letter-spacing:0.01em;">Aureus</div>
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.22em; text-transform:uppercase; color:#9A9384; margin-top:7px;">Private wealth</div>
+        </div>
+      </div>
+      <div style="background:#0E0F13; border-radius:20px; padding:38px 48px; display:flex; align-items:center; gap:20px;">
+        <img src="assets/face-gold.png" alt="Aureus" style="height:64px; width:auto; display:block;">
+        <div style="line-height:1;">
+          <div style="font-family:'Spectral',serif; font-size:38px; color:#ECEAE3; letter-spacing:0.01em;">Aureus</div>
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.22em; text-transform:uppercase; color:#8B8C93; margin-top:7px;">Private wealth</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- app icon + sizes + alt seal -->
+    <div style="display:flex; flex-direction:column; gap:24px;">
+      <div style="background:#F6F3EC; border-radius:20px; padding:32px 36px; display:flex; align-items:center; gap:26px;">
+        <div style="width:84px; height:84px; border-radius:21px; background:#14140F; display:flex; align-items:center; justify-content:center;">
+          <img src="assets/face-gold.png" alt="Aureus" style="width:58px;">
+        </div>
+        <div style="width:84px; height:84px; border-radius:21px; background:linear-gradient(150deg,#F0DFAE,#C6A96A 55%,#A9843F); display:flex; align-items:center; justify-content:center;">
+          <img src="assets/face-ink.png" alt="Aureus" style="width:58px;">
+        </div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:#9A9384; max-width:110px;">App icon · dark &amp; gold</div>
+      </div>
+      <div style="background:#0E0F13; border-radius:20px; padding:28px 36px; display:flex; align-items:center; gap:26px;">
+        <img src="assets/face-gold.png" style="height:44px;">
+        <img src="assets/face-gold.png" style="height:30px;">
+        <img src="assets/face-gold.png" style="height:22px;">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:#8B8C93;">44 · 30 · 22 px</div>
+      </div>
+      <!-- alt seal: the coin -->
+      <div style="background:#F6F3EC; border-radius:20px; padding:28px 36px; display:flex; align-items:center; gap:24px;">
+        <svg width="64" height="64" viewBox="0 0 100 100">
+          <defs>
+            <radialGradient id="fg2" cx="40%" cy="32%" r="80%"><stop offset="0%" stop-color="#FCEFC8"/><stop offset="45%" stop-color="#E5C888"/><stop offset="84%" stop-color="#C6A05B"/><stop offset="100%" stop-color="#A8843F"/></radialGradient>
+            <linearGradient id="rg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#EBD79B"/><stop offset="50%" stop-color="#C6A96A"/><stop offset="100%" stop-color="#93702C"/></linearGradient>
+          </defs>
+          <circle cx="50" cy="50" r="49" fill="url(#rg2)"/>
+          <circle cx="50" cy="50" r="44" fill="url(#fg2)"/>
+          <sc-for list="{{ leaves }}" as="l" hint-placeholder-count="22">
+            <ellipse cx="0" cy="0" rx="4" ry="1.55" fill="#6E5322" fill-opacity="0.82" transform="translate({{ l.x }} {{ l.y }}) rotate({{ l.rot }})"/>
+          </sc-for>
+          <text x="50" y="50.4" text-anchor="middle" dominant-baseline="central" font-family="Spectral, serif" font-weight="500" font-size="34" fill="#5E4718">A</text>
+        </svg>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:#9A9384; max-width:130px;">Alternate seal · the aureus coin</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const rays = [];
+    const M = 150;
+    const cx = 300, cy = 300;
+    for (let i = 0; i < M; i++) {
+      const ang = (i / M) * 2 * Math.PI;
+      const k = i % 3;
+      const lenf = k === 0 ? 1 : k === 1 ? 0.72 : 0.48;
+      const r1 = 108;
+      const r2 = 150 + 140 * lenf + Math.sin(i * 1.7) * 15;
+      rays.push({
+        x1: +(cx + r1 * Math.cos(ang)).toFixed(1),
+        y1: +(cy + r1 * Math.sin(ang)).toFixed(1),
+        x2: +(cx + r2 * Math.cos(ang)).toFixed(1),
+        y2: +(cy + r2 * Math.sin(ang)).toFixed(1),
+        w: +(0.5 + 0.7 * lenf).toFixed(2),
+        o: +(0.12 + 0.34 * lenf).toFixed(2),
+      });
+    }
+    const leaves = [];
+    const N = 22;
+    for (let i = 0; i < N; i++) {
+      const ang = 125 + 290 * (i / (N - 1));
+      const r = 30;
+      leaves.push({
+        x: +(50 + r * Math.cos(ang * Math.PI / 180)).toFixed(2),
+        y: +(50 - r * Math.sin(ang * Math.PI / 180)).toFixed(2),
+        rot: +(90 - ang).toFixed(1),
+      });
+    }
+    return { rays, leaves };
+  }
+}
+</script>
+</body>
+</html>

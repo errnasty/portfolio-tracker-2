@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&family=Hanken+Grotesk:wght@400;500;600;700&family=Spectral:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; background: #F6F3EC; }
+  * { box-sizing: border-box; }
+  ::selection { background: #C6A96A; color: #14140F; }
+  a { text-decoration: none; color: #1B1A16; }
+  a:hover { color: #93702C; }
+  @keyframes auRise { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes auGlow { 0%, 100% { transform: scale(1); opacity: 0.82; } 50% { transform: scale(1.09); opacity: 1; } }
+  @keyframes auFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
+  @keyframes auScan { from { transform: scale(1.06) translateY(2%); } to { transform: scale(1.06) translateY(-2%); } }
+</style>
+</helmet>
+
+<div style="font-family:'Hanken Grotesk',system-ui,sans-serif; color:#1B1A16; background:#F6F3EC; -webkit-font-smoothing:antialiased; overflow-x:hidden;">
+
+  <!-- ══════════ NAV ══════════ -->
+  <header style="position:sticky; top:0; z-index:50; background:rgba(246,243,236,0.78); backdrop-filter:blur(14px); border-bottom:1px solid #E7E1D5;">
+    <div style="max-width:1240px; margin:0 auto; padding:14px 32px; display:flex; align-items:center; gap:14px;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <img src="assets/face-ink.png" alt="Aureus" style="height:34px; width:auto; display:block;">
+        <span style="font-family:'Spectral',serif; font-size:22px; letter-spacing:0.01em; color:#1B1A16;">Aureus</span>
+      </div>
+      <nav style="display:flex; gap:28px; margin-left:44px; font-size:14px; color:#726C60;">
+        <a href="#features">Product</a>
+        <a href="#analytics">Analytics</a>
+        <a href="#" style="color:#726C60;">Docs</a>
+      </nav>
+      <div style="margin-left:auto; display:flex; align-items:center; gap:20px;">
+        <a href="#" style="font-size:14px; color:#4A463E;">Sign in</a>
+        <a href="#" style="font-size:14px; font-weight:600; color:#14140F; background:linear-gradient(150deg,#E4CE9A,#C6A96A); padding:10px 18px; border-radius:10px;">Claim account →</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ══════════ HERO (Roman etching) ══════════ -->
+  <section style="position:relative; overflow:hidden; min-height:90vh; display:flex; align-items:center;">
+    <img src="assets/roman-1.png" alt="" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; filter:grayscale(1) contrast(1.08) brightness(1.04); opacity:0.34; animation:auScan 16s ease-in-out infinite alternate;">
+    <div style="position:absolute; inset:0; background:radial-gradient(700px 440px at 50% 32%, rgba(198,169,106,0.22), transparent 62%), linear-gradient(180deg, rgba(246,243,236,0.28) 0%, rgba(246,243,236,0.22) 42%, #F6F3EC 100%);"></div>
+
+    <div style="position:relative; z-index:2; max-width:900px; margin:0 auto; padding:72px 32px 60px; text-align:center;">
+      <div style="position:relative; display:inline-flex; align-items:center; justify-content:center; margin-bottom:30px; animation:auRise 0.9s cubic-bezier(.2,.7,.2,1) both;">
+        <div style="position:absolute; width:340px; height:340px; border-radius:50%; background:radial-gradient(circle, rgba(198,169,106,0.30), transparent 62%); animation:auGlow 6s ease-in-out infinite;"></div>
+        <img src="assets/face-ink.png" alt="Aureus" style="position:relative; width:236px; filter:drop-shadow(0 18px 40px rgba(120,105,70,0.32)); animation:auFloat 7s ease-in-out infinite;">
+      </div>
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.16em; text-transform:uppercase; color:#93702C; animation:auRise 0.8s cubic-bezier(.2,.7,.2,1) both; animation-delay:0.12s;">Est · MMXXVI — private wealth, struck as one</div>
+      <h1 style="font-family:'Spectral',serif; font-weight:500; font-size:clamp(48px,7vw,88px); line-height:0.98; letter-spacing:-0.02em; margin:20px 0 0; color:#1B1A16; animation:auRise 0.85s cubic-bezier(.2,.7,.2,1) both; animation-delay:0.2s;">Command your whole <em style="font-style:italic; color:#93702C;">fortune.</em></h1>
+      <p style="font-size:18px; line-height:1.62; color:#726C60; margin:24px auto 0; max-width:540px; animation:auRise 0.85s cubic-bezier(.2,.7,.2,1) both; animation-delay:0.3s;">Aureus unifies investments, cash and spending into one tax-aware console — with look-through analytics and plain-English answers. Calm as marble, precise as a mint.</p>
+      <div style="display:flex; gap:14px; justify-content:center; margin-top:34px; animation:auRise 0.85s cubic-bezier(.2,.7,.2,1) both; animation-delay:0.4s;">
+        <a href="#" style="font-size:15px; font-weight:600; color:#14140F; background:linear-gradient(150deg,#E4CE9A,#C6A96A); padding:15px 28px; border-radius:12px; transition:transform .25s cubic-bezier(.2,.7,.2,1), box-shadow .25s ease;" style-hover="transform:translateY(-3px); box-shadow:0 14px 30px rgba(198,169,106,0.45);">Claim your account →</a>
+        <a href="#analytics" style="font-size:15px; font-weight:600; color:#1B1A16; background:#FFFFFF; border:1px solid #E7E1D5; padding:15px 26px; border-radius:12px; transition:transform .25s cubic-bezier(.2,.7,.2,1), box-shadow .25s ease, border-color .25s ease;" style-hover="transform:translateY(-3px); box-shadow:0 12px 26px rgba(80,70,45,0.12); border-color:#C6A96A;">See the console</a>
+      </div>
+      <div style="display:flex; gap:26px; justify-content:center; margin-top:36px; font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.06em; color:#9A9384; text-transform:uppercase; animation:auRise 0.85s cubic-bezier(.2,.7,.2,1) both; animation-delay:0.5s;">
+        <span>✓ Bank &amp; IBKR sync</span>
+        <span>✓ SG-tax aware</span>
+        <span>✓ Free to start</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- summary strip -->
+  <div style="max-width:1240px; margin:-24px auto 0; padding:0 32px; position:relative; z-index:3;">
+    <div style="background:#FFFFFF; border:1px solid #E7E1D5; border-radius:14px; padding:18px 22px; font-family:'IBM Plex Mono',monospace; font-size:13px; line-height:1.7; color:#726C60; box-shadow:0 8px 30px rgba(80,70,45,0.06);">
+      <span style="color:#93702C;">▸ aureus summary</span> &nbsp; Net worth <span style="color:#1B1A16;">$487,320</span> (<span style="color:#2E7D5B;">+2.6% · 30D</span>). &nbsp; VWRA overweight <span style="color:#B4552F;">+7.2%</span> — rebalance flagged. &nbsp; Savings rate <span style="color:#1B1A16;">52%</span>, ahead of plan.
+    </div>
+  </div>
+
+  <!-- trust strip -->
+  <div style="border-top:1px solid #E7E1D5; border-bottom:1px solid #E7E1D5; background:#FBFAF6; margin-top:44px;">
+    <div style="max-width:1240px; margin:0 auto; padding:20px 32px; display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap; font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.08em; color:#9A9384; text-transform:uppercase;">
+      <span>Interactive Brokers</span><span>DBS · POSB · OCBC</span><span>Yahoo Finance</span><span>Frankfurter FX</span><span>Supabase</span>
+    </div>
+  </div>
+
+  <!-- ══════════ FEATURES ══════════ -->
+  <section id="features" style="background:#F6F3EC;">
+    <div style="max-width:1240px; margin:0 auto; padding:100px 32px;">
+      <div data-reveal style="max-width:640px; margin-bottom:64px;">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:#93702C;">The console</div>
+        <h2 style="font-family:'Spectral',serif; font-weight:500; font-size:clamp(34px,4.4vw,52px); line-height:1.06; letter-spacing:-0.01em; margin:16px 0 0; color:#1B1A16;">Six instruments. One standard.</h2>
+      </div>
+      <div data-reveal style="display:grid; grid-template-columns:1fr 1fr; gap:1px; background:#E7E1D5; border:1px solid #E7E1D5; border-radius:18px; overflow:hidden;">
+        <div style="background:#FFFFFF; padding:36px; transition:transform .3s cubic-bezier(.2,.7,.2,1), box-shadow .3s ease; position:relative;" style-hover="transform:translateY(-5px); box-shadow:0 18px 40px rgba(80,70,45,0.10);"><div style="font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.1em; color:#93702C;">#1 · UNIFY</div><h3 style="font-family:'Spectral',serif; font-weight:500; font-size:25px; margin:16px 0 0; color:#1B1A16;">Everything, one number</h3><p style="font-size:14.5px; line-height:1.62; color:#726C60; margin:10px 0 0;">Holdings, cash and bank accounts across currencies, priced live and rolled into a single net worth with 1D / 7D / 30D deltas you can trust.</p></div>
+        <div style="background:#FFFFFF; padding:36px; transition:transform .3s cubic-bezier(.2,.7,.2,1), box-shadow .3s ease; position:relative;" style-hover="transform:translateY(-5px); box-shadow:0 18px 40px rgba(80,70,45,0.10);"><div style="font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.1em; color:#93702C;">#2 · WATCH</div><h3 style="font-family:'Spectral',serif; font-weight:500; font-size:25px; margin:16px 0 0; color:#1B1A16;">Spending that files itself</h3><p style="font-size:14.5px; line-height:1.62; color:#726C60; margin:10px 0 0;">Bank and card feeds auto-categorize into budgets. Catch forgotten subscriptions and protect your savings rate — no spreadsheet required.</p></div>
+        <div style="background:#FFFFFF; padding:36px; transition:transform .3s cubic-bezier(.2,.7,.2,1), box-shadow .3s ease; position:relative;" style-hover="transform:translateY(-5px); box-shadow:0 18px 40px rgba(80,70,45,0.10);"><div style="font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.1em; color:#93702C;">#3 · SEE THROUGH</div><h3 style="font-family:'Spectral',serif; font-weight:500; font-size:25px; margin:16px 0 0; color:#1B1A16;">Look-through analytics</h3><p style="font-size:14.5px; line-height:1.62; color:#726C60; margin:10px 0 0;">Aureus decomposes ETFs into real country, sector and currency exposure — so you know what you truly own, and where two funds secretly overlap.</p></div>
+        <div style="background:#FFFFFF; padding:36px; transition:transform .3s cubic-bezier(.2,.7,.2,1), box-shadow .3s ease; position:relative;" style-hover="transform:translateY(-5px); box-shadow:0 18px 40px rgba(80,70,45,0.10);"><div style="font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.1em; color:#93702C;">#4 · REBALANCE</div><h3 style="font-family:'Spectral',serif; font-weight:500; font-size:25px; margin:16px 0 0; color:#1B1A16;">Drift, corrected</h3><p style="font-size:14.5px; line-height:1.62; color:#726C60; margin:10px 0 0;">Set target weights and tolerance bands. Aureus flags drift and proposes the exact trades, then models contributions and FI timelines with backtests.</p></div>
+        <div style="background:#FFFFFF; padding:36px; transition:transform .3s cubic-bezier(.2,.7,.2,1), box-shadow .3s ease; position:relative;" style-hover="transform:translateY(-5px); box-shadow:0 18px 40px rgba(80,70,45,0.10);"><div style="font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.1em; color:#93702C;">#5 · SHELTER</div><h3 style="font-family:'Spectral',serif; font-weight:500; font-size:25px; margin:16px 0 0; color:#1B1A16;">Singapore-tax aware</h3><p style="font-size:14.5px; line-height:1.62; color:#726C60; margin:10px 0 0;">Dividend and gains treatment built for SG residents — no US-centric assumptions, no manual reconciling to keep the numbers honest.</p></div>
+        <div style="background:#FFFFFF; padding:36px; transition:transform .3s cubic-bezier(.2,.7,.2,1), box-shadow .3s ease; position:relative;" style-hover="transform:translateY(-5px); box-shadow:0 18px 40px rgba(80,70,45,0.10);"><div style="font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.1em; color:#93702C;">#6 · UNDERSTAND</div><h3 style="font-family:'Spectral',serif; font-weight:500; font-size:25px; margin:16px 0 0; color:#1B1A16;">A plain-English verdict</h3><p style="font-size:14.5px; line-height:1.62; color:#726C60; margin:10px 0 0;">A deterministic read on your position — what changed, what needs attention, what to do next. No black box, no per-render cost.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ ANALYTICS SHOWCASE ══════════ -->
+  <section id="analytics" style="background:#FBFAF6; border-top:1px solid #E7E1D5; border-bottom:1px solid #E7E1D5;">
+    <div data-reveal style="max-width:1240px; margin:0 auto; padding:96px 32px; display:grid; grid-template-columns:0.9fr 1.1fr; gap:56px; align-items:center;">
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:#93702C;">Know what you own</div>
+        <h2 style="font-family:'Spectral',serif; font-weight:500; font-size:clamp(30px,3.8vw,44px); line-height:1.1; margin:16px 0 0; color:#1B1A16;">Two ETFs can hide the same ten stocks. Aureus shows you.</h2>
+        <p style="font-size:16.5px; line-height:1.65; color:#726C60; margin:18px 0 0;">Concentration metrics, effective holdings and full look-through — so overlap and hidden risk surface before they cost you.</p>
+        <div style="display:flex; gap:40px; margin-top:32px;">
+          <div><div style="font-family:'Spectral',serif; font-size:38px; color:#93702C;">74.8%</div><div style="font-size:13px; color:#726C60; margin-top:4px;">in top 3 positions</div></div>
+          <div><div style="font-family:'Spectral',serif; font-size:38px; color:#93702C;">4.2</div><div style="font-size:13px; color:#726C60; margin-top:4px;">effective holdings</div></div>
+        </div>
+      </div>
+      <div style="background:#FFFFFF; border:1px solid #E7E1D5; border-radius:20px; padding:30px; box-shadow:0 12px 40px rgba(80,70,45,0.06);">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:#9A9384; margin-bottom:20px;">Geographic · look-through</div>
+        <div style="display:flex; flex-direction:column; gap:15px;">
+          <div><div style="display:flex; justify-content:space-between; font-size:14px; margin-bottom:6px; color:#1B1A16;"><span>United States</span><span style="color:#726C60;">58%</span></div><div style="height:7px; background:#EFEAE0; border-radius:4px;"><div style="height:100%; width:58%; background:#C6A96A; border-radius:4px;"></div></div></div>
+          <div><div style="display:flex; justify-content:space-between; font-size:14px; margin-bottom:6px; color:#1B1A16;"><span>Europe</span><span style="color:#726C60;">12%</span></div><div style="height:7px; background:#EFEAE0; border-radius:4px;"><div style="height:100%; width:12%; background:#C6A96A; border-radius:4px;"></div></div></div>
+          <div><div style="display:flex; justify-content:space-between; font-size:14px; margin-bottom:6px; color:#1B1A16;"><span>Emerging markets</span><span style="color:#726C60;">9%</span></div><div style="height:7px; background:#EFEAE0; border-radius:4px;"><div style="height:100%; width:9%; background:#C6A96A; border-radius:4px;"></div></div></div>
+          <div><div style="display:flex; justify-content:space-between; font-size:14px; margin-bottom:6px; color:#1B1A16;"><span>Singapore</span><span style="color:#726C60;">8%</span></div><div style="height:7px; background:#EFEAE0; border-radius:4px;"><div style="height:100%; width:8%; background:#C6A96A; border-radius:4px;"></div></div></div>
+          <div><div style="display:flex; justify-content:space-between; font-size:14px; margin-bottom:6px; color:#1B1A16;"><span>Japan</span><span style="color:#726C60;">7%</span></div><div style="height:7px; background:#EFEAE0; border-radius:4px;"><div style="height:100%; width:7%; background:#C6A96A; border-radius:4px;"></div></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ QUOTE ══════════ -->
+  <section style="background:#F6F3EC;">
+    <div data-reveal style="max-width:900px; margin:0 auto; padding:96px 32px; text-align:center;">
+      <div style="font-family:'Spectral',serif; font-size:40px; color:#B99640; line-height:0.5;">&ldquo;</div>
+      <p style="font-family:'Spectral',serif; font-weight:300; font-size:clamp(24px,3.2vw,32px); line-height:1.4; margin:20px 0 0; color:#1B1A16;">I stopped keeping three spreadsheets. Aureus tells me my net worth, my drift and my savings rate in one glance — the first finance tool that actually feels calm.</p>
+      <div style="margin-top:28px; font-family:'IBM Plex Mono',monospace; font-size:13px; letter-spacing:0.08em; text-transform:uppercase; color:#9A9384;">Rui — software engineer, Singapore</div>
+    </div>
+  </section>
+
+  <!-- ══════════ FINAL CTA ══════════ -->
+  <section style="background:#F6F3EC;">
+    <div style="max-width:1240px; margin:0 auto; padding:20px 32px 96px;">
+      <div data-reveal style="position:relative; overflow:hidden; border-radius:24px; border:1px solid #E7E1D5; padding:76px 56px; text-align:center; background:#FBFAF6;">
+        <img src="assets/roman-1.png" alt="" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; filter:grayscale(1) contrast(0.96) brightness(1.3); opacity:0.10;">
+        <div style="position:absolute; inset:0; background:radial-gradient(700px 300px at 50% 0%, rgba(198,169,106,0.22), transparent), rgba(251,250,246,0.72);"></div>
+        <div style="position:relative;">
+          <img src="assets/face-ink.png" alt="Aureus" style="height:64px; margin:0 auto 22px; display:block; filter:drop-shadow(0 12px 26px rgba(120,105,70,0.24));">
+          <h2 style="font-family:'Spectral',serif; font-weight:500; font-size:clamp(34px,4.6vw,52px); line-height:1.05; margin:0; color:#1B1A16;">Your capital deserves a mint.</h2>
+          <p style="font-size:17px; color:#726C60; margin:16px auto 0; max-width:460px;">Join Aureus and see your whole financial life, struck as one.</p>
+          <a href="#" style="display:inline-block; margin-top:30px; font-size:15px; font-weight:600; color:#14140F; background:linear-gradient(150deg,#E4CE9A,#C6A96A); padding:15px 30px; border-radius:12px;">Claim your account →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ FOOTER ══════════ -->
+  <footer style="background:#FBFAF6; border-top:1px solid #E7E1D5;">
+    <div style="max-width:1240px; margin:0 auto; padding:44px 32px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; color:#9A9384;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <img src="assets/face-ink.png" alt="Aureus" style="height:28px; width:auto; display:block;">
+        <span style="font-family:'Spectral',serif; font-size:17px; color:#1B1A16;">Aureus</span>
+      </div>
+      <div style="display:flex; gap:24px; margin-left:32px; font-size:13px;">
+        <a href="#features">Product</a><a href="#analytics">Analytics</a><a href="#">Privacy</a><a href="#">Security</a>
+      </div>
+      <span style="margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:12px; color:#B4AE9E;">© MMXXVI Aureus · Made in Singapore</span>
+    </div>
+  </footer>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    let tries = 0;
+    const run = () => {
+      const els = document.querySelectorAll('[data-reveal]');
+      if (!els.length && tries++ < 30) { setTimeout(run, 60); return; }
+      els.forEach((el) => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(36px)';
+        el.style.transition = 'opacity .85s cubic-bezier(.2,.7,.2,1), transform .85s cubic-bezier(.2,.7,.2,1)';
+      });
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            e.target.style.opacity = '1';
+            e.target.style.transform = 'none';
+            io.unobserve(e.target);
+          }
+        });
+      }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+      els.forEach((el) => io.observe(el));
+    };
+    run();
+  }
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

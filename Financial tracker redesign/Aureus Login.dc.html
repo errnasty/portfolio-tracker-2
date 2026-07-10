@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@300;400;500;600&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; background: #F6F3EC; }
+  * { box-sizing: border-box; }
+  ::selection { background: #C6A96A; color: #14140F; }
+  input::placeholder { color: #9A9384; }
+  input:focus { outline: none; border-color: #C6A96A !important; }
+  a { text-decoration: none; color: #1B1A16; }
+  a:hover { color: #93702C; }
+</style>
+</helmet>
+
+<div style="display:flex; min-height:100vh; background:#F6F3EC; font-family:'Hanken Grotesk',system-ui,sans-serif; color:#1B1A16;">
+
+  <!-- LEFT · brand panel -->
+  <div style="position:relative; flex:1; overflow:hidden; border-right:1px solid #E7E1D5; display:flex; flex-direction:column; justify-content:space-between; padding:44px;">
+    <img src="assets/roman-1.png" alt="" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; filter:grayscale(1) contrast(0.96) brightness(1.3); opacity:0.12;">
+    <div style="position:absolute; inset:0; background:linear-gradient(180deg, rgba(246,243,236,0.6), rgba(246,243,236,0.85));"></div>
+
+    <div style="position:relative; z-index:2; display:flex; align-items:center; gap:11px;">
+      <img src="assets/face-ink.png" alt="Aureus" style="height:32px;">
+      <span style="font-family:'Spectral',serif; font-size:22px; color:#1B1A16;">Aureus</span>
+    </div>
+
+    <div style="position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; text-align:center;">
+      <div style="position:relative; display:flex; align-items:center; justify-content:center; margin-bottom:26px;">
+        <div style="position:absolute; width:280px; height:280px; border-radius:50%; background:radial-gradient(circle, rgba(198,169,106,0.26), transparent 62%);"></div>
+        <img src="assets/face-ink.png" alt="Aureus" style="position:relative; width:220px; filter:drop-shadow(0 16px 36px rgba(120,105,70,0.26));">
+      </div>
+      <h2 style="font-family:'Spectral',serif; font-weight:400; font-size:32px; line-height:1.2; margin:0; max-width:360px; color:#1B1A16;">Private wealth, <em style="color:#93702C;">struck as one.</em></h2>
+      <p style="font-size:15px; color:#726C60; margin:14px 0 0; max-width:340px;">Investments, cash and spending — unified in one calm, tax-aware console.</p>
+    </div>
+
+    <div style="position:relative; z-index:2; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#9A9384;">Est · MMXXVI — Made in Singapore</div>
+  </div>
+
+  <!-- RIGHT · form -->
+  <div style="width:520px; flex-shrink:0; display:flex; flex-direction:column; justify-content:center; padding:56px 60px; background:#FBFAF6; border-left:1px solid #E7E1D5;">
+    <div style="max-width:400px; width:100%; margin:0 auto;">
+      <div style="display:flex; padding:3px; background:#F0ECE2; border:1px solid #E7E1D5; border-radius:11px; gap:3px; margin-bottom:32px;">
+        <button onClick="{{ toSignup }}" style="{{ segSignup }}">Create account</button>
+        <button onClick="{{ toSignin }}" style="{{ segSignin }}">Sign in</button>
+      </div>
+
+      <h1 style="font-family:'Spectral',serif; font-weight:500; font-size:32px; margin:0; line-height:1.1; color:#1B1A16;">{{ heading }}</h1>
+      <p style="font-size:14.5px; color:#726C60; margin:10px 0 30px;">{{ subheading }}</p>
+
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        <div style="display:{{ nameDisp }};">
+          <label style="display:block; font-size:12px; color:#726C60; margin-bottom:7px;">Full name</label>
+          <input type="text" placeholder="Jordan Tan" style="width:100%; background:#FFFFFF; border:1px solid #E7E1D5; border-radius:11px; padding:13px 14px; font-size:14px; color:#1B1A16; font-family:inherit;">
+        </div>
+        <div>
+          <label style="display:block; font-size:12px; color:#726C60; margin-bottom:7px;">Email</label>
+          <input type="email" placeholder="you@example.com" style="width:100%; background:#FFFFFF; border:1px solid #E7E1D5; border-radius:11px; padding:13px 14px; font-size:14px; color:#1B1A16; font-family:inherit;">
+        </div>
+        <div>
+          <label style="display:block; font-size:12px; color:#726C60; margin-bottom:7px;">Password</label>
+          <input type="password" placeholder="••••••••••" style="width:100%; background:#FFFFFF; border:1px solid #E7E1D5; border-radius:11px; padding:13px 14px; font-size:14px; color:#1B1A16; font-family:inherit;">
+        </div>
+      </div>
+
+      <button style="width:100%; margin-top:24px; border:none; cursor:pointer; font-size:15px; font-weight:600; color:#14140F; background:linear-gradient(150deg,#E4CE9A,#C6A96A); padding:14px; border-radius:12px; font-family:inherit;">{{ cta }}</button>
+
+      <div style="display:flex; align-items:center; gap:14px; margin:24px 0; color:#9A9384; font-size:12px;">
+        <span style="flex:1; height:1px; background:#E7E1D5;"></span>or<span style="flex:1; height:1px; background:#E7E1D5;"></span>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <button style="width:100%; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; background:#FFFFFF; border:1px solid #E7E1D5; border-radius:12px; padding:12px; font-size:14px; font-weight:500; color:#1B1A16; font-family:inherit;"><span style="font-family:'IBM Plex Mono',monospace; color:#93702C;">G</span> Continue with Google</button>
+        <button style="width:100%; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; background:#FFFFFF; border:1px solid #E7E1D5; border-radius:12px; padding:12px; font-size:14px; font-weight:500; color:#1B1A16; font-family:inherit;"><span style="color:#93702C;">◍</span> Continue with Apple</button>
+      </div>
+
+      <p style="font-size:12px; color:#9A9384; margin-top:26px; line-height:1.6;">By continuing you agree to Aureus's <a href="#" style="color:#726C60; text-decoration:underline;">Terms</a> and <a href="#" style="color:#726C60; text-decoration:underline;">Privacy Policy</a>.</p>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { mode: 'signup' };
+
+  seg(m) {
+    const a = this.state.mode === m;
+    return {
+      flex: 1, textAlign: 'center', border: 'none', cursor: 'pointer',
+      padding: '9px 0', borderRadius: '8px', fontSize: '13.5px', fontWeight: 600,
+      fontFamily: "'Hanken Grotesk', system-ui, sans-serif",
+      background: a ? '#FFFFFF' : 'transparent',
+      color: a ? '#1B1A16' : '#9A9384',
+      boxShadow: a ? '0 1px 3px rgba(0,0,0,0.10)' : 'none',
+    };
+  }
+
+  renderVals() {
+    const su = this.state.mode === 'signup';
+    return {
+      segSignup: this.seg('signup'),
+      segSignin: this.seg('signin'),
+      toSignup: () => this.setState({ mode: 'signup' }),
+      toSignin: () => this.setState({ mode: 'signin' }),
+      heading: su ? 'Create your account' : 'Welcome back',
+      subheading: su ? 'Start tracking your whole financial life.' : 'Sign in to your console.',
+      cta: su ? 'Create account →' : 'Sign in →',
+      nameDisp: su ? 'block' : 'none',
+    };
+  }
+}
+</script>
+</body>
+</html>

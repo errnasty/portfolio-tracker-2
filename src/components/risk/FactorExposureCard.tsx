@@ -102,10 +102,10 @@ export function FactorExposureCard({ portfolioSeries, period }: Props) {
           <Stat label="R²" value={`${(result.rSquared * 100).toFixed(1)}%`}
             hint={result.rSquared > 0.85 ? 'Returns largely explained' : result.rSquared > 0.6 ? 'Most returns explained' : 'Significant unexplained variance'} />
           <Stat label="Alpha (monthly)" value={`${result.alpha.toFixed(2)}%`}
-            valueColor={result.alpha >= 0 ? 'text-emerald-400' : 'text-red-400'}
+            valueColor={result.alpha >= 0 ? 'text-up' : 'text-down'}
             hint="Excess return after factor exposure" />
           <Stat label="Annualized alpha" value={`${(result.alpha * 12).toFixed(2)}%`}
-            valueColor={result.alpha >= 0 ? 'text-emerald-400' : 'text-red-400'} />
+            valueColor={result.alpha >= 0 ? 'text-up' : 'text-down'} />
           <Stat label="Observations" value={result.observations.toString()} hint={`${period.toUpperCase()} window`} />
         </div>
 
@@ -113,7 +113,7 @@ export function FactorExposureCard({ portfolioSeries, period }: Props) {
           {factorKeys.map((k) => {
             const beta = result.betas[k]
             const widthPct = (Math.abs(beta) / maxAbsBeta) * 50
-            const color = beta >= 0 ? 'bg-emerald-500' : 'bg-red-500'
+            const color = beta >= 0 ? 'bg-up' : 'bg-down'
             return (
               <div key={k} className="space-y-1">
                 <div className="flex items-baseline justify-between text-sm">
@@ -125,11 +125,11 @@ export function FactorExposureCard({ portfolioSeries, period }: Props) {
                         : `${FACTOR_PROXIES[k].tickers[0]} − ${FACTOR_PROXIES[k].tickers[1]}`}
                     </span>
                   </div>
-                  <span className={`tabular-nums font-semibold ${beta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  <span className={`tabular-nums font-semibold ${beta >= 0 ? 'text-up' : 'text-down'}`}>
                     {beta >= 0 ? '+' : ''}{beta.toFixed(2)}
                   </span>
                 </div>
-                <div className="relative h-2 rounded-full bg-muted overflow-hidden">
+                <div className="relative h-2 rounded-full bg-[var(--hair)] overflow-hidden">
                   <div className="absolute top-0 bottom-0 left-1/2 w-px bg-foreground/20" />
                   <div
                     className={`absolute top-0 bottom-0 ${color}`}

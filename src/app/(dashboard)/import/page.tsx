@@ -113,7 +113,7 @@ export default function ImportPage() {
   }, [allRows, importableRows])
 
   return (
-    <PageShell screen="IMPORT" footerHints={<span><span className="text-primary">▸</span> <span className="text-foreground">g s</span> spending · <span className="text-foreground">g o</span> holdings</span>}>
+    <PageShell screen="Money" title="Import" footerHints={<span><span className="text-[var(--accent)]">▸</span> <span className="text-foreground">g s</span> spending · <span className="text-foreground">g o</span> holdings</span>}>
     <div className="space-y-4">
       <Tabs value={format} onValueChange={(v) => { setFormat(v as Format); setParseResult(null); setGenericRows(null) }}>
         <TabsList>
@@ -181,12 +181,12 @@ VWRA,dividend,2024-12-15,0,0,12.45,USD,0,Q4`}</pre>
             </div>
           </div>
           {error && (
-            <div className="mt-3 flex items-start gap-2 rounded-md bg-red-500/10 p-3 text-sm text-red-400">
+            <div className="mt-3 flex items-start gap-2 rounded-md bg-down/10 p-3 text-sm text-down">
               <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" /> {error}
             </div>
           )}
           {success && (
-            <div className="mt-3 flex items-start gap-2 rounded-md bg-emerald-500/10 p-3 text-sm text-emerald-400">
+            <div className="mt-3 flex items-start gap-2 rounded-md bg-up/10 p-3 text-sm text-up">
               <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" /> {success} Redirecting…
             </div>
           )}
@@ -273,9 +273,9 @@ VWRA,dividend,2024-12-15,0,0,12.45,USD,0,Q4`}</pre>
                           <td className="px-3 py-2 text-xs">
                             {t ? (
                               <span className={
-                                t.type === 'buy' ? 'text-emerald-400' :
-                                t.type === 'sell' ? 'text-red-400' :
-                                t.type === 'dividend' ? 'text-amber-400' :
+                                t.type === 'buy' ? 'text-up' :
+                                t.type === 'sell' ? 'text-down' :
+                                t.type === 'dividend' ? 'text-warn' :
                                 'text-sky-400'
                               }>{t.type}</span>
                             ) : <span className="text-muted-foreground">{r.source}</span>}
@@ -324,7 +324,7 @@ function Stat({ label, value, positive, muted }: { label: string; value: string;
     <Card>
       <CardContent className="py-3">
         <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
-        <div className={`text-lg font-semibold tabular-nums ${positive ? 'text-emerald-400' : muted ? 'text-muted-foreground' : ''}`}>{value}</div>
+        <div className={`text-lg font-semibold tabular-nums ${positive ? 'text-up' : muted ? 'text-muted-foreground' : ''}`}>{value}</div>
       </CardContent>
     </Card>
   )

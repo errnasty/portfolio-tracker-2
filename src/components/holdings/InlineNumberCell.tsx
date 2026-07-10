@@ -101,7 +101,7 @@ export function InlineNumberCell({
           aria-label={ariaLabel}
           className={cn(
             'h-7 w-24 rounded border bg-background px-1.5 text-sm font-mono tabular-nums focus:outline-none focus:ring-1 focus:ring-ring',
-            error ? 'border-red-500' : 'border-border',
+            error ? 'border-down' : 'border-border',
             align === 'right' && 'text-right',
           )}
         />
@@ -114,7 +114,7 @@ export function InlineNumberCell({
               data-inline-edit-action="save"
               onMouseDown={(e) => e.preventDefault()}
               onClick={commit}
-              className="rounded p-0.5 text-emerald-400 hover:bg-emerald-500/10"
+              className="rounded p-0.5 text-up hover:bg-up/10"
               aria-label="Save"
             >
               <Check className="h-3.5 w-3.5" />

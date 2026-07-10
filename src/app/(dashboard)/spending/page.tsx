@@ -21,10 +21,7 @@ import { ReviewQueueCard } from '@/components/spending/ReviewQueueCard'
 import { Plus, Trash2, Upload } from 'lucide-react'
 import type { Currency } from '@/types'
 
-const PIE_COLORS = [
-  '#f97316', '#0ea5e9', '#ec4899', '#eab308', '#8b5cf6',
-  '#22c55e', '#f43f5e', '#14b8a6', '#6366f1', '#94a3b8',
-]
+const PIE_COLORS = ['#b5732f', '#3f6fb0', '#b07a86', '#C6A96A', '#7a6f9a', '#2f8f5b', '#9a4a3f', '#3f8f86', '#7a6f9a', '#9a8f7a']
 
 function thisMonth() {
   return new Date().toISOString().slice(0, 7)
@@ -155,15 +152,15 @@ export default function SpendingPage() {
 
   const footerHints = (
     <>
-      <span><span className="text-primary">▸</span> <span className="text-foreground">g h</span> home · <span className="text-foreground">g b</span> budgets · <span className="text-foreground">g o</span> holdings</span>
+      <span><span className="text-[var(--accent)]">▸</span> <span className="text-foreground">g h</span> home · <span className="text-foreground">g b</span> budgets · <span className="text-foreground">g o</span> holdings</span>
     </>
   )
 
   return (
-    <PageShell screen="SPENDING" statusRight={statusRight} footerHints={footerHints}>
+    <PageShell screen="Money" title="Spending" statusRight={statusRight} footerHints={footerHints}>
     <div className="space-y-4">
       {error && (
-        <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-400">
+        <div className="rounded-md border border-warn/40 bg-warn/10 p-3 text-sm text-warn">
           {error}
         </div>
       )}
@@ -178,7 +175,7 @@ export default function SpendingPage() {
             value={stats.expense}
             format={(n) => formatCurrency(n, base)}
             delta={prevExpense > 0 ? [
-              <span key="m"><span className="text-muted-foreground">vs last month </span><span className={momDelta <= 0 ? 'text-emerald-400' : 'text-[#ff7a59]'}>{momDelta >= 0 ? '+' : ''}{momPct.toFixed(0)}%</span></span>,
+              <span key="m"><span className="text-muted-foreground">vs last month </span><span className={momDelta <= 0 ? 'text-up' : 'text-down'}>{momDelta >= 0 ? '+' : ''}{momPct.toFixed(0)}%</span></span>,
             ] : undefined}
           />
           <HeroMetric
@@ -191,7 +188,7 @@ export default function SpendingPage() {
             label="Net saved"
             value={stats.net}
             format={(n) => `${n >= 0 ? '+' : ''}${formatCurrency(n, base)}`}
-            delta={[<span key="r" className={stats.net >= 0 ? 'text-emerald-400' : 'text-red-400'}>{savingsRate.toFixed(0)}% savings rate</span>]}
+            delta={[<span key="r" className={stats.net >= 0 ? 'text-up' : 'text-down'}>{savingsRate.toFixed(0)}% savings rate</span>]}
           />
         </HeroBand>
       </div>
@@ -301,13 +298,13 @@ export default function SpendingPage() {
                             </SelectContent>
                           </Select>
                         </TableCell>
-                        <TableCell className={`py-2 text-right tabular-nums text-sm ${isIncome ? 'text-emerald-400' : ''}`}>
+                        <TableCell className={`py-2 text-right tabular-nums text-sm ${isIncome ? 'text-up' : ''}`}>
                           {isIncome ? '+' : ''}{formatCurrency(Number(t.amount), t.currency)}
                         </TableCell>
                         <TableCell className="py-2">
                           <Button
                             variant="ghost" size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-red-400"
+                            className="h-7 w-7 text-muted-foreground hover:text-down"
                             onClick={() => deleteBankTransaction(t.id)}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -341,7 +338,7 @@ export default function SpendingPage() {
                   contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 4, fontSize: 12 }}
                 />
                 <Bar dataKey="expense" radius={[2, 2, 0, 0]}>
-                  {trend.map((t, i) => <Cell key={i} fill={t.ym === month ? '#6aa9ff' : 'hsl(var(--muted))'} />)}
+                  {trend.map((t, i) => <Cell key={i} fill={t.ym === month ? '#3f6fb0' : 'hsl(var(--muted))'} />)}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -356,7 +353,7 @@ export default function SpendingPage() {
                     return (
                       <div key={m.name} className="flex items-center justify-between text-xs">
                         <span className="truncate">{m.name}</span>
-                        <span className={`tabular-nums whitespace-nowrap ${up ? 'text-[#ff7a59]' : 'text-emerald-400'}`}>
+                        <span className={`tabular-nums whitespace-nowrap ${up ? 'text-down' : 'text-up'}`}>
                           {up ? '▲' : '▼'} {m.hasPrev ? `${m.deltaPct >= 0 ? '+' : ''}${m.deltaPct.toFixed(0)}%` : 'new'} · {formatCurrency(Math.abs(m.delta), base)}
                         </span>
                       </div>

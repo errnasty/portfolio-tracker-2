@@ -56,9 +56,9 @@ export default function BudgetsPage() {
 
   return (
     <PageShell
-      screen="BUDGETS"
+      screen="Money" title="Budgets"
       statusRight={<span>{month} · {expenseCats.length} categories</span>}
-      footerHints={<span><span className="text-primary">▸</span> <span className="text-foreground">g s</span> spending · <span className="text-foreground">g h</span> home</span>}
+      footerHints={<span><span className="text-[var(--accent)]">▸</span> <span className="text-foreground">g s</span> spending · <span className="text-foreground">g h</span> home</span>}
     >
     <div className="space-y-4">
       <div className="overflow-hidden rounded-lg border border-border bg-card">
@@ -70,15 +70,15 @@ export default function BudgetsPage() {
             format={(n) => formatCurrency(n, base)}
             sub={totalBudget > 0 ? <>of {formatCurrency(totalBudget, base)} budget</> : 'no budgets set'}
           >
-            <div className="mt-3 h-1.5 overflow-hidden rounded-[1px] bg-muted">
-              <div className={usedPct >= 100 ? 'h-full bg-red-400' : 'h-full bg-sky-400'} style={{ width: `${usedPct}%` }} />
+            <div className="mt-3 h-1.5 overflow-hidden rounded-[1px] bg-[var(--hair)]">
+              <div className={usedPct >= 100 ? 'h-full bg-down' : 'h-full bg-cool'} style={{ width: `${usedPct}%` }} />
             </div>
           </HeroMetric>
           <HeroMetric
             label="Remaining"
             value={remaining}
             format={(n) => formatCurrency(n, base)}
-            delta={[<span key="r" className={remaining >= 0 ? 'text-emerald-400' : 'text-red-400'}>{remaining >= 0 ? 'on track' : 'over budget'}</span>]}
+            delta={[<span key="r" className={remaining >= 0 ? 'text-up' : 'text-down'}>{remaining >= 0 ? 'on track' : 'over budget'}</span>]}
           />
           <HeroMetric
             label="Total budget"
@@ -136,11 +136,11 @@ function BudgetRow({
 
   const pct = limit && limit > 0 ? (spent / limit) * 100 : 0
   const barColor = !limit ? 'bg-muted-foreground/30'
-    : pct > 100 ? 'bg-red-500' : pct > 80 ? 'bg-amber-500' : 'bg-emerald-500'
+    : pct > 100 ? 'bg-down' : pct > 80 ? 'bg-warn' : 'bg-up'
   const status = !limit ? null
-    : pct > 100 ? <span className="text-red-400">Over by {formatCurrency(spent - limit, base)}</span>
-    : pct > 80 ? <span className="text-amber-400">Near limit</span>
-    : <span className="text-emerald-400">On track</span>
+    : pct > 100 ? <span className="text-down">Over by {formatCurrency(spent - limit, base)}</span>
+    : pct > 80 ? <span className="text-warn">Near limit</span>
+    : <span className="text-up">On track</span>
 
   return (
     <div className="grid grid-cols-[1fr_auto] gap-3 items-center rounded-md border border-border p-3">
@@ -151,7 +151,7 @@ function BudgetRow({
             {formatCurrency(spent, base)}{limit ? ` / ${formatCurrency(limit, base)}` : ''}
           </span>
         </div>
-        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+        <div className="h-1.5 rounded-full bg-[var(--hair)] overflow-hidden">
           <div className={`h-full rounded-full ${barColor}`} style={{ width: `${Math.min(100, pct)}%` }} />
         </div>
         <div className="flex items-center justify-between text-[11px] text-muted-foreground">

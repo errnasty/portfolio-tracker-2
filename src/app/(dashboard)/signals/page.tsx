@@ -19,10 +19,10 @@ import {
 import type { ValuationMetrics } from '@/app/api/valuation/route'
 
 const SEVERITY_STYLES: Record<SignalSeverity, { icon: typeof InfoIcon; classes: string; label: string }> = {
-  critical:    { icon: AlertOctagon,  classes: 'border-red-500/40 bg-red-500/10 text-red-400',          label: 'Critical' },
-  warning:     { icon: AlertTriangle, classes: 'border-amber-500/40 bg-amber-500/10 text-amber-400',    label: 'Warning' },
-  info:        { icon: InfoIcon,      classes: 'border-sky-500/40 bg-sky-500/10 text-sky-400',          label: 'Info' },
-  opportunity: { icon: TrendingDown,  classes: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400', label: 'Opportunity' },
+  critical:    { icon: AlertOctagon,  classes: 'border-down/40 bg-down/10 text-down',          label: 'Critical' },
+  warning:     { icon: AlertTriangle, classes: 'border-warn/40 bg-warn/10 text-warn',    label: 'Warning' },
+  info:        { icon: InfoIcon,      classes: 'border-cool/40 bg-cool/10 text-sky-400',          label: 'Info' },
+  opportunity: { icon: TrendingDown,  classes: 'border-up/40 bg-up/10 text-up', label: 'Opportunity' },
 }
 
 const STORAGE_KEY = 'valuation-signal-thresholds'
@@ -98,7 +98,7 @@ export default function SignalsPage() {
 
   if (!portfolioLoading && enriched.length === 0) {
     return (
-      <PageShell screen="SIGNALS">
+      <PageShell screen="Invest" title="Signals">
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             Add holdings to monitor valuation signals.
@@ -119,7 +119,7 @@ export default function SignalsPage() {
           </button>
         </span>
       )}
-      footerHints={<span><span className="text-primary">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g h</span> home</span>}
+      footerHints={<span><span className="text-[var(--accent)]">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g h</span> home</span>}
     >
     <div className="space-y-4">
       {/* Counts strip */}
@@ -138,8 +138,8 @@ export default function SignalsPage() {
       ) : fired.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center space-y-2">
-            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/10">
-              <InfoIcon className="h-5 w-5 text-emerald-400" />
+            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-up/10">
+              <InfoIcon className="h-5 w-5 text-up" />
             </div>
             <p className="text-sm font-medium">No active signals</p>
             <p className="text-xs text-muted-foreground">
@@ -275,8 +275,8 @@ export default function SignalsPage() {
                       <td className="px-4 py-2.5 text-right tabular-nums">{m.dividendYield ? `${(m.dividendYield * 100).toFixed(2)}%` : '—'}</td>
                       <td className="px-4 py-2.5 text-right tabular-nums">{m.rsi14 ? m.rsi14.toFixed(0) : '—'}</td>
                       <td className="px-4 py-2.5 text-right tabular-nums">{vsSma !== undefined ? `${vsSma >= 0 ? '+' : ''}${vsSma.toFixed(1)}%` : '—'}</td>
-                      <td className="px-4 py-2.5 text-right tabular-nums text-red-400">{m.drawdownFromHigh !== undefined ? `${(m.drawdownFromHigh * 100).toFixed(1)}%` : '—'}</td>
-                      <td className={`px-4 py-2.5 text-right tabular-nums ${m.yearChange !== undefined && m.yearChange < 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-down">{m.drawdownFromHigh !== undefined ? `${(m.drawdownFromHigh * 100).toFixed(1)}%` : '—'}</td>
+                      <td className={`px-4 py-2.5 text-right tabular-nums ${m.yearChange !== undefined && m.yearChange < 0 ? 'text-down' : 'text-up'}`}>
                         {m.yearChange !== undefined ? `${m.yearChange >= 0 ? '+' : ''}${(m.yearChange * 100).toFixed(1)}%` : '—'}
                       </td>
                     </tr>

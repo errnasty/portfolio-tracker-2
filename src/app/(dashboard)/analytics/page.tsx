@@ -47,7 +47,7 @@ export default function AnalyticsPage() {
 
   if (!portfolioLoading && enriched.length === 0) {
     return (
-      <PageShell screen="ANALYTICS">
+      <PageShell screen="Invest" title="Analytics">
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             Add some holdings to see portfolio analytics.
@@ -69,7 +69,7 @@ export default function AnalyticsPage() {
     <PageShell
       screen="ANALYTICS"
       statusRight={stats ? <span>value <span className="text-foreground">{formatCurrency(stats.totalValue, baseCurrency)}</span> · {enriched.length} positions</span> : undefined}
-      footerHints={<span><span className="text-primary">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g h</span> home</span>}
+      footerHints={<span><span className="text-[var(--accent)]">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g h</span> home</span>}
     >
     <div className="space-y-4">
       {loading && Object.keys(analytics).length === 0 ? (

@@ -145,13 +145,13 @@ export default function DashboardPage() {
       tone: inc ? 'up' : 'cool',
       when: t.date.slice(5),
       text: t.description,
-      amount: <span className={inc ? 'text-emerald-400' : 'text-[#ff7a59]'}>{inc ? '+' : ''}{formatCurrency(Number(t.amount), t.currency)}</span>,
+      amount: <span className={inc ? 'text-up' : 'text-down'}>{inc ? '+' : ''}{formatCurrency(Number(t.amount), t.currency)}</span>,
     })
   }
   const feed = activity.slice(0, 6)
 
-  const sevColor = (s: Action['sev']) => s === 'high' ? 'border-l-[#ff7a59]' : 'border-l-amber-500'
-  const sevText = (s: Action['sev']) => s === 'high' ? 'text-[#ff7a59]' : 'text-amber-500'
+  const sevColor = (s: Action['sev']) => s === 'high' ? 'border-l-down' : 'border-l-warn'
+  const sevText = (s: Action['sev']) => s === 'high' ? 'text-down' : 'text-warn'
 
   const statusRight = (
     <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -168,7 +168,7 @@ export default function DashboardPage() {
   const footerHints = (
     <>
       <span>
-        <span className="text-primary">▸</span>{' '}
+        <span className="text-[var(--accent)]">▸</span>{' '}
         <span className="text-foreground">g s</span> spending ·{' '}
         <span className="text-foreground">g o</span> holdings ·{' '}
         <span className="text-foreground">g b</span> budgets ·{' '}
@@ -177,8 +177,11 @@ export default function DashboardPage() {
     </>
   )
 
+  const hour = new Date().getHours()
+  const greeting = hour < 5 ? 'Good night' : hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : hour < 21 ? 'Good evening' : 'Good night'
+
   return (
-    <PageShell screen="HOME" statusRight={statusRight} footerHints={footerHints}>
+    <PageShell screen="Overview" title={greeting} statusRight={statusRight} footerHints={footerHints}>
       <div className="space-y-4">
 
         {/* ── Console card: hero + attention + activity ──────────────────── */}
@@ -200,11 +203,11 @@ export default function DashboardPage() {
                     <AreaChart data={sparkData} margin={{ top: 2, bottom: 2, left: 0, right: 0 }}>
                       <defs>
                         <linearGradient id="nwSpark" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#6fcf97" stopOpacity={0.32} />
-                          <stop offset="100%" stopColor="#6fcf97" stopOpacity={0} />
+                          <stop offset="0%" stopColor="#C6A96A" stopOpacity={0.32} />
+                          <stop offset="100%" stopColor="#C6A96A" stopOpacity={0} />
                         </linearGradient>
                       </defs>
-                      <Area type="monotone" dataKey="v" stroke="#6fcf97" strokeWidth={1.4} fill="url(#nwSpark)" isAnimationActive={false} dot={false} />
+                      <Area type="monotone" dataKey="v" stroke="#C6A96A" strokeWidth={1.4} fill="url(#nwSpark)" isAnimationActive={false} dot={false} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
@@ -225,8 +228,8 @@ export default function DashboardPage() {
               format={(n) => formatCurrency(n, base)}
               sub={totalBudget > 0 ? <>of {formatCurrency(totalBudget, base)} budget</> : undefined}
             >
-              <div className="mt-3 h-1.5 overflow-hidden rounded-[1px] bg-muted">
-                <div className={spentPct >= 100 ? 'h-full bg-[#ff7a59]' : 'h-full bg-sky-400'} style={{ width: `${spentPct}%` }} />
+              <div className="mt-3 h-1.5 overflow-hidden rounded-[1px] bg-[var(--hair)]">
+                <div className={spentPct >= 100 ? 'h-full bg-down' : 'h-full bg-cool'} style={{ width: `${spentPct}%`, transition: 'width 0.6s cubic-bezier(0.2,0.7,0.3,1)' }} />
               </div>
               <div className="mt-3 flex justify-between text-xs">
                 <span className="text-muted-foreground">saved this month</span>
@@ -247,7 +250,7 @@ export default function DashboardPage() {
                   <div className="font-sans mt-2 text-[15px] leading-snug text-foreground">{a.title}</div>
                   <div className="mt-1 text-xs leading-relaxed text-muted-foreground">{a.sub}</div>
                   <Link href={a.href}>
-                    <button className="press mt-3 rounded-sm bg-primary px-3 py-1.5 text-[11px] font-bold text-primary-foreground hover:bg-primary/90">{a.cta} →</button>
+                    <button className="press mt-3 rounded-sm bg-[var(--accent)] px-3 py-1.5 text-[11px] font-bold text-[var(--accent-text)] hover:bg-[var(--accent)]/90">{a.cta} →</button>
                   </Link>
                 </div>
               ))}
@@ -262,7 +265,7 @@ export default function DashboardPage() {
                 <ActivityRow key={i} tone={a.tone} when={a.when} text={a.text} amount={a.amount} />
               ))}
               <div className="flex items-center justify-between border-t border-border px-5 py-2.5 text-[11px]">
-                <span className="text-muted-foreground"><span className="text-emerald-400">●</span> income <span className="text-[#ff7a59]">●</span> alert <span className="text-sky-400">●</span> spend</span>
+                <span className="text-muted-foreground"><span className="text-up">●</span> income <span className="text-down">●</span> alert <span className="text-sky-400">●</span> spend</span>
                 <Link href="/spending" className="text-muted-foreground underline hover:text-foreground">all activity →</Link>
               </div>
             </div>
@@ -280,7 +283,7 @@ export default function DashboardPage() {
                   return (
                     <div key={c.category_id ?? 'uncat'}>
                       <div className="flex justify-between text-[11px]"><span className="truncate">{c.name}</span><span className="whitespace-nowrap tabular-nums text-muted-foreground">{formatCurrency(c.amount, base)} · {pct.toFixed(0)}%</span></div>
-                      <div className="mt-1 h-[5px] bg-muted"><div className="h-full bg-sky-400" style={{ width: `${pct}%` }} /></div>
+                      <div className="mt-1 h-[5px] bg-[var(--hair)]"><div className="h-full bg-cool" style={{ width: `${pct}%` }} /></div>
                     </div>
                   )
                 })}
@@ -295,8 +298,8 @@ export default function DashboardPage() {
                   <ComposedChart data={monthDaily.curve} margin={{ top: 4, right: 6, bottom: 0, left: 0 }}>
                     <defs>
                       <linearGradient id="spendCum" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#6aa9ff" stopOpacity={0.3} />
-                        <stop offset="100%" stopColor="#6aa9ff" stopOpacity={0} />
+                        <stop offset="0%" stopColor="#3f6fb0" stopOpacity={0.3} />
+                        <stop offset="100%" stopColor="#3f6fb0" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <XAxis dataKey="day" tick={{ fontSize: 9 }} stroke="hsl(var(--muted-foreground))" axisLine={false} tickLine={false} interval={6} />
@@ -306,7 +309,7 @@ export default function DashboardPage() {
                       contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 4, fontSize: 12 }}
                     />
                     {totalBudget > 0 && <Line type="monotone" dataKey="pace" stroke="hsl(var(--muted-foreground))" strokeWidth={1} strokeDasharray="3 3" dot={false} isAnimationActive={false} />}
-                    <Area type="monotone" dataKey="cum" stroke="#6aa9ff" strokeWidth={1.4} fill="url(#spendCum)" connectNulls dot={false} isAnimationActive={false} />
+                    <Area type="monotone" dataKey="cum" stroke="#3f6fb0" strokeWidth={1.4} fill="url(#spendCum)" connectNulls dot={false} isAnimationActive={false} />
                   </ComposedChart>
                 </ResponsiveContainer>
                 <div className="mt-3 flex flex-wrap gap-[3px]">
@@ -318,7 +321,7 @@ export default function DashboardPage() {
                         key={i}
                         title={`Day ${i + 1} · ${formatCurrency(v, base)}`}
                         className="h-3.5 w-3.5 rounded-[1px]"
-                        style={{ backgroundColor: `rgba(106,169,255,${intensity})`, outline: isToday ? '1px solid hsl(var(--primary))' : 'none' }}
+                        style={{ backgroundColor: `rgba(63,111,176,${intensity})`, outline: isToday ? '1px solid hsl(var(--primary))' : 'none' }}
                       />
                     )
                   })}
@@ -334,7 +337,7 @@ export default function DashboardPage() {
                 {accounts.map((a) => (
                   <div key={a.id} className="grid grid-cols-[1fr_auto] gap-2 border-b border-border px-3.5 py-2 text-[11px] last:border-0">
                     <div className="min-w-0"><div className="truncate">{a.name}</div><div className="truncate text-[10px] text-muted-foreground">{a.institution || a.type} · {a.currency}</div></div>
-                    <div className={`self-center whitespace-nowrap font-medium tabular-nums ${a.type === 'credit' && Number(a.current_balance) > 0 ? 'text-[#ff7a59]' : ''}`}>
+                    <div className={`self-center whitespace-nowrap font-medium tabular-nums ${a.type === 'credit' && Number(a.current_balance) > 0 ? 'text-down' : ''}`}>
                       {a.type === 'credit' && Number(a.current_balance) > 0 ? '-' : ''}{formatCurrency(Number(a.current_balance), a.currency)}
                     </div>
                   </div>
@@ -349,13 +352,13 @@ export default function DashboardPage() {
                 {allocHoldings.map((h) => (
                   <div key={h.id}>
                     <div className="flex justify-between text-[11px]"><span>{h.ticker}</span><span className="tabular-nums text-muted-foreground">{h.allocationPct.toFixed(1)}%</span></div>
-                    <div className="mt-1 h-[5px] bg-muted"><div className="h-full bg-primary" style={{ width: `${h.allocationPct}%` }} /></div>
+                    <div className="mt-1 h-[5px] bg-[var(--hair)]"><div className="h-full bg-[var(--accent)]" style={{ transition: "width 0.6s cubic-bezier(0.2,0.7,0.3,1)", width: `${h.allocationPct}%` }} /></div>
                   </div>
                 ))}
                 {totalCashBase > 0 && invested > 0 && (
                   <div>
                     <div className="flex justify-between text-[11px]"><span>Cash</span><span className="tabular-nums text-muted-foreground">{((totalCashBase / invested) * 100).toFixed(1)}%</span></div>
-                    <div className="mt-1 h-[5px] bg-muted"><div className="h-full bg-sky-400" style={{ width: `${(totalCashBase / invested) * 100}%` }} /></div>
+                    <div className="mt-1 h-[5px] bg-[var(--hair)]"><div className="h-full bg-cool" style={{ width: `${(totalCashBase / invested) * 100}%` }} /></div>
                   </div>
                 )}
               </div>
@@ -367,11 +370,11 @@ export default function DashboardPage() {
               <div className="space-y-2.5 p-3.5">
                 {budgetRows.map((b) => {
                   const pct = b.limit > 0 ? (b.spent / b.limit) * 100 : 0
-                  const col = pct > 100 ? 'bg-[#ff7a59]' : pct > 80 ? 'bg-amber-500' : 'bg-sky-400'
+                  const col = pct > 100 ? 'bg-down' : pct > 80 ? 'bg-warn' : 'bg-cool'
                   return (
                     <div key={b.name}>
                       <div className="flex justify-between text-[11px]"><span className="truncate">{b.name}</span><span className="whitespace-nowrap tabular-nums text-muted-foreground">{formatCurrency(b.spent, base)} / {formatCurrency(b.limit, base)}</span></div>
-                      <div className="relative mt-1 h-[5px] bg-muted">
+                      <div className="relative mt-1 h-[5px] bg-[var(--hair)]">
                         <div className={`absolute inset-y-0 left-0 ${col}`} style={{ width: `${Math.min(100, pct)}%` }} />
                         <div className="absolute -bottom-0.5 -top-0.5 w-px bg-foreground" style={{ left: '100%' }} />
                       </div>
@@ -385,8 +388,8 @@ export default function DashboardPage() {
           <Panel label="SUBSCRIPTIONS" tone="cool" right="14d auto-sync" href="/subscriptions">
             <div className="grid grid-cols-3 gap-3 p-3.5">
               <Mini label="ACTIVE / MO" value={formatCurrency(subscriptionSummary.activeMonthly, base)} />
-              <Mini label="CUT / YR" value={formatCurrency(subscriptionSummary.potentialMonthly * 12, base)} tone="text-amber-500" />
-              <Mini label="SAVED / YR" value={formatCurrency(subscriptionSummary.cancelledMonthly * 12, base)} tone="text-emerald-400" />
+              <Mini label="CUT / YR" value={formatCurrency(subscriptionSummary.potentialMonthly * 12, base)} tone="text-warn" />
+              <Mini label="SAVED / YR" value={formatCurrency(subscriptionSummary.cancelledMonthly * 12, base)} tone="text-up" />
             </div>
             <div className="border-t border-border px-3.5 py-2 text-[10px]"><Link href="/subscriptions" className="text-muted-foreground underline hover:text-foreground">manage →</Link></div>
           </Panel>

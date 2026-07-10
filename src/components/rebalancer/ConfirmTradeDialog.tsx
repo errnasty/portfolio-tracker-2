@@ -95,8 +95,8 @@ export function ConfirmTradeDialog({
   }
 
   const Icon = isBuy ? ArrowDownCircle : ArrowUpCircle
-  const accent = isBuy ? 'text-emerald-400' : 'text-red-400'
-  const accentBg = isBuy ? 'bg-emerald-500/10' : 'bg-red-500/10'
+  const accent = isBuy ? 'text-up' : 'text-down'
+  const accentBg = isBuy ? 'bg-up/10' : 'bg-down/10'
 
   const handleConfirm = async () => {
     if (sharesNum <= 0 || priceNum <= 0) return

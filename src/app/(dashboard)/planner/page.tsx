@@ -220,18 +220,18 @@ export default function PlannerPage() {
   const statusRight = (
     <span className="flex items-center gap-4">
       <span>positions <span className="text-foreground">{positions.length}</span></span>
-      <span>alloc <span className={Math.abs(totalPct - 100) > 0.05 ? 'text-amber-400' : 'text-foreground'}>{totalPct.toFixed(0)}%</span></span>
+      <span>alloc <span className={Math.abs(totalPct - 100) > 0.05 ? 'text-warn' : 'text-foreground'}>{totalPct.toFixed(0)}%</span></span>
     </span>
   )
 
   const footerHints = (
     <>
-      <span><span className="text-primary">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g r</span> rebalancer · <span className="text-foreground">g h</span> home</span>
+      <span><span className="text-[var(--accent)]">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g r</span> rebalancer · <span className="text-foreground">g h</span> home</span>
     </>
   )
 
   return (
-    <PageShell screen="PLANNER" statusRight={statusRight} footerHints={footerHints}>
+    <PageShell screen="Plan" title="Planner" statusRight={statusRight} footerHints={footerHints}>
     <div className="space-y-4">
       <div className="overflow-hidden rounded-lg border border-border bg-card">
         <HeroBand>
@@ -242,7 +242,7 @@ export default function PlannerPage() {
             value={totalValue}
             format={(n) => formatCurrency(n, baseCurrency)}
             delta={currentTotal > 0 ? [
-              <span key="d"><span className="text-muted-foreground">vs current </span><span className={vsCurrent >= 0 ? 'text-emerald-400' : 'text-[#ff7a59]'}>{vsCurrent >= 0 ? '+' : ''}{formatCurrency(vsCurrent, baseCurrency)}</span></span>,
+              <span key="d"><span className="text-muted-foreground">vs current </span><span className={vsCurrent >= 0 ? 'text-up' : 'text-down'}>{vsCurrent >= 0 ? '+' : ''}{formatCurrency(vsCurrent, baseCurrency)}</span></span>,
             ] : undefined}
           />
           <HeroMetric
@@ -304,12 +304,12 @@ export default function PlannerPage() {
                 </div>
               )}
               {missingPriceCount > 0 && !loadingPrices && (
-                <div className="rounded-md border border-amber-400/30 bg-amber-400/5 px-3 py-2 text-xs text-amber-400">
+                <div className="rounded-md border border-amber-400/30 bg-warn/5 px-3 py-2 text-xs text-warn">
                   {missingPriceCount} ticker{missingPriceCount === 1 ? '' : 's'} missing price data — implied share counts unavailable for those.
                 </div>
               )}
               {Math.abs(totalPct - 100) > 0.05 && (
-                <div className="rounded-md border border-amber-400/30 bg-amber-400/5 px-3 py-2 text-xs text-amber-400">
+                <div className="rounded-md border border-amber-400/30 bg-warn/5 px-3 py-2 text-xs text-warn">
                   Allocations sum to {totalPct.toFixed(2)}% — analytics treat the planned weights as-is.
                   Click <em>Normalize</em> to scale them to 100%.
                 </div>

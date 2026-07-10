@@ -11,19 +11,19 @@ export interface DefaultCategory {
 }
 
 export const DEFAULT_CATEGORIES: DefaultCategory[] = [
-  { name: 'Income',            kind: 'income',   color: '#22c55e', icon: 'Banknote' },
-  { name: 'Groceries',         kind: 'expense',  color: '#16a34a', icon: 'ShoppingCart' },
-  { name: 'Food & Dining',     kind: 'expense',  color: '#f97316', icon: 'Utensils' },
-  { name: 'Transport',         kind: 'expense',  color: '#0ea5e9', icon: 'Car' },
-  { name: 'Shopping',          kind: 'expense',  color: '#ec4899', icon: 'ShoppingBag' },
-  { name: 'Bills & Utilities', kind: 'expense',  color: '#eab308', icon: 'ReceiptText' },
-  { name: 'Entertainment',     kind: 'expense',  color: '#8b5cf6', icon: 'Clapperboard' },
-  { name: 'Health',            kind: 'expense',  color: '#f43f5e', icon: 'HeartPulse' },
-  { name: 'Travel',            kind: 'expense',  color: '#14b8a6', icon: 'Plane' },
-  { name: 'Education',         kind: 'expense',  color: '#3b82f6', icon: 'GraduationCap' },
-  { name: 'Giving',            kind: 'expense',  color: '#d946ef', icon: 'HandHeart' },
-  { name: 'Transfers',         kind: 'transfer', color: '#6b7280', icon: 'ArrowLeftRight' },
-  { name: 'Other',             kind: 'expense',  color: '#94a3b8', icon: 'Shapes' },
+  { name: 'Income',            kind: 'income',   color: '#2E7D5B', icon: 'Banknote' },
+  { name: 'Groceries',         kind: 'expense',  color: '#3f8f86', icon: 'ShoppingCart' },
+  { name: 'Food & Dining',     kind: 'expense',  color: '#b5732f', icon: 'Utensils' },
+  { name: 'Transport',         kind: 'expense',  color: '#3f6fb0', icon: 'Car' },
+  { name: 'Shopping',          kind: 'expense',  color: '#b07a86', icon: 'ShoppingBag' },
+  { name: 'Bills & Utilities', kind: 'expense',  color: '#C6A96A', icon: 'ReceiptText' },
+  { name: 'Entertainment',     kind: 'expense',  color: '#7a6f9a', icon: 'Clapperboard' },
+  { name: 'Health',            kind: 'expense',  color: '#9a4a3f', icon: 'HeartPulse' },
+  { name: 'Travel',            kind: 'expense',  color: '#3f8f86', icon: 'Plane' },
+  { name: 'Education',         kind: 'expense',  color: '#3f6fb0', icon: 'GraduationCap' },
+  { name: 'Giving',            kind: 'expense',  color: '#b07a86', icon: 'HandHeart' },
+  { name: 'Transfers',         kind: 'transfer', color: '#9a8f7a', icon: 'ArrowLeftRight' },
+  { name: 'Other',             kind: 'expense',  color: '#9a8f7a', icon: 'Shapes' },
 ]
 
 // Keyword → category. Substrings are matched case-insensitively against the

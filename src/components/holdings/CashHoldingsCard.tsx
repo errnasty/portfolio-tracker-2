@@ -98,7 +98,7 @@ export function CashHoldingsCard() {
                     />
                     <Button
                       variant="ghost" size="icon"
-                      className="h-7 w-7 text-muted-foreground hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="h-7 w-7 text-muted-foreground hover:text-down opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={() => deleteAccount(a.id)}
                     >
                       <Trash2 className="h-3.5 w-3.5" />

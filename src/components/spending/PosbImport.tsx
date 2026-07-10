@@ -138,17 +138,17 @@ export function PosbImport() {
             </div>
           </div>
           {accounts.length === 0 && (
-            <p className="mt-3 text-xs text-amber-400">
+            <p className="mt-3 text-xs text-warn">
               Add a POSB account first (Home → Accounts) so imported transactions have somewhere to live.
             </p>
           )}
           {error && (
-            <div className="mt-3 flex items-start gap-2 rounded-md bg-red-500/10 p-3 text-sm text-red-400">
+            <div className="mt-3 flex items-start gap-2 rounded-md bg-down/10 p-3 text-sm text-down">
               <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" /> {error}
             </div>
           )}
           {success && (
-            <div className="mt-3 flex items-start gap-2 rounded-md bg-emerald-500/10 p-3 text-sm text-emerald-400">
+            <div className="mt-3 flex items-start gap-2 rounded-md bg-up/10 p-3 text-sm text-up">
               <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" /> {success} Redirecting…
             </div>
           )}
@@ -215,7 +215,7 @@ export function PosbImport() {
                             </SelectContent>
                           </Select>
                         </td>
-                        <td className={`px-3 py-2 text-right tabular-nums text-xs ${isIncome ? 'text-emerald-400' : ''}`}>
+                        <td className={`px-3 py-2 text-right tabular-nums text-xs ${isIncome ? 'text-up' : ''}`}>
                           {isIncome ? '+' : ''}{formatCurrency(t.amount, t.currency)}
                         </td>
                       </tr>

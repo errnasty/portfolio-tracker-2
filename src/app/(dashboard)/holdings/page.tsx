@@ -217,12 +217,12 @@ export default function HoldingsPage() {
 
   const footerHints = (
     <>
-      <span><span className="text-primary">▸</span> <span className="text-foreground">g h</span> home · <span className="text-foreground">g r</span> rebalancer · <span className="text-foreground">g p</span> planner</span>
+      <span><span className="text-[var(--accent)]">▸</span> <span className="text-foreground">g h</span> home · <span className="text-foreground">g r</span> rebalancer · <span className="text-foreground">g p</span> planner</span>
     </>
   )
 
   return (
-    <PageShell screen="HOLDINGS" statusRight={statusRight} footerHints={footerHints}>
+    <PageShell screen="Invest" title="Holdings" statusRight={statusRight} footerHints={footerHints}>
     <div className="space-y-4">
       <div className="overflow-hidden rounded-lg border border-border bg-card">
         <HeroBand>
@@ -313,7 +313,7 @@ export default function HoldingsPage() {
                           <div className="text-xs text-muted-foreground">{h.priceCurrency}</div>
                         </>
                       ) : (
-                        <span className="text-xs text-amber-400">Price unavailable</span>
+                        <span className="text-xs text-warn">Price unavailable</span>
                       )}
                     </TableCell>
                     <TableCell className="text-right font-mono font-medium">
@@ -333,7 +333,7 @@ export default function HoldingsPage() {
                           </div>
                         </>
                       ) : (
-                        <span className="text-xs text-amber-400">—</span>
+                        <span className="text-xs text-warn">—</span>
                       )}
                     </TableCell>
                     <TableCell>
@@ -343,7 +343,7 @@ export default function HoldingsPage() {
                         </Button>
                         <Button
                           variant="ghost" size="icon"
-                          className="text-red-400 hover:text-red-300"
+                          className="text-down hover:text-down"
                           onClick={() => setDeleteId(h.id)}
                         >
                           <Trash2 className="h-4 w-4" />

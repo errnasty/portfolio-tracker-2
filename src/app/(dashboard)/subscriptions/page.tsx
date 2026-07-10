@@ -25,9 +25,9 @@ export default function SubscriptionsPage() {
 
   return (
     <PageShell
-      screen="SUBSCRIPTIONS"
-      statusRight={<span>{subscriptions.length} recurring · <span className="text-amber-400">{formatCurrency(s.potentialMonthly * 12, base)}/yr</span> if cut</span>}
-      footerHints={<span><span className="text-primary">▸</span> <span className="text-foreground">g s</span> spending · <span className="text-foreground">g b</span> budgets</span>}
+      screen="Money" title="Subscriptions"
+      statusRight={<span>{subscriptions.length} recurring · <span className="text-warn">{formatCurrency(s.potentialMonthly * 12, base)}/yr</span> if cut</span>}
+      footerHints={<span><span className="text-[var(--accent)]">▸</span> <span className="text-foreground">g s</span> spending · <span className="text-foreground">g b</span> budgets</span>}
     >
     <div className="space-y-4">
       {/* Savings summary */}
@@ -35,12 +35,12 @@ export default function SubscriptionsPage() {
         <SummaryCard icon={RefreshCcw} title="Active / month" value={formatCurrency(s.activeMonthly, base)}
           sub={`${formatCurrency(s.activeMonthly * 12, base)} / year`} loading={loading} />
         <SummaryCard icon={Scissors} title="Could save / month" value={formatCurrency(s.potentialMonthly, base)}
-          sub={`${formatCurrency(s.potentialMonthly * 12, base)} / year`} tone="text-amber-400" loading={loading} />
+          sub={`${formatCurrency(s.potentialMonthly * 12, base)} / year`} tone="text-warn" loading={loading} />
         <SummaryCard icon={CheckCircle2} title="Cancelled / month" value={formatCurrency(s.cancelledMonthly, base)}
-          sub={`${formatCurrency(s.cancelledMonthly * 12, base)} / year saved`} tone="text-emerald-400" loading={loading} />
+          sub={`${formatCurrency(s.cancelledMonthly * 12, base)} / year saved`} tone="text-up" loading={loading} />
         <SummaryCard icon={PiggyBank} title="Total potential / year"
           value={formatCurrency((s.potentialMonthly + s.cancelledMonthly) * 12, base)}
-          sub="if you cut the flagged ones" tone="text-emerald-400" loading={loading} />
+          sub="if you cut the flagged ones" tone="text-up" loading={loading} />
       </div>
 
       <Card>
@@ -72,7 +72,7 @@ export default function SubscriptionsPage() {
                   const cancelled = sub.status === 'cancelled'
                   const couldCancel = sub.status === 'could_cancel'
                   return (
-                    <TableRow key={sub.key} className={cancelled ? 'opacity-50' : couldCancel ? 'bg-amber-500/5' : ''}>
+                    <TableRow key={sub.key} className={cancelled ? 'opacity-50' : couldCancel ? 'bg-warn/5' : ''}>
                       <TableCell>
                         <div className={`font-medium ${cancelled ? 'line-through' : ''}`}>{sub.label}</div>
                         <div className="text-[10px] text-muted-foreground">
@@ -106,8 +106,8 @@ export default function SubscriptionsPage() {
       </Card>
 
       <p className="text-xs text-muted-foreground">
-        Tip: mark something <strong className="text-amber-400">Could cancel</strong> while you decide, then{' '}
-        <strong className="text-emerald-400">Cancelled</strong> once you&apos;ve actually cancelled it — your yearly savings update automatically.
+        Tip: mark something <strong className="text-warn">Could cancel</strong> while you decide, then{' '}
+        <strong className="text-up">Cancelled</strong> once you&apos;ve actually cancelled it — your yearly savings update automatically.
       </p>
     </div>
     </PageShell>

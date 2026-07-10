@@ -1,11 +1,12 @@
 'use client'
 import { cn } from '@/lib/utils'
 import { useCountUp } from '@/lib/useCountUp'
+import { useRef, useEffect } from 'react'
 
 // The hero row: one dominant metric (1.6fr) + up to two siblings (1fr each).
 export function HeroBand({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn('grid grid-cols-1 border-b border-border md:grid-cols-[1.6fr_1fr_1fr]', className)}>
+    <div className={cn('grid grid-cols-1 gap-5 md:grid-cols-[1.6fr_1fr_1fr]', className)}>
       {children}
     </div>
   )
@@ -19,25 +20,40 @@ export function HeroMetric({
   format: (n: number) => string
   delta?: React.ReactNode
   sub?: React.ReactNode
-  big?: boolean            // the ONE dominant number on the screen
-  vtName?: string          // view-transition-name for cross-route morphing
-  children?: React.ReactNode // sparkline / progress slot
+  big?: boolean
+  vtName?: string
+  children?: React.ReactNode
 }) {
   const n = useCountUp(value)
+  const prevValue = useRef(value)
+  const pulseRef = useRef<HTMLDivElement>(null)
+
+  // Trigger a subtle scale pulse when the value changes
+  useEffect(() => {
+    if (prevValue.current !== value && pulseRef.current) {
+      pulseRef.current.classList.remove('animate-count-pulse')
+      // Force reflow to restart animation
+      void pulseRef.current.offsetWidth
+      pulseRef.current.classList.add('animate-count-pulse')
+    }
+    prevValue.current = value
+  }, [value])
+
   return (
-    <div className="border-b border-border p-6 sm:p-7 md:border-b-0 md:border-r md:last:border-r-0">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{label}</div>
+    <div className="animate-scale-in rounded-[var(--radius)] border border-border bg-card p-7 transition-shadow duration-300 hover:shadow-[0_8px_30px_rgba(80,70,45,0.06)]">
+      <div className="text-[12px] font-semibold uppercase tracking-[0.08em] text-faint">{label}</div>
       <div
+        ref={pulseRef}
         className={cn(
-          'mt-3 font-bold leading-none tracking-tight tabular-nums text-foreground',
-          big ? 'text-[clamp(2.5rem,5vw,3.5rem)]' : 'text-3xl',
+          'mt-3.5 font-display font-medium leading-none tracking-tight tabular-nums text-foreground',
+          big ? 'text-[clamp(2.5rem,5vw,3.25rem)]' : 'text-[30px]',
         )}
         style={vtName ? ({ viewTransitionName: vtName } as React.CSSProperties) : undefined}
       >
         {format(n)}
       </div>
-      {delta != null && <div className="mt-3.5 flex flex-wrap gap-x-6 gap-y-1 text-xs">{delta}</div>}
-      {sub != null && <div className="mt-1.5 text-xs text-muted-foreground">{sub}</div>}
+      {delta != null && <div className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-[13px]">{delta}</div>}
+      {sub != null && <div className="mt-1.5 text-[13px] text-muted-foreground">{sub}</div>}
       {children}
     </div>
   )

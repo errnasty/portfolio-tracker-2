@@ -215,7 +215,7 @@ export function PlannerEditor({
           <div className="rounded-md bg-muted px-3 py-2 text-xs space-y-0.5">
             <div className="flex items-center gap-3">
               <span className="text-muted-foreground">Allocated</span>
-              <span className={`font-medium tabular-nums ${totalOk ? 'text-emerald-400' : totalPct > 100 ? 'text-red-400' : 'text-amber-400'}`}>
+              <span className={`font-medium tabular-nums ${totalOk ? 'text-up' : totalPct > 100 ? 'text-down' : 'text-warn'}`}>
                 {totalPct.toFixed(2)}%
               </span>
             </div>
@@ -278,7 +278,7 @@ export function PlannerEditor({
                         <td className="py-2">
                           <Button
                             variant="ghost" size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-red-400"
+                            className="h-8 w-8 text-muted-foreground hover:text-down"
                             onClick={() => removePosition(p.id)}
                           >
                             <Trash2 className="h-3.5 w-3.5" />

@@ -113,7 +113,7 @@ export default function ReportPage() {
   if (!hasHoldings && bankTransactions.length === 0) {
     return (
       <div className="space-y-4">
-        <StatusBar screen="REPORT" className="print:hidden" />
+        <StatusBar screen="Plan" title="Report" className="print:hidden" />
         <p className="text-sm text-muted-foreground">Nothing to report yet — add holdings or import spending first.</p>
       </div>
     )
@@ -121,7 +121,7 @@ export default function ReportPage() {
 
   return (
     <div className="space-y-6 print:space-y-3">
-      <StatusBar screen="REPORT" className="print:hidden" />
+      <StatusBar screen="Plan" title="Report" className="print:hidden" />
       {/* Toolbar — hidden in print */}
       <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
         <Link href="/dashboard">
@@ -154,10 +154,10 @@ export default function ReportPage() {
         {/* Spending summary */}
         <Section title={`Spending · ${monthLabel}`}>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <SummaryStat label="Income" value={formatCurrency(spend.income, base)} valueColor="text-emerald-400" />
+            <SummaryStat label="Income" value={formatCurrency(spend.income, base)} valueColor="text-up" />
             <SummaryStat label="Spent" value={formatCurrency(spend.expense, base)} />
             <SummaryStat label="Net" value={formatCurrency(spend.net, base)} valueColor={gainLossColor(spend.net)} />
-            <SummaryStat label="Savings rate" value={`${savingsRate.toFixed(0)}%`} valueColor={savingsRate >= 0 ? 'text-emerald-400' : 'text-red-400'} />
+            <SummaryStat label="Savings rate" value={`${savingsRate.toFixed(0)}%`} valueColor={savingsRate >= 0 ? 'text-up' : 'text-down'} />
           </div>
           {spend.byCategory.length > 0 && (
             <table className="w-full text-sm mt-3">

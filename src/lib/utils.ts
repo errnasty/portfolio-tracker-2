@@ -32,13 +32,13 @@ export function formatShares(value: number): string {
 }
 
 export function gainLossColor(value: number): string {
-  if (value > 0) return 'text-emerald-400'
-  if (value < 0) return 'text-red-400'
+  if (value > 0) return 'text-up'
+  if (value < 0) return 'text-down'
   return 'text-muted-foreground'
 }
 
 export function gainLossBg(value: number): string {
-  if (value > 0) return 'bg-emerald-400/10 text-emerald-400'
-  if (value < 0) return 'bg-red-400/10 text-red-400'
+  if (value > 0) return 'bg-[var(--up-soft)] text-up'
+  if (value < 0) return 'bg-down/10 text-down'
   return 'bg-muted text-muted-foreground'
 }

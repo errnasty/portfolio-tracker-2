@@ -89,7 +89,7 @@ export function RebalanceBandsWidget({ enriched, targets, base }: Props) {
       </CardHeader>
       <CardContent>
         {allGood ? (
-          <div className="flex items-center gap-2 text-sm text-emerald-400">
+          <div className="flex items-center gap-2 text-sm text-up">
             <CheckCircle2 className="h-4 w-4" /> Portfolio is on target — no action needed.
           </div>
         ) : (
@@ -121,27 +121,27 @@ function BandRow({ row, base }: { row: BandRow; base: Currency }) {
     <div className="space-y-1">
       <div className="flex items-baseline justify-between text-sm">
         <div className="flex items-center gap-2">
-          {overshoot ? <AlertTriangle className="h-3.5 w-3.5 text-amber-400" /> : null}
+          {overshoot ? <AlertTriangle className="h-3.5 w-3.5 text-warn" /> : null}
           <span className="font-medium">{row.ticker}</span>
         </div>
         <div className="flex items-center gap-3 text-xs tabular-nums">
           <span className="text-muted-foreground">{row.currentPct.toFixed(1)}% / {row.targetPct.toFixed(1)}%</span>
-          <span className={overshoot ? (row.driftPct > 0 ? 'text-amber-400' : 'text-amber-400') : 'text-muted-foreground'}>
+          <span className={overshoot ? (row.driftPct > 0 ? 'text-warn' : 'text-warn') : 'text-muted-foreground'}>
             {formatPercent(row.driftPct, 1)}
           </span>
         </div>
       </div>
-      <div className="relative h-2 rounded-full bg-muted overflow-hidden">
+      <div className="relative h-2 rounded-full bg-[var(--hair)] overflow-hidden">
         {/* Tolerance band */}
         <div
-          className="absolute top-0 bottom-0 bg-emerald-500/15"
+          className="absolute top-0 bottom-0 bg-up/15"
           style={{ left: '25%', right: '25%' }}
         />
         {/* Center line (target) */}
         <div className="absolute top-0 bottom-0 left-1/2 w-px bg-foreground/30" />
         {/* Marker */}
         <div
-          className={`absolute top-0 bottom-0 w-1 -translate-x-1/2 rounded-full ${overshoot ? 'bg-amber-400' : 'bg-emerald-400'}`}
+          className={`absolute top-0 bottom-0 w-1 -translate-x-1/2 rounded-full ${overshoot ? 'bg-warn' : 'bg-up'}`}
           style={{ left: `${pos}%` }}
         />
       </div>

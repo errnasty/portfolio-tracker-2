@@ -23,7 +23,7 @@ const PERIODS = [
   { label: '3Y', value: '3y' },
 ]
 
-const LINE_COLORS = ['#6366f1', '#22c55e', '#f97316', '#ec4899', '#0ea5e9', '#eab308']
+const LINE_COLORS = ['#C6A96A', '#3f6fb0', '#8a9a5b', '#b07a86', '#7a6f9a', '#b5732f']
 
 function normalizeToBase(series: { date: string; close: number }[]): { date: string; value: number }[] {
   if (series.length === 0) return []
@@ -126,13 +126,13 @@ export default function PerformancePage() {
 
   return (
     <PageShell
-      screen="PERFORMANCE"
+      screen="Invest" title="Performance"
       statusRight={(
         <button onClick={fetchData} disabled={loading} className="press flex items-center gap-1 hover:text-foreground disabled:opacity-50">
           <RefreshCw className="h-3.5 w-3.5" /> refresh
         </button>
       )}
-      footerHints={<span><span className="text-primary">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g h</span> home</span>}
+      footerHints={<span><span className="text-[var(--accent)]">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g h</span> home</span>}
     >
     <div className="space-y-4">
       {/* Controls */}
@@ -145,7 +145,7 @@ export default function PerformancePage() {
               onClick={() => setPeriod(p.value)}
               className={`px-3 py-1.5 text-sm transition-colors ${
                 period === p.value
-                  ? 'bg-primary text-primary-foreground'
+                  ? 'bg-[var(--accent)] text-[var(--accent-text)]'
                   : 'text-muted-foreground hover:bg-accent'
               }`}
             >
@@ -162,7 +162,7 @@ export default function PerformancePage() {
               onClick={() => toggleBenchmark(b.ticker)}
               className={`rounded-full border px-3 py-1 text-xs transition-colors ${
                 activeBenchmarks.includes(b.ticker)
-                  ? 'border-primary bg-primary/10 text-primary'
+                  ? 'border-primary bg-[var(--accent)]/10 text-[var(--accent)]'
                   : 'border-border text-muted-foreground hover:border-foreground'
               }`}
             >

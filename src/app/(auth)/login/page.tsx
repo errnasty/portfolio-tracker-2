@@ -2,17 +2,18 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { TrendingUp } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [name, setName] = useState('')
   const [isSignUp, setIsSignUp] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -25,7 +26,7 @@ export default function LoginPage() {
     setMessage('')
 
     if (isSignUp) {
-      const { error } = await supabase.auth.signUp({ email, password })
+      const { error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name } } })
       if (error) {
         setError(error.message)
       } else {
@@ -37,7 +38,7 @@ export default function LoginPage() {
       if (error) {
         setError(error.message)
       } else {
-        router.push('/')
+        router.push('/dashboard')
         router.refresh()
       }
     }
@@ -45,69 +46,134 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md space-y-6">
-        <div className="flex flex-col items-center gap-2">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <TrendingUp className="h-6 w-6" />
-          </div>
-          <h1 className="text-2xl font-bold">Financial tracker</h1>
-          <p className="text-sm text-muted-foreground">Your portfolio and spending, one console</p>
+    <div className="flex min-h-screen bg-background">
+      {/* LEFT · brand panel */}
+      <div className="relative hidden flex-1 overflow-hidden border-r border-border md:flex md:flex-col md:justify-between md:p-11">
+        <Image
+          src="/aureus/roman-1.png"
+          alt=""
+          fill
+          className="object-cover opacity-[0.12]"
+          style={{ filter: 'grayscale(1) contrast(0.96) brightness(1.3)' }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-background/60 to-background/85" />
+
+        <div className="relative z-10 flex items-center gap-3">
+          <Image src="/aureus/face-ink.png" alt="Aureus" width={32} height={32} />
+          <span className="font-display text-[22px] text-foreground">Aureus</span>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{isSignUp ? 'Create account' : 'Sign in'}</CardTitle>
-            <CardDescription>
-              {isSignUp ? 'Create your account to get started' : 'Enter your credentials to access your portfolio'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+        <div className="relative z-10 flex flex-col items-center text-center">
+          <div className="relative mb-6 flex items-center justify-center">
+            <div className="absolute h-[280px] w-[280px] rounded-full bg-[radial-gradient(circle,rgba(198,169,106,0.26),transparent_62%)]" />
+            <Image src="/aureus/face-ink.png" alt="Aureus" width={220} height={220} className="relative drop-shadow-2xl" />
+          </div>
+          <h2 className="font-display text-[32px] font-normal leading-tight text-foreground">
+            Private wealth, <em className="text-[#93702C] not-italic">struck as one.</em>
+          </h2>
+          <p className="mt-3.5 max-w-[340px] text-[15px] text-muted-foreground">
+            Investments, cash and spending — unified in one calm, tax-aware console.
+          </p>
+        </div>
+
+        <div className="relative z-10 font-mono text-[11px] uppercase tracking-[0.08em] text-faint">
+          Est · MMXXVI — Made in Singapore
+        </div>
+      </div>
+
+      {/* RIGHT · form */}
+      <div className="flex w-full flex-col justify-center bg-secondary px-10 py-14 md:w-[520px] md:border-l md:border-border animate-fade-in">
+        <div className="mx-auto w-full max-w-[400px]">
+          {/* Segmented toggle */}
+          <div className="mb-8 flex gap-1 rounded-[11px] border border-border bg-[var(--hair)] p-[3px]">
+            <button
+              onClick={() => { setIsSignUp(true); setError(''); setMessage('') }}
+              className={cn(
+                'flex-1 rounded-[8px] py-2 text-[13.5px] font-semibold transition-all',
+                isSignUp ? 'bg-card text-foreground shadow-sm' : 'text-faint',
+              )}
+            >
+              Create account
+            </button>
+            <button
+              onClick={() => { setIsSignUp(false); setError(''); setMessage('') }}
+              className={cn(
+                'flex-1 rounded-[8px] py-2 text-[13.5px] font-semibold transition-all',
+                !isSignUp ? 'bg-card text-foreground shadow-sm' : 'text-faint',
+              )}
+            >
+              Sign in
+            </button>
+          </div>
+
+          <h1 className="font-display text-[32px] font-medium leading-tight text-foreground">
+            {isSignUp ? 'Create your account' : 'Welcome back'}
+          </h1>
+          <p className="mt-2.5 text-[14.5px] text-muted-foreground">
+            {isSignUp ? 'Start tracking your whole financial life.' : 'Sign in to your console.'}
+          </p>
+
+          <form onSubmit={handleSubmit} className="mt-7 flex flex-col gap-4">
+            {isSignUp && (
+              <div>
+                <Label className="mb-1.5 block text-[12px] text-muted-foreground">Full name</Label>
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
+                  type="text"
+                  placeholder="Your name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={6}
-                />
-              </div>
+            )}
+            <div>
+              <Label className="mb-1.5 block text-[12px] text-muted-foreground">Email</Label>
+              <Input
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label className="mb-1.5 block text-[12px] text-muted-foreground">Password</Label>
+              <Input
+                type="password"
+                placeholder="••••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+              />
+            </div>
 
-              {error && <p className="text-sm text-red-400">{error}</p>}
-              {message && <p className="text-sm text-emerald-400">{message}</p>}
+            {error && <p className="text-sm text-down">{error}</p>}
+            {message && <p className="text-sm text-up">{message}</p>}
 
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Please wait…' : isSignUp ? 'Create account' : 'Sign in'}
-              </Button>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? 'Please wait…' : isSignUp ? 'Create account →' : 'Sign in →'}
+            </Button>
+          </form>
 
-              <p className="text-center text-sm text-muted-foreground">
-                {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
-                <button
-                  type="button"
-                  className="text-foreground underline underline-offset-4"
-                  onClick={() => { setIsSignUp(!isSignUp); setError(''); setMessage('') }}
-                >
-                  {isSignUp ? 'Sign in' : 'Sign up'}
-                </button>
-              </p>
-            </form>
-          </CardContent>
-        </Card>
+          <div className="my-6 flex items-center gap-3.5 text-[12px] text-faint">
+            <span className="h-px flex-1 bg-border" />or<span className="h-px flex-1 bg-border" />
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <button className="flex w-full items-center justify-center gap-2.5 rounded-[12px] border border-border bg-card py-3 text-[14px] font-medium text-foreground transition-all press">
+              <span className="font-mono text-[#93702C]">G</span> Continue with Google
+            </button>
+            <button className="flex w-full items-center justify-center gap-2.5 rounded-[12px] border border-border bg-card py-3 text-[14px] font-medium text-foreground transition-all press">
+              <span className="text-[#93702C]">◍</span> Continue with Apple
+            </button>
+          </div>
+
+          <p className="mt-6 text-[12px] leading-relaxed text-faint">
+            By continuing you agree to Aureus&apos;s{' '}
+            <a href="#" className="text-muted-foreground underline">Terms</a> and{' '}
+            <a href="#" className="text-muted-foreground underline">Privacy Policy</a>.
+          </p>
+        </div>
       </div>
     </div>
   )

@@ -92,9 +92,9 @@ export default function GoalsPage() {
 
   return (
     <PageShell
-      screen="GOALS"
+      screen="Plan" title="Goals"
       statusRight={<button onClick={openAdd} className="press flex items-center gap-1 hover:text-foreground"><Plus className="h-3.5 w-3.5" /> add goal</button>}
-      footerHints={<span><span className="text-primary">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g p</span> planner</span>}
+      footerHints={<span><span className="text-[var(--accent)]">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g p</span> planner</span>}
     >
     <div className="space-y-4">
       {loading ? (
@@ -271,7 +271,7 @@ function GoalCard({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <CardTitle className="text-base flex items-center gap-2">
-              <Target className="h-4 w-4 text-primary" /> {goal.name}
+              <Target className="h-4 w-4 text-[var(--accent)]" /> {goal.name}
             </CardTitle>
             <CardDescription>
               {formatCurrency(goal.target_amount, base)} by {goal.target_date}
@@ -281,7 +281,7 @@ function GoalCard({
           </div>
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon" onClick={onEdit}><Pencil className="h-4 w-4" /></Button>
-            <Button variant="ghost" size="icon" className="text-red-400" onClick={onDelete}><Trash2 className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon" className="text-down" onClick={onDelete}><Trash2 className="h-4 w-4" /></Button>
           </div>
         </div>
       </CardHeader>
@@ -310,12 +310,12 @@ function GoalCard({
               <span className="text-muted-foreground">{progressPct.toFixed(1)}%</span>
             </span>
           </div>
-          <div className="h-2 rounded-full bg-muted overflow-hidden">
+          <div className="h-2 rounded-full bg-[var(--hair)] overflow-hidden">
             <div
               className={`h-full rounded-full transition-all ${
-                status === 'ahead' ? 'bg-emerald-500'
-                : status === 'on_track' ? 'bg-sky-500'
-                : status === 'behind' ? 'bg-amber-500' : 'bg-red-500'
+                status === 'ahead' ? 'bg-up'
+                : status === 'on_track' ? 'bg-cool'
+                : status === 'behind' ? 'bg-warn' : 'bg-down'
               }`}
               style={{ width: `${progressPct}%` }}
             />
@@ -331,7 +331,7 @@ function GoalCard({
             <Stat
               label="Median outcome"
               value={formatCurrency(result.finalP50, base)}
-              valueColor={result.finalP50 >= goal.target_amount ? 'text-emerald-400' : 'text-amber-400'}
+              valueColor={result.finalP50 >= goal.target_amount ? 'text-up' : 'text-warn'}
               hint={result.finalP50 >= goal.target_amount
                 ? `+${formatCurrency(result.finalP50 - goal.target_amount, base)} above target`
                 : `−${formatCurrency(goal.target_amount - result.finalP50, base)} below target`}
@@ -350,9 +350,9 @@ function GoalCard({
               label="Success probability"
               value={`${(result.successRate * 100).toFixed(0)}%`}
               valueColor={
-                result.successRate >= 0.85 ? 'text-emerald-400'
+                result.successRate >= 0.85 ? 'text-up'
                 : result.successRate >= 0.5 ? 'text-sky-400'
-                : result.successRate >= 0.25 ? 'text-amber-400' : 'text-red-400'
+                : result.successRate >= 0.25 ? 'text-warn' : 'text-down'
               }
               hint={`Hits ${formatCurrency(goal.target_amount, base)}+ across paths`}
             />
@@ -373,10 +373,10 @@ function GoalCard({
               label="For 50% chance"
               value={requiredFor50 > 0 ? `${formatCurrency(requiredFor50, base)}/mo` : 'Already there'}
               valueColor={
-                requiredFor50 === 0 ? 'text-emerald-400'
-                : monthlyGap === 0 ? 'text-emerald-400'
-                : monthlyGap < goal.monthly_contribution * 0.5 ? 'text-amber-400'
-                : 'text-red-400'
+                requiredFor50 === 0 ? 'text-up'
+                : monthlyGap === 0 ? 'text-up'
+                : monthlyGap < goal.monthly_contribution * 0.5 ? 'text-warn'
+                : 'text-down'
               }
               hint={
                 requiredFor50 === 0
@@ -389,7 +389,7 @@ function GoalCard({
             <Stat
               label="For 80% chance"
               value={requiredFor80 > 0 ? `${formatCurrency(requiredFor80, base)}/mo` : 'Already there'}
-              valueColor={requiredFor80 === 0 ? 'text-emerald-400' : 'text-foreground'}
+              valueColor={requiredFor80 === 0 ? 'text-up' : 'text-foreground'}
               hint={requiredFor80 === 0
                 ? 'Trajectory covers it with high confidence'
                 : `${formatCurrency(Math.max(0, requiredFor80 - goal.monthly_contribution), base)}/mo more for stronger odds`}
@@ -458,25 +458,25 @@ function StatusBanner({
     ahead: {
       icon: Sparkles,
       label: 'AHEAD OF TARGET',
-      classes: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400',
+      classes: 'border-up/40 bg-up/10 text-up',
       message: `You're tracking strongly — ${(successRate * 100).toFixed(0)}% of paths land at or above ${formatCurrency(target, base)}. Median outcome ${formatCurrency(medianFinal, base)}.`,
     },
     on_track: {
       icon: CheckCircle2,
       label: 'ON TRACK',
-      classes: 'border-sky-500/40 bg-sky-500/10 text-sky-400',
+      classes: 'border-cool/40 bg-cool/10 text-sky-400',
       message: `${(successRate * 100).toFixed(0)}% chance of hitting target. Median outcome ${formatCurrency(medianFinal, base)} vs ${formatCurrency(target, base)} target.`,
     },
     behind: {
       icon: AlertTriangle,
       label: 'BEHIND',
-      classes: 'border-amber-500/40 bg-amber-500/10 text-amber-400',
+      classes: 'border-warn/40 bg-warn/10 text-warn',
       message: `Only ${(successRate * 100).toFixed(0)}% chance at current pace. Median ${formatCurrency(medianFinal, base)}, target ${formatCurrency(target, base)}.${monthlyGap > 0 ? ` Add ~${formatCurrency(monthlyGap, base)}/mo to get to a coin-flip.` : ''}`,
     },
     critical: {
       icon: AlertTriangle,
       label: 'OFF TRACK',
-      classes: 'border-red-500/40 bg-red-500/10 text-red-400',
+      classes: 'border-down/40 bg-down/10 text-down',
       message: `Only ${(successRate * 100).toFixed(0)}% of paths hit target. Median outcome ${formatCurrency(medianFinal, base)} — significantly below ${formatCurrency(target, base)}.${monthlyGap > 0 ? ` Need ~${formatCurrency(monthlyGap, base)}/mo more, or revisit the target/horizon.` : ''}`,
     },
   }[status]

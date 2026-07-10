@@ -10,9 +10,9 @@ interface Props {
 }
 
 function hhiInterpretation(hhi: number): { label: string; color: string } {
-  if (hhi < 1500) return { label: 'Well diversified', color: 'text-emerald-400' }
+  if (hhi < 1500) return { label: 'Well diversified', color: 'text-up' }
   if (hhi < 2500) return { label: 'Moderately concentrated', color: 'text-yellow-400' }
-  return { label: 'Highly concentrated', color: 'text-red-400' }
+  return { label: 'Highly concentrated', color: 'text-down' }
 }
 
 export function ConcentrationCard({ metrics, totalHoldings }: Props) {

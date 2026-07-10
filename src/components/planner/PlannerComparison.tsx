@@ -48,7 +48,7 @@ export function ComparisonBars({ title, description, rows, baseCurrency }: BarsP
             <span className="h-2 w-3 rounded-sm bg-muted-foreground/60" /> Current
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="h-2 w-3 rounded-sm bg-primary" /> Planned
+            <span className="h-2 w-3 rounded-sm bg-[var(--accent)]" /> Planned
           </span>
         </div>
       </CardHeader>
@@ -91,7 +91,7 @@ function Bar({
   baseCurrency: Currency
 }) {
   const widthPct = maxPct > 0 ? (pct / maxPct) * 100 : 0
-  const fill = variant === 'planned' ? 'bg-primary' : 'bg-muted-foreground/40'
+  const fill = variant === 'planned' ? 'bg-[var(--accent)]' : 'bg-muted-foreground/40'
   return (
     <div className="flex items-center gap-2">
       <div className="h-2 w-full rounded-full bg-muted">
@@ -115,7 +115,7 @@ function DeltaChip({ delta }: { delta: number }) {
   return (
     <span
       className={`rounded-md px-1.5 py-0.5 font-medium ${
-        positive ? 'bg-emerald-400/10 text-emerald-400' : 'bg-red-400/10 text-red-400'
+        positive ? 'bg-up/10 text-up' : 'bg-down/10 text-down'
       }`}
     >
       {positive ? '+' : ''}{delta.toFixed(1)}%
@@ -157,8 +157,8 @@ export function ConcentrationComparison({
                 const deltaColor = !meaningful
                   ? 'text-muted-foreground'
                   : goodDirection
-                    ? 'text-emerald-400'
-                    : 'text-red-400'
+                    ? 'text-up'
+                    : 'text-down'
                 return (
                   <tr key={r.label} className="border-b border-border/50 last:border-0">
                     <td className="py-2.5">{r.label}</td>

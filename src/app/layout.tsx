@@ -4,17 +4,17 @@ import './globals.css'
 import { ThemeProvider } from '@/components/providers/ThemeProvider'
 
 export const metadata: Metadata = {
-  title: 'Finance Console',
-  description: 'Your portfolio and spending on one console',
+  title: 'Aureus — Private wealth, struck as one',
+  description: 'Investments, cash and spending — unified in one calm, tax-aware console.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           {children}
-          <Toaster position="top-right" theme="dark" richColors closeButton />
+          <Toaster position="bottom-center" theme="system" richColors closeButton />
         </ThemeProvider>
       </body>
     </html>

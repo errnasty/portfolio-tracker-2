@@ -115,7 +115,7 @@ export function PlannerBacktest({ positions, currentEnriched, startingValue, bas
               <CardTitle className="text-base flex items-center gap-2">
                 <TrendingUp className="h-4 w-4" /> Historical backtest
                 {dca > 0 && (
-                  <span className="rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-400">
+                  <span className="rounded-md bg-up/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-up">
                     DCA
                   </span>
                 )}
@@ -181,10 +181,10 @@ export function PlannerBacktest({ positions, currentEnriched, startingValue, bas
                   />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
                   {dca > 0 && (
-                    <Line type="monotone" dataKey="invested" stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="2 4" dot={false} name="Capital invested" />
+                    <Line type="monotone" dataKey="invested" stroke="#b5732f" strokeWidth={1.5} strokeDasharray="2 4" dot={false} name="Capital invested" />
                   )}
-                  <Line type="monotone" dataKey="planned" stroke="#22c55e" strokeWidth={2} dot={false} name="Planned" />
-                  {currentResult && <Line type="monotone" dataKey="current" stroke="#a3a3a3" strokeWidth={1.5} strokeDasharray="4 4" dot={false} name="Current" />}
+                  <Line type="monotone" dataKey="planned" stroke="#2f8f5b" strokeWidth={2} dot={false} name="Planned" />
+                  {currentResult && <Line type="monotone" dataKey="current" stroke="#9a8f7a" strokeWidth={1.5} strokeDasharray="4 4" dot={false} name="Current" />}
                 </LineChart>
               </ResponsiveContainer>
               {loading && <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin" /> Loading prices…</p>}
@@ -213,7 +213,7 @@ function MetricsCard({
   dcaActive: boolean
   useMoney: boolean
 }) {
-  const accent = variant === 'planned' ? 'text-emerald-400' : 'text-muted-foreground'
+  const accent = variant === 'planned' ? 'text-up' : 'text-muted-foreground'
   return (
     <Card>
       <CardHeader>
@@ -225,18 +225,18 @@ function MetricsCard({
         )}
       </CardHeader>
       <CardContent className="grid grid-cols-2 gap-3">
-        <Stat label="CAGR (TWR)" value={formatPercent(result.cagrPct)} valueColor={result.cagrPct >= 0 ? accent : 'text-red-400'} />
-        <Stat label="Total return (TWR)" value={formatPercent(result.totalReturnPct)} valueColor={result.totalReturnPct >= 0 ? accent : 'text-red-400'} />
+        <Stat label="CAGR (TWR)" value={formatPercent(result.cagrPct)} valueColor={result.cagrPct >= 0 ? accent : 'text-down'} />
+        <Stat label="Total return (TWR)" value={formatPercent(result.totalReturnPct)} valueColor={result.totalReturnPct >= 0 ? accent : 'text-down'} />
         {dcaActive && (
           <>
             <Stat label="ROI on capital" value={formatPercent(result.moneyWeightedReturnPct)}
-              valueColor={result.moneyWeightedReturnPct >= 0 ? accent : 'text-red-400'} />
+              valueColor={result.moneyWeightedReturnPct >= 0 ? accent : 'text-down'} />
             <Stat label="Total invested" value={useMoney ? formatCurrency(result.totalInvested, baseCurrency) : result.totalInvested.toFixed(0)} />
             <Stat label="Final value" value={useMoney ? formatCurrency(result.finalValue, baseCurrency) : result.finalValue.toFixed(0)}
-              valueColor={result.finalValue >= result.totalInvested ? accent : 'text-red-400'} />
+              valueColor={result.finalValue >= result.totalInvested ? accent : 'text-down'} />
           </>
         )}
-        <Stat label="Max drawdown" value={`${result.maxDrawdownPct.toFixed(1)}%`} valueColor="text-red-400" />
+        <Stat label="Max drawdown" value={`${result.maxDrawdownPct.toFixed(1)}%`} valueColor="text-down" />
         <Stat label="Annual vol" value={`${result.volPct.toFixed(1)}%`} />
         <Stat label="Sharpe (rf=0)" value={result.sharpe.toFixed(2)} />
         <Stat label="Best / worst month" value={`${result.bestMonthPct.toFixed(1)}% / ${result.worstMonthPct.toFixed(1)}%`} />

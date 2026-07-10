@@ -6,11 +6,7 @@ import { formatCurrency } from '@/lib/utils'
 import type { BreakdownSlice } from '@/lib/analytics'
 import type { Currency } from '@/types'
 
-const COLORS = [
-  '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316',
-  '#eab308', '#22c55e', '#14b8a6', '#0ea5e9', '#3b82f6',
-  '#a855f7', '#84cc16', '#06b6d4', '#f59e0b', '#ef4444',
-]
+const COLORS = ['#C6A96A', '#3f8f86', '#3f6fb0', '#8a9a5b', '#b07a86', '#7a6f9a', '#6f8f3f', '#b5732f', '#9a4a3f', '#9a8f7a']
 
 interface Props {
   title: string

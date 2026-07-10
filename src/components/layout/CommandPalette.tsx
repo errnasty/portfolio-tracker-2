@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
 import { useTheme } from 'next-themes'
-import { Moon, Sun, CornerDownLeft } from 'lucide-react'
+import { Moon, Sun, CornerDownLeft, Search } from 'lucide-react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { NAV_ROUTES } from '@/lib/nav-registry'
 import { fuzzyScore } from '@/lib/fuzzy'
@@ -16,7 +16,6 @@ interface Item {
   run: () => void
 }
 
-// ⌘K / k command palette: fuzzy-jump to any route + a few quick actions.
 export function CommandPalette({ open, onOpenChange }: {
   open: boolean
   onOpenChange: (v: boolean) => void
@@ -55,46 +54,57 @@ export function CommandPalette({ open, onOpenChange }: {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl gap-0 overflow-hidden p-0" aria-describedby={undefined}>
+      <DialogContent className="max-w-[560px] gap-0 overflow-hidden rounded-2xl border border-border p-0 shadow-2xl animate-pop-in" aria-describedby={undefined}>
         <DialogTitle className="sr-only">Command palette</DialogTitle>
-        <input
-          autoFocus
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Jump to…"
-          className="w-full border-b border-border bg-transparent px-4 py-3.5 text-sm outline-none placeholder:text-muted-foreground"
-          onKeyDown={(e) => {
-            if (e.key === 'ArrowDown') { e.preventDefault(); setActive((v) => Math.min(results.length - 1, v + 1)) }
-            else if (e.key === 'ArrowUp') { e.preventDefault(); setActive((v) => Math.max(0, v - 1)) }
-            else if (e.key === 'Enter') { e.preventDefault(); choose(results[active]) }
-          }}
-        />
-        <ul className="max-h-80 overflow-y-auto py-1">
+        <div className="flex items-center gap-3 border-b border-[var(--hair)] px-5 py-4">
+          <Search className="h-4 w-4 text-faint" />
+          <input
+            autoFocus
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search pages and actions…"
+            className="flex-1 border-none bg-transparent text-[15px] outline-none placeholder:text-faint"
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowDown') { e.preventDefault(); setActive((v) => Math.min(results.length - 1, v + 1)) }
+              else if (e.key === 'ArrowUp') { e.preventDefault(); setActive((v) => Math.max(0, v - 1)) }
+              else if (e.key === 'Enter') { e.preventDefault(); choose(results[active]) }
+            }}
+          />
+          <span className="font-mono rounded border border-border bg-card px-1.5 py-0.5 text-[10.5px] text-faint">ESC</span>
+        </div>
+        <div className="max-h-[344px] overflow-y-auto p-2">
           {results.map((it, idx) => {
             const Icon = it.icon
             return (
-              <li key={it.key}>
-                <button
-                  type="button"
-                  onMouseEnter={() => setActive(idx)}
-                  onClick={() => choose(it)}
-                  className={cn(
-                    'flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors',
-                    idx === active ? 'bg-accent text-accent-foreground' : 'text-muted-foreground',
-                  )}
-                >
-                  <Icon className="h-4 w-4 shrink-0" />
-                  <span className="text-foreground">{it.label}</span>
-                  <span className="ml-auto text-[10px] uppercase tracking-wider text-muted-foreground">{it.hint}</span>
-                  {idx === active && <CornerDownLeft className="h-3.5 w-3.5 text-muted-foreground" />}
-                </button>
-              </li>
+              <button
+                key={it.key}
+                type="button"
+                onMouseEnter={() => setActive(idx)}
+                onClick={() => choose(it)}
+                style={{ animationDelay: `${idx * 18}ms` }}
+                className={cn(
+                  'animate-slide-up flex w-full items-center gap-3 rounded-[9px] px-3 py-2.5 text-left text-[14px] transition-colors',
+                  idx === active
+                    ? 'bg-[var(--accent-soft)] font-semibold text-[var(--accent)]'
+                    : 'text-foreground',
+                )}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="flex-1">{it.label}</span>
+                <span className="font-mono text-[9.5px] uppercase tracking-[0.12em] text-faint">{it.hint}</span>
+                {idx === active && <CornerDownLeft className="h-3.5 w-3.5 text-faint" />}
+              </button>
             )
           })}
           {results.length === 0 && (
-            <li className="px-4 py-8 text-center text-xs text-muted-foreground">No matches</li>
+            <div className="px-5 py-8 text-center text-[13px] text-faint">No matches</div>
           )}
-        </ul>
+        </div>
+        <div className="flex gap-4 border-t border-[var(--hair)] px-5 py-2.5 font-mono text-[10.5px] text-faint">
+          <span>↑↓ navigate</span>
+          <span>↵ open</span>
+          <span>esc close</span>
+        </div>
       </DialogContent>
     </Dialog>
   )

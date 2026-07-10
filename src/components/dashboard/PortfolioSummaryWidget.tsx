@@ -39,7 +39,7 @@ export function PortfolioSummaryWidget({ enriched, stats, baseCurrency }: Props)
     <Card>
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
-          <FileText className="h-4 w-4 text-primary" /> Portfolio summary
+          <FileText className="h-4 w-4 text-[var(--accent)]" /> Portfolio summary
         </CardTitle>
         <CardDescription>Plain-English read of your current allocation, returns, and concentration.</CardDescription>
       </CardHeader>

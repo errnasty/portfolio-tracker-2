@@ -105,7 +105,7 @@ export function GmailCard() {
       <CardContent className="flex items-center gap-2">
         {connected ? (
           <>
-            <span className="flex items-center gap-1.5 text-sm text-emerald-400">
+            <span className="flex items-center gap-1.5 text-sm text-up">
               <CheckCircle2 className="h-4 w-4" /> Connected
             </span>
             <Button size="sm" onClick={sync} disabled={syncing} className="ml-auto">

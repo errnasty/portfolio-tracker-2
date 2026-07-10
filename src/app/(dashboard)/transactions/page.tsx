@@ -35,9 +35,9 @@ const EMPTY_FORM: TransactionFormData = {
 }
 
 const TYPE_META: Record<TransactionType, { label: string; icon: typeof ArrowDownCircle; color: string }> = {
-  buy: { label: 'Buy', icon: ArrowDownCircle, color: 'text-emerald-400' },
-  sell: { label: 'Sell', icon: ArrowUpCircle, color: 'text-red-400' },
-  dividend: { label: 'Dividend', icon: Coins, color: 'text-amber-400' },
+  buy: { label: 'Buy', icon: ArrowDownCircle, color: 'text-up' },
+  sell: { label: 'Sell', icon: ArrowUpCircle, color: 'text-down' },
+  dividend: { label: 'Dividend', icon: Coins, color: 'text-warn' },
   split: { label: 'Split', icon: Split, color: 'text-sky-400' },
 }
 
@@ -130,14 +130,14 @@ export default function TransactionsPage() {
 
   return (
     <PageShell
-      screen="TRANSACTIONS"
+      screen="Invest" title="Transactions"
       statusRight={(
         <span className="flex items-center gap-4">
           <Link href="/import" className="flex items-center gap-1 hover:text-foreground"><Upload className="h-3.5 w-3.5" /> import</Link>
           <button onClick={openAdd} className="press flex items-center gap-1 hover:text-foreground"><Plus className="h-3.5 w-3.5" /> add</button>
         </span>
       )}
-      footerHints={<span><span className="text-primary">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g s</span> spending</span>}
+      footerHints={<span><span className="text-[var(--accent)]">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g s</span> spending</span>}
     >
     <div className="space-y-4">
       {/* Filters */}
@@ -242,7 +242,7 @@ export default function TransactionsPage() {
                             </Button>
                             <Button
                               variant="ghost" size="icon"
-                              className="text-red-400 hover:text-red-300"
+                              className="text-down hover:text-down"
                               onClick={() => setDeleteId(t.id)}
                             >
                               <Trash2 className="h-4 w-4" />

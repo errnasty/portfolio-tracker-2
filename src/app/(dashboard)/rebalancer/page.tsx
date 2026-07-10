@@ -83,13 +83,13 @@ export default function RebalancerPage() {
   }
 
   const actionBadge = (action: string) => {
-    if (action === 'buy') return <Badge className="bg-emerald-400/10 text-emerald-400 border-0">Buy</Badge>
-    if (action === 'sell') return <Badge className="bg-red-400/10 text-red-400 border-0">Sell</Badge>
+    if (action === 'buy') return <Badge className="bg-up/10 text-up border-0">Buy</Badge>
+    if (action === 'sell') return <Badge className="bg-down/10 text-down border-0">Sell</Badge>
     return <Badge variant="outline">Hold</Badge>
   }
 
   return (
-    <PageShell screen="REBALANCER" footerHints={<span><span className="text-primary">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g p</span> planner</span>}>
+    <PageShell screen="Plan" title="Rebalancer" footerHints={<span><span className="text-[var(--accent)]">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g p</span> planner</span>}>
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-end">
         {/* Mode toggle */}
@@ -125,7 +125,7 @@ export default function RebalancerPage() {
           <CardHeader>
             <CardTitle className="text-base">Target Allocations</CardTitle>
             <CardDescription>
-              Total allocated: <strong className={totalTargetPct > 100 ? 'text-red-400' : 'text-foreground'}>{totalTargetPct.toFixed(1)}%</strong>
+              Total allocated: <strong className={totalTargetPct > 100 ? 'text-down' : 'text-foreground'}>{totalTargetPct.toFixed(1)}%</strong>
               {remaining !== 0 && (
                 <span className="ml-2 text-muted-foreground">({remaining > 0 ? `${remaining.toFixed(1)}% unallocated` : 'over 100%'})</span>
               )}
@@ -156,16 +156,16 @@ export default function RebalancerPage() {
                             <span className="font-medium">{t.target_pct.toFixed(1)}%</span>
                           </span>
                         </div>
-                        <div className="mt-1 h-1.5 w-full rounded-full bg-muted">
+                        <div className="mt-1 h-1.5 w-full rounded-full bg-[var(--hair)]">
                           <div
-                            className="h-1.5 rounded-full bg-primary transition-all"
+                            className="h-1.5 rounded-full bg-[var(--accent)] transition-all"
                             style={{ width: `${Math.min(t.target_pct, 100)}%` }}
                           />
                         </div>
                       </div>
                       <Button
                         variant="ghost" size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-red-400"
+                        className="h-7 w-7 text-muted-foreground hover:text-down"
                         onClick={() => deleteWithUndo({
                           description: `Removed target ${t.ticker}`,
                           remove: () => deleteTarget(t.id),
@@ -218,7 +218,7 @@ export default function RebalancerPage() {
             </div>
 
             {totalTargetPct > 100 && (
-              <div className="flex items-center gap-2 rounded-md bg-red-400/10 p-3 text-sm text-red-400">
+              <div className="flex items-center gap-2 rounded-md bg-down/10 p-3 text-sm text-down">
                 <AlertCircle className="h-4 w-4 shrink-0" />
                 Targets exceed 100% — adjust allocations before rebalancing.
               </div>
@@ -332,7 +332,7 @@ export default function RebalancerPage() {
                         <div>{formatCurrency(r.targetValue, base)}</div>
                         <div className="text-xs text-muted-foreground">{r.targetPct.toFixed(1)}%</div>
                       </TableCell>
-                      <TableCell className={`text-right font-mono text-sm ${r.delta > 0 ? 'text-emerald-400' : r.delta < 0 ? 'text-red-400' : 'text-muted-foreground'}`}>
+                      <TableCell className={`text-right font-mono text-sm ${r.delta > 0 ? 'text-up' : r.delta < 0 ? 'text-down' : 'text-muted-foreground'}`}>
                         {r.action !== 'hold' && r.nativeAmount > 0 && isForeign ? (
                           <>
                             <div>{r.delta >= 0 ? '+' : '−'}{formatCurrency(r.nativeAmount, cur)}</div>
@@ -347,14 +347,14 @@ export default function RebalancerPage() {
                       <TableCell className="text-right">{actionBadge(r.action)}</TableCell>
                       <TableCell className="text-right font-mono text-sm">
                         {r.action !== 'hold' ? (
-                          <span className={r.action === 'buy' ? 'text-emerald-400' : 'text-red-400'}>
+                          <span className={r.action === 'buy' ? 'text-up' : 'text-down'}>
                             {r.action === 'buy' ? '+' : ''}{formatShares(r.sharesToTrade)}
                           </span>
                         ) : '—'}
                       </TableCell>
                       <TableCell className="text-right">
                         {r.action === 'hold' ? null : justExecuted ? (
-                          <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/15 px-2 py-1 text-[11px] font-medium text-emerald-400">
+                          <span className="inline-flex items-center gap-1 rounded-md bg-up/15 px-2 py-1 text-[11px] font-medium text-up">
                             <Check className="h-3 w-3" /> Logged
                           </span>
                         ) : (
@@ -383,7 +383,7 @@ export default function RebalancerPage() {
               <div className="grid gap-3 grid-cols-2 md:grid-cols-3 text-sm">
                 <div>
                   <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Total to buy</div>
-                  <div className="font-semibold tabular-nums text-emerald-400">{formatCurrency(result.totalBuy, base)}</div>
+                  <div className="font-semibold tabular-nums text-up">{formatCurrency(result.totalBuy, base)}</div>
                 </div>
                 <div>
                   <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Cash deployed</div>
@@ -393,13 +393,13 @@ export default function RebalancerPage() {
                 </div>
                 <div>
                   <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Unallocated</div>
-                  <div className={`font-semibold tabular-nums ${result.unallocatedCash > 0.005 ? 'text-amber-400' : 'text-muted-foreground'}`}>
+                  <div className={`font-semibold tabular-nums ${result.unallocatedCash > 0.005 ? 'text-warn' : 'text-muted-foreground'}`}>
                     {formatCurrency(result.unallocatedCash, base)}
                   </div>
                 </div>
               </div>
               {result.unallocatedCash > 0.005 && (
-                <div className="flex items-start gap-2 rounded-md bg-amber-400/10 p-3 text-xs text-amber-400">
+                <div className="flex items-start gap-2 rounded-md bg-warn/10 p-3 text-xs text-warn">
                   <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                   <div>
                     <strong>{formatCurrency(result.unallocatedCash, base)}</strong> is left over after filling every underweight position to its target.

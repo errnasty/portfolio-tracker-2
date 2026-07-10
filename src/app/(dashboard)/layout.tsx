@@ -29,7 +29,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (checking) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <div className="h-8 w-8 animate-spin-custom rounded-full border-2 border-primary border-t-transparent" />
       </div>
     )
   }
@@ -41,8 +41,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <KeyboardProvider>
             <div className="flex min-h-screen bg-background">
               <Sidebar />
-              <main className="flex-1 pt-12 md:pl-14 md:pt-0">
-                <div key={pathname} className="mx-auto max-w-7xl animate-fade-up p-3 sm:p-4 md:p-6 lg:p-8">
+              <main className="flex-1 pt-12 md:pl-[250px] md:pt-0">
+                <div key={pathname} className="mx-auto max-w-[1180px] animate-section-in px-6 py-10 pb-18 md:px-12 md:py-10">
                   {children}
                 </div>
               </main>

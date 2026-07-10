@@ -13,8 +13,8 @@ interface Props {
 
 export function MetricCard({ label, value, hint, hintColor, tone = 'neutral', size = 'md' }: Props) {
   const toneClass =
-    tone === 'positive' ? 'text-emerald-400'
-      : tone === 'negative' ? 'text-red-400'
+    tone === 'positive' ? 'text-up'
+      : tone === 'negative' ? 'text-down'
         : 'text-foreground'
   const sizeClass =
     size === 'lg' ? 'text-2xl md:text-3xl'

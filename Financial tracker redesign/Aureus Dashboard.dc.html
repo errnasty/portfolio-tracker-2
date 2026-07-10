@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Hanken+Grotesk:wght@400;500;600;700&family=Spectral:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; }
+  * { box-sizing: border-box; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: rgba(128,128,128,0.3); border-radius: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { color: var(--accent); text-decoration: underline; }
+  @keyframes sectionIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+  @keyframes popIn { from { opacity:0; transform:translateY(-8px) scale(0.985); } to { opacity:1; transform:none; } }
+  @keyframes drawerIn { from { transform:translateX(100%); } to { transform:none; } }
+  @keyframes toastIn { from { opacity:0; transform:translate(-50%,14px); } to { opacity:1; transform:translate(-50%,0); } }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  input::placeholder { color: var(--faint); }
+</style>
+</helmet>
+
+<div style="{{ themeVars }}">
+
+  <!-- ══════════ SIDEBAR ══════════ -->
+  <aside style="width:250px; flex-shrink:0; height:100vh; position:sticky; top:0; background:var(--sidebar); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:22px 14px 16px;">
+    <div style="display:flex; align-items:center; gap:13px; padding:6px 10px 22px;">
+      <img src="{{ markSrc }}" alt="Aureus" style="width:46px; height:46px; object-fit:contain; flex-shrink:0;">
+      <div style="line-height:1.1;">
+        <div style="font-family:var(--display); font-size:25px; color:var(--ink);">Aureus</div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.16em; text-transform:uppercase; color:var(--faint);">Private wealth</div>
+      </div>
+    </div>
+
+    <div onClick="{{ openPalette }}" style="margin:2px 6px 14px; display:flex; align-items:center; gap:8px; background:var(--hair); border:1px solid var(--border); border-radius:10px; padding:9px 11px; color:var(--faint); font-size:13px; cursor:pointer; transition:border-color 0.15s;" style-hover="border-color:var(--faint);">
+      <span style="font-size:14px;">⌕</span>
+      <span style="flex:1;">Search…</span>
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; background:var(--card); border:1px solid var(--border); border-radius:5px; padding:1px 6px;">⌘K</span>
+    </div>
+
+    <nav style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:2px;">
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:var(--faint); padding:12px 12px 6px;">Overview</div>
+      <button onClick="{{ goDash }}" style="{{ navDash }}" style-hover="{{ navHover }}">Home</button>
+
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:var(--faint); padding:16px 12px 6px;">Money</div>
+      <button onClick="{{ goSpend }}" style="{{ navSpend }}" style-hover="{{ navHover }}">Spending</button>
+      <button onClick="{{ goSubs }}" style="{{ navSubs }}" style-hover="{{ navHover }}">Subscriptions</button>
+      <button onClick="{{ goBudgets }}" style="{{ navBudgets }}" style-hover="{{ navHover }}">Budgets</button>
+      <div style="{{ navMuted }}">Import</div>
+
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:var(--faint); padding:16px 12px 6px;">Invest</div>
+      <button onClick="{{ goHold }}" style="{{ navHold }}" style-hover="{{ navHover }}">Holdings</button>
+      <div style="{{ navMuted }}">Performance</div>
+      <button onClick="{{ goAna }}" style="{{ navAna }}" style-hover="{{ navHover }}">Analytics</button>
+      <div style="{{ navMuted }}">Risk</div>
+      <button onClick="{{ goTxns }}" style="{{ navTxns }}" style-hover="{{ navHover }}">Transactions</button>
+      <div style="{{ navMuted }}">Dividends</div>
+      <div style="{{ navMuted }}">Rebalancer</div>
+      <div style="{{ navMuted }}">Planner</div>
+
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:var(--faint); padding:16px 12px 6px;">Plan</div>
+      <button onClick="{{ goGoals }}" style="{{ navGoals }}" style-hover="{{ navHover }}">Goals</button>
+      <div style="{{ navMuted }}">Settings</div>
+    </nav>
+
+    <div style="border-top:1px solid var(--border); padding-top:14px; margin-top:8px;">
+      <div style="display:flex; padding:3px; background:var(--hair); border-radius:10px; gap:3px;">
+        <button onClick="{{ setLight }}" style="{{ lightBtn }}">☀ Light</button>
+        <button onClick="{{ setDark }}" style="{{ darkBtn }}">☾ Dark</button>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px; padding:12px 10px 2px; color:var(--muted); font-size:13px;">
+        <div style="width:26px; height:26px; border-radius:50%; background:var(--accentSoft); color:var(--accent); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600;">JT</div>
+        <span>Jordan T.</span>
+        <button onClick="{{ signout }}" style="margin-left:auto; color:var(--faint); font-size:12px; border:none; background:none; cursor:pointer; font-family:'Hanken Grotesk',system-ui,sans-serif; transition:color 0.15s;" style-hover="color:var(--ink);">Sign out</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══════════ MAIN ══════════ -->
+  <main style="flex:1; min-width:0; height:100vh; overflow-y:auto;">
+
+    <!-- ───────── DASHBOARD ───────── -->
+    <section style="display:{{ dashDisp }}; animation:sectionIn 0.34s cubic-bezier(0.2,0.7,0.3,1);">
+      <div style="max-width:1180px; margin:0 auto; padding:40px 48px 72px;">
+        <div style="display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:30px; flex-wrap:wrap; gap:16px;">
+          <div>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:var(--faint);">Overview</div>
+            <h1 style="font-family:var(--display); font-weight:500; font-size:34px; color:var(--ink); margin:8px 0 0; line-height:1;">Good morning, Jordan</h1>
+          </div>
+          <div style="display:flex; align-items:center; gap:16px; font-size:13px; color:var(--muted);">
+            <span>Base <strong style="color:var(--ink); font-weight:600;">USD</strong></span>
+            <span>6 positions</span>
+            <span style="color:var(--faint);">Updated {{ asOf }}</span>
+            <button onClick="{{ doRefresh }}" style="{{ refreshBtn }}" style-hover="filter:brightness(0.97);"><span style="{{ spinStyle }}">↻</span>{{ refreshLabel }}</button>
+          </div>
+        </div>
+
+        <!-- hero -->
+        <div style="display:grid; grid-template-columns:1.6fr 1fr 1fr; gap:20px; margin-bottom:20px;">
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:28px;">
+            <div style="font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:var(--faint); font-weight:600;">Net worth · USD</div>
+            <div style="font-family:var(--display); font-weight:500; font-size:52px; line-height:1; letter-spacing:-0.01em; color:var(--ink); margin-top:14px;">$487,320</div>
+            <svg viewBox="0 0 340 46" preserveAspectRatio="none" style="width:100%; height:46px; margin-top:18px; display:block;">
+              <defs><linearGradient id="nw" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--up)" stop-opacity="0.20"/><stop offset="100%" stop-color="var(--up)" stop-opacity="0"/></linearGradient></defs>
+              <polygon points="0,34 34,32 68,35 102,27 136,29 170,21 204,24 238,15 272,17 306,9 340,5 340,46 0,46" fill="url(#nw)"/>
+              <polyline points="0,34 34,32 68,35 102,27 136,29 170,21 204,24 238,15 272,17 306,9 340,5" fill="none" stroke="var(--up)" stroke-width="1.6"/>
+            </svg>
+            <div style="display:flex; gap:26px; margin-top:16px; font-size:13px;">
+              <span style="color:var(--faint);">1D <strong style="color:var(--up); font-weight:600;">+$1,240</strong></span>
+              <span style="color:var(--faint);">7D <strong style="color:var(--up); font-weight:600;">+$3,980</strong></span>
+              <span style="color:var(--faint);">30D <strong style="color:var(--up); font-weight:600;">+$12,400</strong></span>
+            </div>
+          </div>
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:28px;">
+            <div style="font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:var(--faint); font-weight:600;">Invested</div>
+            <div style="font-family:var(--display); font-weight:500; font-size:30px; color:var(--ink); margin-top:14px;">$342,180</div>
+            <div style="font-size:13px; color:var(--up); font-weight:600; margin-top:14px;">+18.3% lifetime</div>
+            <div style="font-size:13px; color:var(--muted); margin-top:6px;">Cash $28,400</div>
+          </div>
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:28px;">
+            <div style="font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:var(--faint); font-weight:600;">Spent this month</div>
+            <div style="font-family:var(--display); font-weight:500; font-size:30px; color:var(--ink); margin-top:14px;">$3,240</div>
+            <div style="font-size:13px; color:var(--muted); margin-top:12px;">of $4,500 budget</div>
+            <div style="height:6px; border-radius:3px; background:var(--hair); margin-top:12px; overflow:hidden;"><div style="height:100%; width:72%; background:var(--cool); border-radius:3px;"></div></div>
+            <div style="display:flex; justify-content:space-between; font-size:12px; margin-top:10px;"><span style="color:var(--faint);">saved</span><span style="color:var(--up); font-weight:600;">+$3,560 · 52%</span></div>
+          </div>
+        </div>
+
+        <!-- attention + activity -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;">
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden;">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 24px; border-bottom:1px solid var(--hair);"><span style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--accent); font-weight:500;">Needs your attention</span><span style="font-size:12px; color:var(--faint);">2 items</span></div>
+            <div style="padding:18px 24px; border-left:3px solid var(--down);">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--down);">Rebalance</div>
+              <div style="font-family:var(--display); font-size:18px; color:var(--ink); margin-top:8px;">VWRA 37.2% / target 30.0%</div>
+              <div style="font-size:13px; color:var(--muted); margin-top:4px;">Overweight by 7.2% · +1 more.</div>
+              <div style="margin-top:14px;"><button onClick="{{ execute }}" style="display:inline-block; background:var(--accent); color:var(--accentText); font-size:12px; font-weight:600; padding:8px 15px; border-radius:9px; border:none; cursor:pointer; font-family:'Hanken Grotesk',system-ui,sans-serif; transition:filter 0.15s;" style-hover="filter:brightness(1.08);">Execute →</button></div>
+            </div>
+            <div style="padding:18px 24px; border-top:1px solid var(--hair); border-left:3px solid var(--warn);">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--warn);">Categorize</div>
+              <div style="font-family:var(--display); font-size:18px; color:var(--ink); margin-top:8px;">7 uncategorized · $612.40</div>
+              <div style="font-size:13px; color:var(--muted); margin-top:4px;">Tag these to keep budgets accurate.</div>
+              <div style="margin-top:14px;"><button onClick="{{ review }}" style="display:inline-block; background:var(--accentSoft); color:var(--accent); font-size:12px; font-weight:600; padding:8px 15px; border-radius:9px; border:none; cursor:pointer; font-family:'Hanken Grotesk',system-ui,sans-serif; transition:filter 0.15s;" style-hover="filter:brightness(0.97);">Review →</button></div>
+            </div>
+          </div>
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden;">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 24px; border-bottom:1px solid var(--hair);"><span style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--cool); font-weight:500;">Activity</span><span style="font-size:12px; color:var(--faint);">last events</span></div>
+            <div style="display:grid; grid-template-columns:56px 12px 1fr auto; align-items:center; gap:12px; padding:14px 24px; font-size:13px;"><span style="color:var(--faint);">now</span><span style="color:var(--down);">●</span><span style="color:var(--ink);">VWRA breached rebalance band</span><span style="color:var(--down); font-weight:600;">+7.2%</span></div>
+            <div style="display:grid; grid-template-columns:56px 12px 1fr auto; align-items:center; gap:12px; padding:14px 24px; font-size:13px; background:var(--stripe);"><span style="color:var(--faint);">07-08</span><span style="color:var(--up);">●</span><span style="color:var(--ink);">Salary — Acme Pte Ltd</span><span style="color:var(--up); font-weight:600;">+$6,800</span></div>
+            <div style="display:grid; grid-template-columns:56px 12px 1fr auto; align-items:center; gap:12px; padding:14px 24px; font-size:13px;"><span style="color:var(--faint);">07-07</span><span style="color:var(--cool);">●</span><span style="color:var(--ink);">NTUC FairPrice</span><span style="color:var(--muted);">−$84.20</span></div>
+            <div style="display:grid; grid-template-columns:56px 12px 1fr auto; align-items:center; gap:12px; padding:14px 24px; font-size:13px; background:var(--stripe);"><span style="color:var(--faint);">07-06</span><span style="color:var(--cool);">●</span><span style="color:var(--ink);">Grab Transport</span><span style="color:var(--muted);">−$18.60</span></div>
+            <div style="display:grid; grid-template-columns:56px 12px 1fr auto; align-items:center; gap:12px; padding:14px 24px; font-size:13px;"><span style="color:var(--faint);">07-05</span><span style="color:var(--cool);">●</span><span style="color:var(--ink);">Din Tai Fung</span><span style="color:var(--muted);">−$96.40</span></div>
+          </div>
+        </div>
+
+        <!-- allocation + categories -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:22px 24px 26px;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--faint); margin-bottom:18px;">Allocation</div>
+            <div style="display:flex; flex-direction:column; gap:14px;">
+              <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--ink);"><span>VWRA</span><span style="color:var(--muted);">34.1%</span></div><div style="height:6px; background:var(--hair); border-radius:3px;"><div style="height:100%; width:34%; background:var(--accent); border-radius:3px;"></div></div></div>
+              <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--ink);"><span>CSPX</span><span style="color:var(--muted);">23.8%</span></div><div style="height:6px; background:var(--hair); border-radius:3px;"><div style="height:100%; width:24%; background:var(--accent); border-radius:3px;"></div></div></div>
+              <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--ink);"><span>NVDA</span><span style="color:var(--muted);">10.6%</span></div><div style="height:6px; background:var(--hair); border-radius:3px;"><div style="height:100%; width:11%; background:var(--accent); border-radius:3px;"></div></div></div>
+              <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--ink);"><span>AAPL</span><span style="color:var(--muted);">9.2%</span></div><div style="height:6px; background:var(--hair); border-radius:3px;"><div style="height:100%; width:9%; background:var(--accent); border-radius:3px;"></div></div></div>
+              <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--ink);"><span>Cash</span><span style="color:var(--muted);">8.3%</span></div><div style="height:6px; background:var(--hair); border-radius:3px;"><div style="height:100%; width:8%; background:var(--cool); border-radius:3px;"></div></div></div>
+            </div>
+          </div>
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:22px 24px 26px;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--faint); margin-bottom:18px;">Spending by category</div>
+            <div style="display:flex; flex-direction:column; gap:14px;">
+              <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--ink);"><span>Groceries</span><span style="color:var(--muted);">$820 · 25%</span></div><div style="height:6px; background:var(--hair); border-radius:3px;"><div style="height:100%; width:25%; background:var(--cool); border-radius:3px;"></div></div></div>
+              <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--ink);"><span>Dining</span><span style="color:var(--muted);">$640 · 20%</span></div><div style="height:6px; background:var(--hair); border-radius:3px;"><div style="height:100%; width:20%; background:var(--cool); border-radius:3px;"></div></div></div>
+              <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--ink);"><span>Transport</span><span style="color:var(--muted);">$430 · 13%</span></div><div style="height:6px; background:var(--hair); border-radius:3px;"><div style="height:100%; width:13%; background:var(--cool); border-radius:3px;"></div></div></div>
+              <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--ink);"><span>Shopping</span><span style="color:var(--muted);">$390 · 12%</span></div><div style="height:6px; background:var(--hair); border-radius:3px;"><div style="height:100%; width:12%; background:var(--cool); border-radius:3px;"></div></div></div>
+              <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--ink);"><span>Utilities</span><span style="color:var(--muted);">$280 · 9%</span></div><div style="height:6px; background:var(--hair); border-radius:3px;"><div style="height:100%; width:9%; background:var(--cool); border-radius:3px;"></div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── HOLDINGS ───────── -->
+    <section style="display:{{ holdDisp }}; animation:sectionIn 0.34s cubic-bezier(0.2,0.7,0.3,1);">
+      <div style="max-width:1180px; margin:0 auto; padding:40px 48px 72px;">
+        <div style="display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:30px; flex-wrap:wrap; gap:16px;">
+          <div>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:var(--faint);">Invest</div>
+            <h1 style="font-family:var(--display); font-weight:500; font-size:34px; color:var(--ink); margin:8px 0 0; line-height:1;">Holdings</h1>
+          </div>
+          <div style="display:flex; align-items:center; gap:14px; font-size:13px; color:var(--muted);">
+            <span>6 positions</span>
+            <button onClick="{{ openAddPosition }}" style="display:flex; align-items:center; gap:6px; background:var(--accent); color:var(--accentText); font-weight:600; padding:8px 15px; border-radius:10px; border:none; cursor:pointer; font-family:'Hanken Grotesk',system-ui,sans-serif; transition:filter 0.15s;" style-hover="filter:brightness(1.08);">+ Add position</button>
+          </div>
+        </div>
+
+        <!-- hero -->
+        <div style="display:grid; grid-template-columns:1.6fr 1fr 1fr; gap:20px; margin-bottom:20px;">
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:28px;">
+            <div style="font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:var(--faint); font-weight:600;">Total invested · USD</div>
+            <div style="font-family:var(--display); font-weight:500; font-size:48px; line-height:1; color:var(--ink); margin-top:14px;">$313,780</div>
+            <div style="display:flex; gap:26px; margin-top:16px; font-size:13px;">
+              <span style="color:var(--faint);">unrealised <strong style="color:var(--up); font-weight:600;">+$38,790</strong></span>
+              <span style="color:var(--faint);">return <strong style="color:var(--up); font-weight:600;">+14.1%</strong></span>
+            </div>
+          </div>
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:28px;">
+            <div style="font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:var(--faint); font-weight:600;">Today</div>
+            <div style="font-family:var(--display); font-weight:500; font-size:30px; color:var(--up); margin-top:14px;">+$1,240</div>
+            <div style="font-size:13px; color:var(--up); font-weight:600; margin-top:14px;">+0.40%</div>
+          </div>
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:28px;">
+            <div style="font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:var(--faint); font-weight:600;">Total return</div>
+            <div style="font-family:var(--display); font-weight:500; font-size:30px; color:var(--up); margin-top:14px;">+$38,790</div>
+            <div style="font-size:13px; color:var(--up); font-weight:600; margin-top:14px;">+14.1%</div>
+          </div>
+        </div>
+
+        <!-- cash -->
+        <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:20px 24px; margin-bottom:20px; display:flex; align-items:center; gap:32px; flex-wrap:wrap;">
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--faint);">Cash</div>
+          <div style="display:flex; align-items:baseline; gap:8px;"><span style="font-size:13px; color:var(--muted);">USD</span><span style="font-family:var(--display); font-size:20px; color:var(--ink);">$18,200</span></div>
+          <div style="display:flex; align-items:baseline; gap:8px;"><span style="font-size:13px; color:var(--muted);">SGD</span><span style="font-family:var(--display); font-size:20px; color:var(--ink);">S$13,760</span></div>
+          <div style="margin-left:auto; display:flex; align-items:baseline; gap:8px;"><span style="font-size:13px; color:var(--muted);">Total</span><span style="font-family:var(--display); font-size:20px; color:var(--ink);">$28,400</span></div>
+        </div>
+
+        <!-- positions table -->
+        <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden;">
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 24px; border-bottom:1px solid var(--hair);"><span style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--faint);">Positions</span><span style="font-size:12px; color:var(--faint);">sorted by value</span></div>
+          <div style="display:grid; grid-template-columns:2fr 1fr 1.2fr 1.2fr 1.2fr 0.9fr 1.1fr; padding:12px 24px; border-bottom:1px solid var(--hair); font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--faint);">
+            <span>Ticker / Name</span><span style="text-align:right;">Shares</span><span style="text-align:right;">Cost basis</span><span style="text-align:right;">Price</span><span style="text-align:right;">Value</span><span style="text-align:right;">Day</span><span style="text-align:right;">Return</span>
+          </div>
+          <div style="display:grid; grid-template-columns:2fr 1fr 1.2fr 1.2fr 1.2fr 0.9fr 1.1fr; align-items:center; padding:16px 24px; border-bottom:1px solid var(--hair); font-size:13px;"><div><div style="font-weight:600; color:var(--ink);">VWRA</div><div style="font-size:11px; color:var(--faint);">Vanguard FTSE All-World</div></div><span style="text-align:right; color:var(--ink);">1,040</span><span style="text-align:right; color:var(--ink);">$88.60</span><span style="text-align:right; color:var(--ink);">$112.21</span><span style="text-align:right; font-weight:600; color:var(--ink);">$116,700</span><span style="text-align:right; color:var(--up);">+0.5%</span><span style="text-align:right;"><span style="background:var(--upSoft); color:var(--up); padding:3px 8px; border-radius:20px; font-weight:600; font-size:12px;">+26.6%</span></span></div>
+          <div style="display:grid; grid-template-columns:2fr 1fr 1.2fr 1.2fr 1.2fr 0.9fr 1.1fr; align-items:center; padding:16px 24px; border-bottom:1px solid var(--hair); font-size:13px; background:var(--stripe);"><div><div style="font-weight:600; color:var(--ink);">CSPX</div><div style="font-size:11px; color:var(--faint);">iShares Core S&amp;P 500</div></div><span style="text-align:right; color:var(--ink);">118</span><span style="text-align:right; color:var(--ink);">$520.00</span><span style="text-align:right; color:var(--ink);">$691.50</span><span style="text-align:right; font-weight:600; color:var(--ink);">$81,600</span><span style="text-align:right; color:var(--up);">+0.7%</span><span style="text-align:right;"><span style="background:var(--upSoft); color:var(--up); padding:3px 8px; border-radius:20px; font-weight:600; font-size:12px;">+33.0%</span></span></div>
+          <div style="display:grid; grid-template-columns:2fr 1fr 1.2fr 1.2fr 1.2fr 0.9fr 1.1fr; align-items:center; padding:16px 24px; border-bottom:1px solid var(--hair); font-size:13px;"><div><div style="font-weight:600; color:var(--ink);">NVDA</div><div style="font-size:11px; color:var(--faint);">NVIDIA Corp</div></div><span style="text-align:right; color:var(--ink);">210</span><span style="text-align:right; color:var(--ink);">$102.40</span><span style="text-align:right; color:var(--ink);">$173.30</span><span style="text-align:right; font-weight:600; color:var(--ink);">$36,400</span><span style="text-align:right; color:var(--up);">+1.9%</span><span style="text-align:right;"><span style="background:var(--upSoft); color:var(--up); padding:3px 8px; border-radius:20px; font-weight:600; font-size:12px;">+69.2%</span></span></div>
+          <div style="display:grid; grid-template-columns:2fr 1fr 1.2fr 1.2fr 1.2fr 0.9fr 1.1fr; align-items:center; padding:16px 24px; border-bottom:1px solid var(--hair); font-size:13px; background:var(--stripe);"><div><div style="font-weight:600; color:var(--ink);">AAPL</div><div style="font-size:11px; color:var(--faint);">Apple Inc</div></div><span style="text-align:right; color:var(--ink);">132</span><span style="text-align:right; color:var(--ink);">$189.20</span><span style="text-align:right; color:var(--ink);">$237.90</span><span style="text-align:right; font-weight:600; color:var(--ink);">$31,400</span><span style="text-align:right; color:var(--down);">−0.3%</span><span style="text-align:right;"><span style="background:var(--upSoft); color:var(--up); padding:3px 8px; border-radius:20px; font-weight:600; font-size:12px;">+25.7%</span></span></div>
+          <div style="display:grid; grid-template-columns:2fr 1fr 1.2fr 1.2fr 1.2fr 0.9fr 1.1fr; align-items:center; padding:16px 24px; border-bottom:1px solid var(--hair); font-size:13px;"><div><div style="font-weight:600; color:var(--ink);">MSFT</div><div style="font-size:11px; color:var(--faint);">Microsoft Corp</div></div><span style="text-align:right; color:var(--ink);">51</span><span style="text-align:right; color:var(--ink);">$402.10</span><span style="text-align:right; color:var(--ink);">$498.00</span><span style="text-align:right; font-weight:600; color:var(--ink);">$25,400</span><span style="text-align:right; color:var(--up);">+0.4%</span><span style="text-align:right;"><span style="background:var(--upSoft); color:var(--up); padding:3px 8px; border-radius:20px; font-weight:600; font-size:12px;">+23.8%</span></span></div>
+          <div style="display:grid; grid-template-columns:2fr 1fr 1.2fr 1.2fr 1.2fr 0.9fr 1.1fr; align-items:center; padding:16px 24px; font-size:13px; background:var(--stripe);"><div><div style="font-weight:600; color:var(--ink);">ES3.SI</div><div style="font-size:11px; color:var(--faint);">SPDR Straits Times Index</div></div><span style="text-align:right; color:var(--ink);">6,400</span><span style="text-align:right; color:var(--ink);">S$3.05</span><span style="text-align:right; color:var(--ink);">S$3.48</span><span style="text-align:right; font-weight:600; color:var(--ink);">$22,280</span><span style="text-align:right; color:var(--up);">+0.2%</span><span style="text-align:right;"><span style="background:var(--upSoft); color:var(--up); padding:3px 8px; border-radius:20px; font-weight:600; font-size:12px;">+14.1%</span></span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── SPENDING ───────── -->
+    <section style="display:{{ spendDisp }}; animation:sectionIn 0.34s cubic-bezier(0.2,0.7,0.3,1);">
+      <div style="max-width:1180px; margin:0 auto; padding:40px 48px 72px;">
+        <div style="display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:30px; flex-wrap:wrap; gap:16px;">
+          <div>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:var(--faint);">Money</div>
+            <h1 style="font-family:var(--display); font-weight:500; font-size:34px; color:var(--ink); margin:8px 0 0; line-height:1;">Spending</h1>
+          </div>
+          <div style="display:flex; align-items:center; gap:14px; font-size:13px; color:var(--muted);">
+            <div style="position:relative;">
+              <button onClick="{{ toggleMonth }}" style="{{ monthBtn }}" style-hover="background:var(--hair);">{{ month }} ▾</button>
+              <sc-if value="{{ monthOpen }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute; top:calc(100% + 6px); right:0; width:170px; background:var(--card); border:1px solid var(--border); border-radius:12px; box-shadow:0 14px 34px rgba(0,0,0,0.14); padding:6px; z-index:40; animation:popIn 0.16s ease;">
+                  <sc-for list="{{ months }}" as="m" hint-placeholder-count="0">
+                    <button onClick="{{ m.run }}" style="{{ m.style }}">{{ m.label }}</button>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+            <button onClick="{{ openAddTxn }}" style="display:flex; align-items:center; gap:6px; background:var(--accent); color:var(--accentText); font-weight:600; padding:8px 15px; border-radius:10px; border:none; cursor:pointer; font-family:'Hanken Grotesk',system-ui,sans-serif; transition:filter 0.15s;" style-hover="filter:brightness(1.08);">+ Add transaction</button>
+          </div>
+        </div>
+
+        <!-- hero -->
+        <div style="display:grid; grid-template-columns:1.6fr 1fr 1fr; gap:20px; margin-bottom:20px;">
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:28px;">
+            <div style="font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:var(--faint); font-weight:600;">Spent · July 2026</div>
+            <div style="font-family:var(--display); font-weight:500; font-size:48px; line-height:1; color:var(--ink); margin-top:14px;">$3,240</div>
+            <div style="font-size:13px; margin-top:16px; color:var(--faint);">vs last month <strong style="color:var(--up); font-weight:600;">−8%</strong></div>
+          </div>
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:28px;">
+            <div style="font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:var(--faint); font-weight:600;">Income</div>
+            <div style="font-family:var(--display); font-weight:500; font-size:30px; color:var(--ink); margin-top:14px;">$6,800</div>
+            <div style="font-size:13px; color:var(--muted); margin-top:14px;">this month</div>
+          </div>
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:28px;">
+            <div style="font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:var(--faint); font-weight:600;">Net saved</div>
+            <div style="font-family:var(--display); font-weight:500; font-size:30px; color:var(--up); margin-top:14px;">+$3,560</div>
+            <div style="font-size:13px; color:var(--up); font-weight:600; margin-top:14px;">52% savings rate</div>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:340px 1fr; gap:20px; margin-bottom:20px;">
+          <!-- donut -->
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden;">
+            <div style="padding:16px 24px; border-bottom:1px solid var(--hair); font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--faint);">By category</div>
+            <div style="padding:26px 24px;">
+              <div style="width:170px; height:170px; border-radius:50%; margin:0 auto 20px; background:conic-gradient(#5E8B7E 0 25%, #6E93B0 25% 45%, #C9A45C 45% 58%, #B06A4A 58% 70%, #8892A6 70% 79%, #B8AE9A 79% 85%, #7FA98F 85% 91%, #A69BB0 91% 100%); position:relative;">
+                <div style="position:absolute; inset:26px; border-radius:50%; background:var(--card); display:flex; flex-direction:column; align-items:center; justify-content:center;"><span style="font-size:11px; color:var(--faint);">Total</span><span style="font-family:var(--display); font-size:22px; color:var(--ink);">$3,240</span></div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:9px;">
+                <div style="display:flex; align-items:center; gap:9px; font-size:13px;"><span style="width:9px; height:9px; border-radius:2px; background:#5E8B7E;"></span><span style="color:var(--ink);">Groceries</span><span style="margin-left:auto; color:var(--muted);">$820</span></div>
+                <div style="display:flex; align-items:center; gap:9px; font-size:13px;"><span style="width:9px; height:9px; border-radius:2px; background:#6E93B0;"></span><span style="color:var(--ink);">Dining</span><span style="margin-left:auto; color:var(--muted);">$640</span></div>
+                <div style="display:flex; align-items:center; gap:9px; font-size:13px;"><span style="width:9px; height:9px; border-radius:2px; background:#C9A45C;"></span><span style="color:var(--ink);">Transport</span><span style="margin-left:auto; color:var(--muted);">$430</span></div>
+                <div style="display:flex; align-items:center; gap:9px; font-size:13px;"><span style="width:9px; height:9px; border-radius:2px; background:#B06A4A;"></span><span style="color:var(--ink);">Shopping</span><span style="margin-left:auto; color:var(--muted);">$390</span></div>
+                <div style="display:flex; align-items:center; gap:9px; font-size:13px;"><span style="width:9px; height:9px; border-radius:2px; background:#8892A6;"></span><span style="color:var(--ink);">Utilities</span><span style="margin-left:auto; color:var(--muted);">$280</span></div>
+                <div style="display:flex; align-items:center; gap:9px; font-size:13px;"><span style="width:9px; height:9px; border-radius:2px; background:#B8AE9A;"></span><span style="color:var(--ink);">Subscriptions</span><span style="margin-left:auto; color:var(--muted);">$210</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- transactions -->
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden;">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 24px; border-bottom:1px solid var(--hair);"><span style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--faint);">Transactions</span><span style="display:flex; gap:8px; font-size:12px; color:var(--muted);"><span style="border:1px solid var(--border); border-radius:8px; padding:4px 10px;">All accounts ▾</span><span style="border:1px solid var(--border); border-radius:8px; padding:4px 10px;">All categories ▾</span></span></div>
+            <div style="display:grid; grid-template-columns:70px 1fr 130px 110px; align-items:center; padding:14px 24px; border-bottom:1px solid var(--hair); font-size:13px;"><span style="color:var(--faint);">07-08</span><span style="color:var(--ink);">Salary — Acme Pte Ltd</span><span style="color:var(--muted); font-size:12px;">Income</span><span style="text-align:right; color:var(--up); font-weight:600;">+$6,800.00</span></div>
+            <div style="display:grid; grid-template-columns:70px 1fr 130px 110px; align-items:center; padding:14px 24px; border-bottom:1px solid var(--hair); font-size:13px; background:var(--stripe);"><span style="color:var(--faint);">07-07</span><span style="color:var(--ink);">NTUC FairPrice</span><span style="color:var(--muted); font-size:12px;">Groceries</span><span style="text-align:right; color:var(--ink);">−$84.20</span></div>
+            <div style="display:grid; grid-template-columns:70px 1fr 130px 110px; align-items:center; padding:14px 24px; border-bottom:1px solid var(--hair); font-size:13px;"><span style="color:var(--faint);">07-06</span><span style="color:var(--ink);">Grab Transport</span><span style="color:var(--muted); font-size:12px;">Transport</span><span style="text-align:right; color:var(--ink);">−$18.60</span></div>
+            <div style="display:grid; grid-template-columns:70px 1fr 130px 110px; align-items:center; padding:14px 24px; border-bottom:1px solid var(--hair); font-size:13px; background:var(--stripe);"><span style="color:var(--faint);">07-05</span><span style="color:var(--ink);">Din Tai Fung</span><span style="color:var(--muted); font-size:12px;">Dining</span><span style="text-align:right; color:var(--ink);">−$96.40</span></div>
+            <div style="display:grid; grid-template-columns:70px 1fr 130px 110px; align-items:center; padding:14px 24px; border-bottom:1px solid var(--hair); font-size:13px;"><span style="color:var(--faint);">07-04</span><span style="color:var(--ink);">Amazon SG</span><span style="color:var(--muted); font-size:12px;">Shopping</span><span style="text-align:right; color:var(--ink);">−$142.00</span></div>
+            <div style="display:grid; grid-template-columns:70px 1fr 130px 110px; align-items:center; padding:14px 24px; border-bottom:1px solid var(--hair); font-size:13px; background:var(--stripe);"><span style="color:var(--faint);">07-02</span><span style="color:var(--ink);">Spotify Premium</span><span style="color:var(--muted); font-size:12px;">Subscriptions</span><span style="text-align:right; color:var(--ink);">−$14.90</span></div>
+            <div style="display:grid; grid-template-columns:70px 1fr 130px 110px; align-items:center; padding:14px 24px; font-size:13px;"><span style="color:var(--faint);">07-01</span><span style="color:var(--ink);">SP Utilities</span><span style="color:var(--muted); font-size:12px;">Utilities</span><span style="text-align:right; color:var(--ink);">−$128.30</span></div>
+          </div>
+        </div>
+
+        <!-- trends -->
+        <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden;">
+          <div style="padding:16px 24px; border-bottom:1px solid var(--hair); font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--faint);">Trends · last 6 months</div>
+          <div style="display:grid; grid-template-columns:1fr 300px; gap:32px; padding:26px 24px;">
+            <div style="display:flex; align-items:flex-end; gap:18px; height:150px;">
+              <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:8px;"><div style="width:100%; height:100px; background:var(--hair); border-radius:5px; display:flex; align-items:flex-end;"><div style="width:100%; height:100%; background:var(--faint); opacity:0.35; border-radius:5px;"></div></div><span style="font-size:11px; color:var(--faint);">Feb</span></div>
+              <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:8px;"><div style="width:100%; height:100px; background:var(--hair); border-radius:5px; display:flex; align-items:flex-end;"><div style="width:100%; height:86%; background:var(--faint); opacity:0.35; border-radius:5px;"></div></div><span style="font-size:11px; color:var(--faint);">Mar</span></div>
+              <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:8px;"><div style="width:100%; height:100px; background:var(--hair); border-radius:5px; display:flex; align-items:flex-end;"><div style="width:100%; height:94%; background:var(--faint); opacity:0.35; border-radius:5px;"></div></div><span style="font-size:11px; color:var(--faint);">Apr</span></div>
+              <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:8px;"><div style="width:100%; height:100px; background:var(--hair); border-radius:5px; display:flex; align-items:flex-end;"><div style="width:100%; height:88%; background:var(--faint); opacity:0.35; border-radius:5px;"></div></div><span style="font-size:11px; color:var(--faint);">May</span></div>
+              <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:8px;"><div style="width:100%; height:100px; background:var(--hair); border-radius:5px; display:flex; align-items:flex-end;"><div style="width:100%; height:88%; background:var(--faint); opacity:0.35; border-radius:5px;"></div></div><span style="font-size:11px; color:var(--faint);">Jun</span></div>
+              <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:8px;"><div style="width:100%; height:100px; background:var(--hair); border-radius:5px; display:flex; align-items:flex-end;"><div style="width:100%; height:81%; background:var(--cool); border-radius:5px;"></div></div><span style="font-size:11px; color:var(--ink); font-weight:600;">Jul</span></div>
+            </div>
+            <div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--faint); margin-bottom:14px;">Biggest movers vs last month</div>
+              <div style="display:flex; flex-direction:column; gap:12px;">
+                <div style="display:flex; justify-content:space-between; font-size:13px;"><span style="color:var(--ink);">Dining</span><span style="color:var(--down);">▲ +18% · $96</span></div>
+                <div style="display:flex; justify-content:space-between; font-size:13px;"><span style="color:var(--ink);">Transport</span><span style="color:var(--up);">▼ −22% · $120</span></div>
+                <div style="display:flex; justify-content:space-between; font-size:13px;"><span style="color:var(--ink);">Shopping</span><span style="color:var(--down);">▲ new · $390</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── ANALYTICS ───────── -->
+    <section style="display:{{ anaDisp }}; animation:sectionIn 0.34s cubic-bezier(0.2,0.7,0.3,1);">
+      <div style="max-width:1180px; margin:0 auto; padding:40px 48px 72px;">
+        <div style="display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:30px; flex-wrap:wrap; gap:16px;">
+          <div>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:var(--faint);">Invest</div>
+            <h1 style="font-family:var(--display); font-weight:500; font-size:34px; color:var(--ink); margin:8px 0 0; line-height:1;">Analytics</h1>
+          </div>
+          <div style="font-size:13px; color:var(--muted);">value <strong style="color:var(--ink); font-weight:600;">$313,780</strong> · 6 positions</div>
+        </div>
+
+        <!-- concentration -->
+        <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-bottom:20px;">
+          <div style="padding:16px 24px; border-bottom:1px solid var(--hair); font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--faint);">Concentration</div>
+          <div style="display:grid; grid-template-columns:repeat(4,1fr);">
+            <div style="padding:24px; border-right:1px solid var(--hair);"><div style="font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--faint);">Top holding</div><div style="font-family:var(--display); font-size:30px; color:var(--ink); margin-top:10px;">37.2%</div><div style="font-size:12px; color:var(--muted); margin-top:4px;">VWRA</div></div>
+            <div style="padding:24px; border-right:1px solid var(--hair);"><div style="font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--faint);">Top 3 weight</div><div style="font-family:var(--display); font-size:30px; color:var(--ink); margin-top:10px;">74.8%</div><div style="font-size:12px; color:var(--warn); margin-top:4px;">Fairly concentrated</div></div>
+            <div style="padding:24px; border-right:1px solid var(--hair);"><div style="font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--faint);">Effective holdings</div><div style="font-family:var(--display); font-size:30px; color:var(--ink); margin-top:10px;">4.2</div><div style="font-size:12px; color:var(--muted); margin-top:4px;">of 6 positions</div></div>
+            <div style="padding:24px;"><div style="font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--faint);">Positions</div><div style="font-family:var(--display); font-size:30px; color:var(--ink); margin-top:10px;">6</div><div style="font-size:12px; color:var(--muted); margin-top:4px;">2 ETFs · 4 direct</div></div>
+          </div>
+        </div>
+
+        <!-- breakdowns -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;">
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:22px 24px 26px;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--faint);">Geographic · look-through</div>
+            <div style="font-size:12px; color:var(--muted); margin:6px 0 18px;">ETFs decomposed into underlying countries</div>
+            <div style="display:flex; flex-direction:column; gap:13px;">
+              <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--ink);"><span>United States</span><span style="color:var(--muted);">58%</span></div><div style="height:6px; background:var(--hair); border-radius:3px;"><div style="height:100%; width:58%; background:var(--accent); border-radius:3px;"></div></div></div>
+              <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--ink);"><span>Europe</span><span style="color:var(--muted);">12%</span></div><div style="height:6px; background:var(--hair); border-radius:3px;"><div style="height:100%; width:12%; background:var(--accent); border-radius:3px;"></div></div></div>
+              <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--ink);"><span>Emerging markets</span><span style="color:var(--muted);">9%</span></div><div style="height:6px; background:var(--hair); border-radius:3px;"><div style="height:100%; width:9%; background:var(--accent); border-radius:3px;"></div></div></div>
+              <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--ink);"><span>Singapore</span><span style="color:var(--muted);">8%</span></div><div style="height:6px; background:var(--hair); border-radius:3px;"><div style="height:100%; width:8%; background:var(--accent); border-radius:3px;"></div></div></div>
+              <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--ink);"><span>Japan</span><span style="color:var(--muted);">7%</span></div><div style="height:6px; background:var(--hair); border-radius:3px;"><div style="height:100%; width:7%; background:var(--accent); border-radius:3px;"></div></div></div>
+            </div>
+          </div>
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:22px 24px 26px;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--faint);">Sector · look-through</div>
+            <div style="font-size:12px; color:var(--muted); margin:6px 0 18px;">ETFs decomposed by sector weightings</div>
+            <div style="display:flex; flex-direction:column; gap:13px;">
+              <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--ink);"><span>Technology</span><span style="color:var(--muted);">31%</span></div><div style="height:6px; background:var(--hair); border-radius:3px;"><div style="height:100%; width:31%; background:var(--cool); border-radius:3px;"></div></div></div>
+              <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--ink);"><span>Financials</span><span style="color:var(--muted);">14%</span></div><div style="height:6px; background:var(--hair); border-radius:3px;"><div style="height:100%; width:14%; background:var(--cool); border-radius:3px;"></div></div></div>
+              <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--ink);"><span>Consumer</span><span style="color:var(--muted);">12%</span></div><div style="height:6px; background:var(--hair); border-radius:3px;"><div style="height:100%; width:12%; background:var(--cool); border-radius:3px;"></div></div></div>
+              <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--ink);"><span>Healthcare</span><span style="color:var(--muted);">11%</span></div><div style="height:6px; background:var(--hair); border-radius:3px;"><div style="height:100%; width:11%; background:var(--cool); border-radius:3px;"></div></div></div>
+              <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--ink);"><span>Industrials</span><span style="color:var(--muted);">9%</span></div><div style="height:6px; background:var(--hair); border-radius:3px;"><div style="height:100%; width:9%; background:var(--cool); border-radius:3px;"></div></div></div>
+            </div>
+          </div>
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:22px 24px 26px;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--faint);">Currency exposure</div>
+            <div style="font-size:12px; color:var(--muted); margin:6px 0 18px;">Underlying currency of assets</div>
+            <div style="display:flex; flex-direction:column; gap:13px;">
+              <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--ink);"><span>USD</span><span style="color:var(--muted);">71%</span></div><div style="height:6px; background:var(--hair); border-radius:3px;"><div style="height:100%; width:71%; background:var(--accent); border-radius:3px;"></div></div></div>
+              <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--ink);"><span>SGD</span><span style="color:var(--muted);">12%</span></div><div style="height:6px; background:var(--hair); border-radius:3px;"><div style="height:100%; width:12%; background:var(--accent); border-radius:3px;"></div></div></div>
+              <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--ink);"><span>EUR</span><span style="color:var(--muted);">9%</span></div><div style="height:6px; background:var(--hair); border-radius:3px;"><div style="height:100%; width:9%; background:var(--accent); border-radius:3px;"></div></div></div>
+              <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--ink);"><span>JPY</span><span style="color:var(--muted);">5%</span></div><div style="height:6px; background:var(--hair); border-radius:3px;"><div style="height:100%; width:5%; background:var(--accent); border-radius:3px;"></div></div></div>
+              <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--ink);"><span>Other</span><span style="color:var(--muted);">3%</span></div><div style="height:6px; background:var(--hair); border-radius:3px;"><div style="height:100%; width:3%; background:var(--accent); border-radius:3px;"></div></div></div>
+            </div>
+          </div>
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:22px 24px 26px;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--faint);">Asset type</div>
+            <div style="font-size:12px; color:var(--muted); margin:6px 0 18px;">Direct holding structure</div>
+            <div style="display:flex; height:150px; align-items:center; justify-content:center; gap:36px;">
+              <div style="width:130px; height:130px; border-radius:50%; background:conic-gradient(var(--accent) 0 68%, var(--cool) 68% 100%); position:relative;"><div style="position:absolute; inset:22px; border-radius:50%; background:var(--card);"></div></div>
+              <div style="display:flex; flex-direction:column; gap:14px;">
+                <div><div style="display:flex; align-items:center; gap:8px; font-size:14px; color:var(--ink);"><span style="width:10px; height:10px; border-radius:3px; background:var(--accent);"></span>ETF</div><div style="font-family:var(--display); font-size:22px; color:var(--ink); margin-top:2px; margin-left:18px;">68%</div></div>
+                <div><div style="display:flex; align-items:center; gap:8px; font-size:14px; color:var(--ink);"><span style="width:10px; height:10px; border-radius:3px; background:var(--cool);"></span>Stock</div><div style="font-family:var(--display); font-size:22px; color:var(--ink); margin-top:2px; margin-left:18px;">32%</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- top positions -->
+        <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden;">
+          <div style="padding:16px 24px; border-bottom:1px solid var(--hair); font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--faint);">Top positions</div>
+          <div style="display:grid; grid-template-columns:1.6fr 0.8fr 1.4fr 1fr 0.9fr 0.9fr; padding:12px 24px; border-bottom:1px solid var(--hair); font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--faint);"><span>Ticker</span><span>Type</span><span>Sector</span><span style="text-align:right;">Value</span><span style="text-align:right;">Alloc</span><span style="text-align:right;">Gain</span></div>
+          <div style="display:grid; grid-template-columns:1.6fr 0.8fr 1.4fr 1fr 0.9fr 0.9fr; align-items:center; padding:14px 24px; border-bottom:1px solid var(--hair); font-size:13px;"><div><div style="font-weight:600; color:var(--ink);">VWRA</div><div style="font-size:11px; color:var(--faint);">Vanguard FTSE All-World</div></div><span style="color:var(--muted);">ETF</span><span style="color:var(--muted);">Diversified</span><span style="text-align:right; color:var(--ink);">$116,700</span><span style="text-align:right; color:var(--ink);">37.2%</span><span style="text-align:right; color:var(--up);">+26.6%</span></div>
+          <div style="display:grid; grid-template-columns:1.6fr 0.8fr 1.4fr 1fr 0.9fr 0.9fr; align-items:center; padding:14px 24px; border-bottom:1px solid var(--hair); font-size:13px; background:var(--stripe);"><div><div style="font-weight:600; color:var(--ink);">CSPX</div><div style="font-size:11px; color:var(--faint);">iShares Core S&amp;P 500</div></div><span style="color:var(--muted);">ETF</span><span style="color:var(--muted);">US Large Cap</span><span style="text-align:right; color:var(--ink);">$81,600</span><span style="text-align:right; color:var(--ink);">26.0%</span><span style="text-align:right; color:var(--up);">+33.0%</span></div>
+          <div style="display:grid; grid-template-columns:1.6fr 0.8fr 1.4fr 1fr 0.9fr 0.9fr; align-items:center; padding:14px 24px; border-bottom:1px solid var(--hair); font-size:13px;"><div><div style="font-weight:600; color:var(--ink);">NVDA</div><div style="font-size:11px; color:var(--faint);">NVIDIA Corp</div></div><span style="color:var(--muted);">Stock</span><span style="color:var(--muted);">Technology</span><span style="text-align:right; color:var(--ink);">$36,400</span><span style="text-align:right; color:var(--ink);">11.6%</span><span style="text-align:right; color:var(--up);">+69.2%</span></div>
+          <div style="display:grid; grid-template-columns:1.6fr 0.8fr 1.4fr 1fr 0.9fr 0.9fr; align-items:center; padding:14px 24px; border-bottom:1px solid var(--hair); font-size:13px; background:var(--stripe);"><div><div style="font-weight:600; color:var(--ink);">AAPL</div><div style="font-size:11px; color:var(--faint);">Apple Inc</div></div><span style="color:var(--muted);">Stock</span><span style="color:var(--muted);">Technology</span><span style="text-align:right; color:var(--ink);">$31,400</span><span style="text-align:right; color:var(--ink);">10.0%</span><span style="text-align:right; color:var(--up);">+25.7%</span></div>
+          <div style="display:grid; grid-template-columns:1.6fr 0.8fr 1.4fr 1fr 0.9fr 0.9fr; align-items:center; padding:14px 24px; font-size:13px;"><div><div style="font-weight:600; color:var(--ink);">MSFT</div><div style="font-size:11px; color:var(--faint);">Microsoft Corp</div></div><span style="color:var(--muted);">Stock</span><span style="color:var(--muted);">Technology</span><span style="text-align:right; color:var(--ink);">$25,400</span><span style="text-align:right; color:var(--ink);">8.1%</span><span style="text-align:right; color:var(--up);">+23.8%</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── BUDGETS ───────── -->
+    <section style="display:{{ budgetsDisp }}; animation:sectionIn 0.34s cubic-bezier(0.2,0.7,0.3,1);">
+      <div style="max-width:1180px; margin:0 auto; padding:40px 48px 72px;">
+        <div style="margin-bottom:30px;">
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:var(--faint);">Money</div>
+          <h1 style="font-family:var(--display); font-weight:500; font-size:34px; color:var(--ink); margin:8px 0 0; line-height:1;">Budgets</h1>
+        </div>
+        <div style="display:grid; grid-template-columns:1.6fr 1fr 1fr; gap:20px; margin-bottom:20px;">
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:28px;"><div style="font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:var(--faint); font-weight:600;">Monthly budget</div><div style="font-family:var(--display); font-weight:500; font-size:48px; line-height:1; color:var(--ink); margin-top:14px;">$4,500</div><div style="height:6px; border-radius:3px; background:var(--hair); margin-top:20px; overflow:hidden;"><div style="height:100%; width:72%; background:var(--cool); border-radius:3px;"></div></div><div style="font-size:13px; color:var(--muted); margin-top:10px;">72% used · 9 days left</div></div>
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:28px;"><div style="font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:var(--faint); font-weight:600;">Spent</div><div style="font-family:var(--display); font-weight:500; font-size:30px; color:var(--ink); margin-top:14px;">$3,240</div><div style="font-size:13px; color:var(--muted); margin-top:14px;">across 8 categories</div></div>
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:28px;"><div style="font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:var(--faint); font-weight:600;">Remaining</div><div style="font-family:var(--display); font-weight:500; font-size:30px; color:var(--up); margin-top:14px;">$1,260</div><div style="font-size:13px; color:var(--up); font-weight:600; margin-top:14px;">on track</div></div>
+        </div>
+        <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden;">
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 24px; border-bottom:1px solid var(--hair);"><span style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--faint);">By category · July</span><span style="font-size:12px; color:var(--faint);">spent / limit</span></div>
+          <div style="padding:22px 24px; display:flex; flex-direction:column; gap:18px;">
+            <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--ink);"><span>Groceries</span><span style="color:var(--muted);">$820 / $900</span></div><div style="position:relative; height:6px; background:var(--hair); border-radius:3px;"><div style="height:100%; width:91%; background:var(--cool); border-radius:3px;"></div></div></div>
+            <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--ink);"><span>Dining</span><span style="color:var(--down); font-weight:600;">$640 / $500</span></div><div style="position:relative; height:6px; background:var(--hair); border-radius:3px; overflow:hidden;"><div style="height:100%; width:100%; background:var(--down); border-radius:3px;"></div></div></div>
+            <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--ink);"><span>Transport</span><span style="color:var(--muted);">$430 / $500</span></div><div style="position:relative; height:6px; background:var(--hair); border-radius:3px;"><div style="height:100%; width:86%; background:var(--cool); border-radius:3px;"></div></div></div>
+            <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--ink);"><span>Shopping</span><span style="color:var(--muted);">$390 / $400</span></div><div style="position:relative; height:6px; background:var(--hair); border-radius:3px;"><div style="height:100%; width:97%; background:var(--warn); border-radius:3px;"></div></div></div>
+            <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--ink);"><span>Utilities</span><span style="color:var(--muted);">$280 / $300</span></div><div style="position:relative; height:6px; background:var(--hair); border-radius:3px;"><div style="height:100%; width:93%; background:var(--cool); border-radius:3px;"></div></div></div>
+            <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--ink);"><span>Subscriptions</span><span style="color:var(--muted);">$210 / $250</span></div><div style="position:relative; height:6px; background:var(--hair); border-radius:3px;"><div style="height:100%; width:84%; background:var(--cool); border-radius:3px;"></div></div></div>
+            <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--ink);"><span>Health</span><span style="color:var(--muted);">$180 / $300</span></div><div style="position:relative; height:6px; background:var(--hair); border-radius:3px;"><div style="height:100%; width:60%; background:var(--cool); border-radius:3px;"></div></div></div>
+            <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--ink);"><span>Entertainment</span><span style="color:var(--muted);">$90 / $350</span></div><div style="position:relative; height:6px; background:var(--hair); border-radius:3px;"><div style="height:100%; width:26%; background:var(--cool); border-radius:3px;"></div></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── SUBSCRIPTIONS ───────── -->
+    <section style="display:{{ subsDisp }}; animation:sectionIn 0.34s cubic-bezier(0.2,0.7,0.3,1);">
+      <div style="max-width:1180px; margin:0 auto; padding:40px 48px 72px;">
+        <div style="margin-bottom:30px;">
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:var(--faint);">Money</div>
+          <h1 style="font-family:var(--display); font-weight:500; font-size:34px; color:var(--ink); margin:8px 0 0; line-height:1;">Subscriptions</h1>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:20px; margin-bottom:20px;">
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:26px;"><div style="font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:var(--faint); font-weight:600;">Active / month</div><div style="font-family:var(--display); font-weight:500; font-size:32px; color:var(--ink); margin-top:12px;">$210.84</div></div>
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:26px;"><div style="font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:var(--faint); font-weight:600;">Flagged to cut / yr</div><div style="font-family:var(--display); font-weight:500; font-size:32px; color:var(--warn); margin-top:12px;">$660</div></div>
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:26px;"><div style="font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:var(--faint); font-weight:600;">Active count</div><div style="font-family:var(--display); font-weight:500; font-size:32px; color:var(--ink); margin-top:12px;">8</div></div>
+        </div>
+        <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden;">
+          <div style="padding:16px 24px; border-bottom:1px solid var(--hair); font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--faint);">Recurring</div>
+          <div style="display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; align-items:center; padding:15px 24px; border-bottom:1px solid var(--hair); font-size:13px;"><span style="color:var(--ink); font-weight:600;">ChatGPT Plus</span><span style="color:var(--muted);">Monthly</span><span style="color:var(--muted);">last 07-02</span><span style="text-align:right; color:var(--ink);">$28.00</span></div>
+          <div style="display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; align-items:center; padding:15px 24px; border-bottom:1px solid var(--hair); font-size:13px; background:var(--stripe);"><span style="color:var(--ink); font-weight:600;">Adobe Creative Cloud <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--warn); border:1px solid var(--warn); border-radius:20px; padding:1px 7px; margin-left:6px;">could cancel</span></span><span style="color:var(--muted);">Monthly</span><span style="color:var(--muted);">last 06-28</span><span style="text-align:right; color:var(--ink);">$42.00</span></div>
+          <div style="display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; align-items:center; padding:15px 24px; border-bottom:1px solid var(--hair); font-size:13px;"><span style="color:var(--ink); font-weight:600;">Fitness First</span><span style="color:var(--muted);">Monthly</span><span style="color:var(--muted);">last 07-01</span><span style="text-align:right; color:var(--ink);">$88.00</span></div>
+          <div style="display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; align-items:center; padding:15px 24px; border-bottom:1px solid var(--hair); font-size:13px; background:var(--stripe);"><span style="color:var(--ink); font-weight:600;">Netflix</span><span style="color:var(--muted);">Monthly</span><span style="color:var(--muted);">last 07-04</span><span style="text-align:right; color:var(--ink);">$18.98</span></div>
+          <div style="display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; align-items:center; padding:15px 24px; border-bottom:1px solid var(--hair); font-size:13px;"><span style="color:var(--ink); font-weight:600;">Spotify</span><span style="color:var(--muted);">Monthly</span><span style="color:var(--muted);">last 07-02</span><span style="text-align:right; color:var(--ink);">$14.90</span></div>
+          <div style="display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; align-items:center; padding:15px 24px; border-bottom:1px solid var(--hair); font-size:13px; background:var(--stripe);"><span style="color:var(--ink); font-weight:600;">iCloud+ <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--warn); border:1px solid var(--warn); border-radius:20px; padding:1px 7px; margin-left:6px;">could cancel</span></span><span style="color:var(--muted);">Monthly</span><span style="color:var(--muted);">last 06-30</span><span style="text-align:right; color:var(--ink);">$12.98</span></div>
+          <div style="display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; align-items:center; padding:15px 24px; font-size:13px;"><span style="color:var(--ink); font-weight:600;">Notion</span><span style="color:var(--muted);">Monthly</span><span style="color:var(--muted);">last 07-01</span><span style="text-align:right; color:var(--ink);">$10.00</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── GOALS ───────── -->
+    <section style="display:{{ goalsDisp }}; animation:sectionIn 0.34s cubic-bezier(0.2,0.7,0.3,1);">
+      <div style="max-width:1180px; margin:0 auto; padding:40px 48px 72px;">
+        <div style="margin-bottom:30px;">
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:var(--faint);">Plan</div>
+          <h1 style="font-family:var(--display); font-weight:500; font-size:34px; color:var(--ink); margin:8px 0 0; line-height:1;">Goals</h1>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px;">
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:28px;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--faint);">Emergency fund</div>
+            <div style="font-family:var(--display); font-weight:500; font-size:34px; color:var(--ink); margin-top:14px;">$28,400</div>
+            <div style="font-size:13px; color:var(--muted); margin-top:4px;">of $30,000 · 6 months</div>
+            <div style="height:6px; border-radius:3px; background:var(--hair); margin-top:18px; overflow:hidden;"><div style="height:100%; width:95%; background:var(--up); border-radius:3px;"></div></div>
+            <div style="display:flex; justify-content:space-between; font-size:12px; margin-top:10px;"><span style="color:var(--faint);">95% funded</span><span style="color:var(--up); font-weight:600;">on track</span></div>
+          </div>
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:28px;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--faint);">House down payment</div>
+            <div style="font-family:var(--display); font-weight:500; font-size:34px; color:var(--ink); margin-top:14px;">$142,000</div>
+            <div style="font-size:13px; color:var(--muted); margin-top:4px;">of $250,000 · by 2029</div>
+            <div style="height:6px; border-radius:3px; background:var(--hair); margin-top:18px; overflow:hidden;"><div style="height:100%; width:57%; background:var(--cool); border-radius:3px;"></div></div>
+            <div style="display:flex; justify-content:space-between; font-size:12px; margin-top:10px;"><span style="color:var(--faint);">57% funded</span><span style="color:var(--cool); font-weight:600;">$1,850 / mo needed</span></div>
+          </div>
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:28px;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--faint);">Financial independence</div>
+            <div style="font-family:var(--display); font-weight:500; font-size:34px; color:var(--ink); margin-top:14px;">$487K</div>
+            <div style="font-size:13px; color:var(--muted); margin-top:4px;">of $1.5M · target age 50</div>
+            <div style="height:6px; border-radius:3px; background:var(--hair); margin-top:18px; overflow:hidden;"><div style="height:100%; width:32%; background:var(--accent); border-radius:3px;"></div></div>
+            <div style="display:flex; justify-content:space-between; font-size:12px; margin-top:10px;"><span style="color:var(--faint);">32% funded</span><span style="color:var(--up); font-weight:600;">78% Monte Carlo</span></div>
+          </div>
+        </div>
+        <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:26px 28px; margin-top:20px;">
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--faint); margin-bottom:8px;">Projection · plain English</div>
+          <p style="font-family:var(--display); font-size:22px; line-height:1.45; color:var(--ink); margin:0; max-width:760px;">At your current $3,560/mo savings rate, you reach financial independence around <em style="color:var(--accent);">2044 (age 51)</em> — a year behind target. Adding $400/mo closes the gap with 88% confidence.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── TRANSACTIONS ───────── -->
+    <section style="display:{{ txnsDisp }}; animation:sectionIn 0.34s cubic-bezier(0.2,0.7,0.3,1);">
+      <div style="max-width:1180px; margin:0 auto; padding:40px 48px 72px;">
+        <div style="margin-bottom:30px;">
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:var(--faint);">Invest</div>
+          <h1 style="font-family:var(--display); font-weight:500; font-size:34px; color:var(--ink); margin:8px 0 0; line-height:1;">Transactions</h1>
+        </div>
+        <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden;">
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 24px; border-bottom:1px solid var(--hair);"><span style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--faint);">Trade history</span><span style="font-size:12px; color:var(--faint);">all accounts</span></div>
+          <div style="display:grid; grid-template-columns:90px 90px 1.4fr 0.9fr 1fr 1fr; padding:12px 24px; border-bottom:1px solid var(--hair); font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--faint);"><span>Date</span><span>Type</span><span>Instrument</span><span style="text-align:right;">Qty</span><span style="text-align:right;">Price</span><span style="text-align:right;">Amount</span></div>
+          <div style="display:grid; grid-template-columns:90px 90px 1.4fr 0.9fr 1fr 1fr; align-items:center; padding:15px 24px; border-bottom:1px solid var(--hair); font-size:13px;"><span style="color:var(--faint);">07-01</span><span><span style="background:var(--accentSoft); color:var(--accent); font-size:11px; font-weight:600; padding:2px 9px; border-radius:20px;">Buy</span></span><span style="color:var(--ink);">VWRA</span><span style="text-align:right; color:var(--ink);">12</span><span style="text-align:right; color:var(--ink);">$112.10</span><span style="text-align:right; color:var(--ink);">−$1,345.20</span></div>
+          <div style="display:grid; grid-template-columns:90px 90px 1.4fr 0.9fr 1fr 1fr; align-items:center; padding:15px 24px; border-bottom:1px solid var(--hair); font-size:13px; background:var(--stripe);"><span style="color:var(--faint);">06-15</span><span><span style="background:var(--upSoft); color:var(--up); font-size:11px; font-weight:600; padding:2px 9px; border-radius:20px;">Dividend</span></span><span style="color:var(--ink);">CSPX</span><span style="text-align:right; color:var(--muted);">—</span><span style="text-align:right; color:var(--muted);">—</span><span style="text-align:right; color:var(--up);">+$186.40</span></div>
+          <div style="display:grid; grid-template-columns:90px 90px 1.4fr 0.9fr 1fr 1fr; align-items:center; padding:15px 24px; border-bottom:1px solid var(--hair); font-size:13px;"><span style="color:var(--faint);">06-01</span><span><span style="background:var(--accentSoft); color:var(--accent); font-size:11px; font-weight:600; padding:2px 9px; border-radius:20px;">Buy</span></span><span style="color:var(--ink);">NVDA</span><span style="text-align:right; color:var(--ink);">5</span><span style="text-align:right; color:var(--ink);">$168.00</span><span style="text-align:right; color:var(--ink);">−$840.00</span></div>
+          <div style="display:grid; grid-template-columns:90px 90px 1.4fr 0.9fr 1fr 1fr; align-items:center; padding:15px 24px; border-bottom:1px solid var(--hair); font-size:13px; background:var(--stripe);"><span style="color:var(--faint);">05-20</span><span><span style="background:rgba(180,85,47,0.12); color:var(--down); font-size:11px; font-weight:600; padding:2px 9px; border-radius:20px;">Sell</span></span><span style="color:var(--ink);">AAPL</span><span style="text-align:right; color:var(--ink);">10</span><span style="text-align:right; color:var(--ink);">$235.00</span><span style="text-align:right; color:var(--up);">+$2,350.00</span></div>
+          <div style="display:grid; grid-template-columns:90px 90px 1.4fr 0.9fr 1fr 1fr; align-items:center; padding:15px 24px; font-size:13px;"><span style="color:var(--faint);">05-01</span><span><span style="background:var(--accentSoft); color:var(--accent); font-size:11px; font-weight:600; padding:2px 9px; border-radius:20px;">Buy</span></span><span style="color:var(--ink);">VWRA</span><span style="text-align:right; color:var(--ink);">12</span><span style="text-align:right; color:var(--ink);">$109.80</span><span style="text-align:right; color:var(--ink);">−$1,317.60</span></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ══════════ COMMAND PALETTE ══════════ -->
+  <sc-if value="{{ paletteOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closePalette }}" style="position:fixed; inset:0; background:rgba(12,12,16,0.36); backdrop-filter:blur(2px); z-index:80; display:flex; align-items:flex-start; justify-content:center; animation:fadeIn 0.14s ease;">
+      <div onClick="{{ stop }}" style="{{ palettePanel }}">
+        <div style="display:flex; align-items:center; gap:12px; padding:16px 20px; border-bottom:1px solid var(--hair);">
+          <span style="color:var(--faint); font-size:16px;">⌕</span>
+          <input ref="{{ inputRef }}" value="{{ q }}" onChange="{{ onQuery }}" placeholder="Search pages and actions…" style="flex:1; border:none; outline:none; background:transparent; font-family:'Hanken Grotesk',system-ui,sans-serif; font-size:15px; color:var(--ink);">
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.08em; color:var(--faint); border:1px solid var(--border); border-radius:5px; padding:2px 6px;">ESC</span>
+        </div>
+        <div style="max-height:344px; overflow-y:auto; padding:8px;">
+          <sc-for list="{{ paletteItems }}" as="item" hint-placeholder-count="0">
+            <button onClick="{{ item.run }}" onMouseEnter="{{ item.onHover }}" style="{{ item.style }}">
+              <span style="flex:1; text-align:left;">{{ item.label }}</span>
+              <span style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.12em; text-transform:uppercase; color:var(--faint);">{{ item.group }}</span>
+            </button>
+          </sc-for>
+          <sc-if value="{{ paletteEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:22px; text-align:center; color:var(--faint); font-size:13px;">No matches</div>
+          </sc-if>
+        </div>
+        <div style="display:flex; gap:16px; padding:11px 20px; border-top:1px solid var(--hair); font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--faint);">
+          <span>↑↓ navigate</span><span>↵ open</span><span>esc close</span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══════════ DRAWER ══════════ -->
+  <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeDrawer }}" style="position:fixed; inset:0; background:rgba(12,12,16,0.34); z-index:70; animation:fadeIn 0.16s ease;"></div>
+    <div style="{{ drawerPanel }}">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+        <h2 style="font-family:var(--display); font-weight:500; font-size:24px; color:var(--ink); margin:0;">{{ drawerTitle }}</h2>
+        <button onClick="{{ closeDrawer }}" style="border:none; background:var(--hair); color:var(--muted); width:30px; height:30px; border-radius:8px; cursor:pointer; font-size:15px; transition:color 0.15s;" style-hover="color:var(--ink);">✕</button>
+      </div>
+      <div style="font-size:13px; color:var(--muted); margin-bottom:24px;">Fill in the details below.</div>
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        <sc-for list="{{ drawerFields }}" as="f" hint-placeholder-count="4">
+          <label style="display:block;">
+            <span style="font-size:12px; color:var(--muted); font-family:'Hanken Grotesk',system-ui,sans-serif;">{{ f.label }}</span>
+            <input placeholder="{{ f.ph }}" style="{{ f.inputStyle }}">
+          </label>
+        </sc-for>
+      </div>
+      <div style="display:flex; gap:10px; margin-top:28px;">
+        <button onClick="{{ closeDrawer }}" style="flex:1; padding:11px 0; border:1px solid var(--border); background:transparent; color:var(--ink); border-radius:10px; cursor:pointer; font-weight:600; font-size:13.5px; font-family:'Hanken Grotesk',system-ui,sans-serif; transition:background 0.15s;" style-hover="background:var(--hair);">Cancel</button>
+        <button onClick="{{ saveDrawer }}" style="flex:1; padding:11px 0; border:none; background:var(--accent); color:var(--accentText); border-radius:10px; cursor:pointer; font-weight:600; font-size:13.5px; font-family:'Hanken Grotesk',system-ui,sans-serif; transition:filter 0.15s;" style-hover="filter:brightness(1.08);">Save</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══════════ TOAST ══════════ -->
+  <sc-if value="{{ toastOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed; bottom:26px; left:50%; transform:translateX(-50%); z-index:90; background:var(--ink); color:var(--bg); font-size:13.5px; font-weight:500; padding:12px 20px; border-radius:12px; box-shadow:0 10px 34px rgba(0,0,0,0.24); display:flex; align-items:center; gap:10px; animation:toastIn 0.24s cubic-bezier(0.2,0.7,0.3,1);">
+      <span style="color:var(--up); font-size:15px;">●</span>{{ toast }}
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    screen: 'dashboard', theme: 'light',
+    paletteOpen: false, q: '', sel: 0,
+    drawer: null, toast: null,
+    refreshing: false, asOf: 'just now',
+    monthOpen: false, month: 'July 2026',
+  };
+
+  componentDidMount() {
+    try {
+      const t = localStorage.getItem('aureus-theme');
+      if (t === 'light' || t === 'dark') this.setState({ theme: t });
+    } catch (e) {}
+    this._onKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); this.togglePalette(); return; }
+      if (e.key === 'Escape') {
+        if (this.state.paletteOpen) this.closePalette();
+        else if (this.state.drawer) this.setState({ drawer: null });
+        else if (this.state.monthOpen) this.setState({ monthOpen: false });
+        return;
+      }
+      if (this.state.paletteOpen) {
+        const items = this.filtered();
+        if (e.key === 'ArrowDown') { e.preventDefault(); this.setState((s) => ({ sel: Math.min(s.sel + 1, items.length - 1) })); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); this.setState((s) => ({ sel: Math.max(s.sel - 1, 0) })); }
+        else if (e.key === 'Enter') { e.preventDefault(); const it = items[this.state.sel]; if (it) it.run(); }
+      }
+    };
+    window.addEventListener('keydown', this._onKey);
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener('keydown', this._onKey);
+    clearTimeout(this._t); clearTimeout(this._r);
+  }
+
+  componentDidUpdate(pp, ps) {
+    if (!ps.paletteOpen && this.state.paletteOpen && this._input) { try { this._input.focus(); } catch (e) {} }
+  }
+
+  commands() {
+    const go = (screen, label, group) => ({ label, group, run: () => { this.setState({ screen }); this.closePalette(); } });
+    return [
+      go('dashboard', 'Home', 'Overview'),
+      go('spending', 'Spending', 'Money'),
+      go('subscriptions', 'Subscriptions', 'Money'),
+      go('budgets', 'Budgets', 'Money'),
+      go('holdings', 'Holdings', 'Invest'),
+      go('analytics', 'Analytics', 'Invest'),
+      go('transactions', 'Transactions', 'Invest'),
+      go('goals', 'Goals', 'Plan'),
+      { label: 'Add position', group: 'Actions', run: () => { this.closePalette(); this.setState({ drawer: 'position' }); } },
+      { label: 'Add transaction', group: 'Actions', run: () => { this.closePalette(); this.setState({ drawer: 'transaction' }); } },
+      { label: 'Refresh prices', group: 'Actions', run: () => { this.closePalette(); this.doRefresh(); } },
+      { label: this.state.theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme', group: 'Actions', run: () => { this.closePalette(); this.toggleTheme(); } },
+      { label: 'Sign out', group: 'Actions', run: () => { this.closePalette(); this.toast('Signed out'); } },
+    ];
+  }
+
+  filtered() {
+    const q = this.state.q.trim().toLowerCase();
+    const all = this.commands();
+    if (!q) return all;
+    return all.filter((c) => c.label.toLowerCase().includes(q) || c.group.toLowerCase().includes(q));
+  }
+
+  togglePalette() { this.setState((s) => ({ paletteOpen: !s.paletteOpen, q: '', sel: 0 })); }
+  openPalette() { this.setState({ paletteOpen: true, q: '', sel: 0 }); }
+  closePalette() { this.setState({ paletteOpen: false }); }
+  toggleTheme() { const t = this.state.theme === 'dark' ? 'light' : 'dark'; try { localStorage.setItem('aureus-theme', t); } catch (e) {} this.setState({ theme: t }); }
+  toast(msg) { this.setState({ toast: msg }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: null }), 2600); }
+  doRefresh() { if (this.state.refreshing) return; this.setState({ refreshing: true }); clearTimeout(this._r); this._r = setTimeout(() => { this.setState({ refreshing: false, asOf: 'just now' }); this.toast('Prices updated'); }, 950); }
+  saveDrawer() { const kind = this.state.drawer; this.setState({ drawer: null }); this.toast(kind === 'position' ? 'Position added' : 'Transaction added'); }
+
+  vars(theme) {
+    const light = {
+      '--bg': '#F6F3EC', '--sidebar': '#FBFAF6', '--card': '#FFFFFF',
+      '--ink': '#1B1A16', '--muted': '#726C60', '--faint': '#9A9384',
+      '--border': '#E7E1D5', '--hair': '#EFEAE0', '--stripe': 'rgba(0,0,0,0.02)',
+      '--accent': '#2E5E4E', '--accentText': '#FFFFFF', '--accentSoft': '#EAF0EC',
+      '--up': '#2E7D5B', '--upSoft': 'rgba(46,125,91,0.10)', '--down': '#B4552F',
+      '--cool': '#3C6E8F', '--warn': '#C6923E',
+      '--display': "'Newsreader', Georgia, serif", '--radius': '16px',
+    };
+    const dark = {
+      '--bg': '#0E0F13', '--sidebar': '#101216', '--card': '#16181E',
+      '--ink': '#ECEAE3', '--muted': '#8B8C93', '--faint': '#5E606A',
+      '--border': '#262A32', '--hair': '#1C1F26', '--stripe': 'rgba(255,255,255,0.02)',
+      '--accent': '#C6A96A', '--accentText': '#14140F', '--accentSoft': 'rgba(198,169,106,0.14)',
+      '--up': '#64C68C', '--upSoft': 'rgba(100,198,140,0.12)', '--down': '#E0785B',
+      '--cool': '#74A7D8', '--warn': '#D6B15E',
+      '--display': "'Spectral', Georgia, serif", '--radius': '16px',
+    };
+    const t = theme === 'dark' ? dark : light;
+    return {
+      ...t,
+      display: 'flex', minHeight: '100vh', background: 'var(--bg)', color: 'var(--ink)',
+      fontFamily: "'Hanken Grotesk', system-ui, sans-serif", fontVariantNumeric: 'tabular-nums',
+    };
+  }
+
+  navStyle(name) {
+    const active = this.state.screen === name;
+    return {
+      display: 'flex', alignItems: 'center', gap: '10px',
+      textAlign: 'left', border: 'none', cursor: 'pointer', width: '100%',
+      padding: '8px 12px', borderRadius: '9px', fontSize: '13.5px', lineHeight: '1',
+      fontFamily: "'Hanken Grotesk', system-ui, sans-serif",
+      background: active ? 'var(--accentSoft)' : 'transparent',
+      color: active ? 'var(--accent)' : 'var(--ink)',
+      fontWeight: active ? 600 : 500,
+      transition: 'background 0.15s, color 0.15s',
+    };
+  }
+
+  themeBtn(t) {
+    const active = this.state.theme === t;
+    return {
+      flex: 1, border: 'none', cursor: 'pointer', padding: '7px 0', borderRadius: '8px',
+      fontSize: '12.5px', fontWeight: 600, fontFamily: "'Hanken Grotesk', system-ui, sans-serif",
+      background: active ? 'var(--card)' : 'transparent',
+      color: active ? 'var(--ink)' : 'var(--faint)',
+      boxShadow: active ? '0 1px 3px rgba(0,0,0,0.14)' : 'none',
+    };
+  }
+
+  renderVals() {
+    const s = this.state;
+    const disp = (n) => (s.screen === n ? 'block' : 'none');
+    const items = this.filtered();
+    const paletteItems = items.map((it, i) => ({
+      label: it.label, group: it.group, run: it.run,
+      onHover: () => this.setState({ sel: i }),
+      style: {
+        display: 'flex', alignItems: 'center', gap: '12px', width: '100%', textAlign: 'left',
+        border: 'none', cursor: 'pointer', padding: '10px 12px', borderRadius: '9px', fontSize: '14px',
+        fontFamily: "'Hanken Grotesk', system-ui, sans-serif", transition: 'background 0.12s',
+        background: i === s.sel ? 'var(--accentSoft)' : 'transparent',
+        color: i === s.sel ? 'var(--accent)' : 'var(--ink)',
+        fontWeight: i === s.sel ? 600 : 500,
+      },
+    }));
+    const inputBase = { width: '100%', padding: '10px 12px', border: '1px solid var(--border)', borderRadius: '10px', background: 'var(--bg)', color: 'var(--ink)', fontSize: '14px', fontFamily: "'Hanken Grotesk', system-ui, sans-serif", outline: 'none', marginTop: '6px' };
+    const posFields = [{ label: 'Ticker', ph: 'e.g. VWRA' }, { label: 'Shares', ph: '0' }, { label: 'Cost basis (per share)', ph: '$0.00' }, { label: 'Account', ph: 'Main brokerage' }];
+    const txnFields = [{ label: 'Merchant', ph: 'e.g. NTUC FairPrice' }, { label: 'Amount', ph: '$0.00' }, { label: 'Date', ph: '2026-07-10' }, { label: 'Category', ph: 'Groceries' }];
+    const drawerFields = (s.drawer === 'position' ? posFields : txnFields).map((f) => ({ label: f.label, ph: f.ph, inputStyle: inputBase }));
+    const months = ['July 2026', 'June 2026', 'May 2026', 'April 2026', 'March 2026', 'February 2026'].map((m) => ({
+      label: m, run: () => this.setState({ month: m, monthOpen: false }),
+      style: { display: 'block', width: '100%', textAlign: 'left', border: 'none', cursor: 'pointer', padding: '8px 10px', borderRadius: '8px', fontSize: '13px', fontFamily: "'Hanken Grotesk', system-ui, sans-serif", background: m === s.month ? 'var(--accentSoft)' : 'transparent', color: m === s.month ? 'var(--accent)' : 'var(--ink)', fontWeight: m === s.month ? 600 : 500 },
+    }));
+    return {
+      paletteOpen: s.paletteOpen, paletteItems, paletteEmpty: items.length === 0,
+      q: s.q, onQuery: (e) => this.setState({ q: e.target.value, sel: 0 }),
+      inputRef: (el) => { this._input = el; }, stop: (e) => e.stopPropagation(),
+      openPalette: () => this.openPalette(), closePalette: () => this.closePalette(),
+      navHover: { background: 'var(--accentSoft)' },
+      asOf: s.asOf, refreshLabel: s.refreshing ? 'Refreshing…' : 'Refresh',
+      doRefresh: () => this.doRefresh(),
+      refreshBtn: { display: 'inline-flex', alignItems: 'center', gap: '7px', border: 'none', cursor: 'pointer', background: 'var(--accentSoft)', color: 'var(--accent)', fontWeight: 600, fontSize: '13px', padding: '8px 14px', borderRadius: '10px', fontFamily: "'Hanken Grotesk', system-ui, sans-serif", transition: 'filter 0.15s' },
+      spinStyle: { display: 'inline-block', animation: s.refreshing ? 'spin 0.7s linear infinite' : 'none' },
+      drawerOpen: !!s.drawer, drawerTitle: s.drawer === 'position' ? 'Add position' : 'Add transaction', drawerFields,
+      drawerPanel: { position: 'fixed', top: 0, right: 0, height: '100vh', width: '380px', maxWidth: '88vw', background: 'var(--card)', borderLeft: '1px solid var(--border)', boxShadow: '-14px 0 40px rgba(0,0,0,0.14)', padding: '28px', zIndex: 71, overflowY: 'auto', animation: 'drawerIn 0.28s cubic-bezier(0.2,0.7,0.3,1)' },
+      closeDrawer: () => this.setState({ drawer: null }), saveDrawer: () => this.saveDrawer(),
+      palettePanel: { width: '560px', maxWidth: '92vw', marginTop: '12vh', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '16px', boxShadow: '0 24px 70px rgba(0,0,0,0.28)', overflow: 'hidden', animation: 'popIn 0.18s cubic-bezier(0.2,0.7,0.3,1)' },
+      toast: s.toast, toastOpen: !!s.toast,
+      month: s.month, monthOpen: s.monthOpen, months, toggleMonth: () => this.setState((st) => ({ monthOpen: !st.monthOpen })),
+      monthBtn: { border: '1px solid var(--border)', borderRadius: '10px', padding: '8px 14px', cursor: 'pointer', background: 'transparent', color: 'var(--muted)', fontSize: '13px', fontFamily: "'Hanken Grotesk', system-ui, sans-serif", transition: 'background 0.15s' },
+      openAddPosition: () => this.setState({ drawer: 'position' }), openAddTxn: () => this.setState({ drawer: 'transaction' }),
+      execute: () => this.toast('Opening rebalancer…'), review: () => this.setState({ screen: 'transactions' }),
+      signout: () => this.toast('Signed out'),
+      themeVars: this.vars(s.theme),
+      markSrc: s.theme === 'dark' ? 'assets/face-gold.png' : 'assets/face-ink.png',
+      navMuted: {
+        display: 'flex', alignItems: 'center', gap: '10px',
+        padding: '8px 12px', borderRadius: '9px', fontSize: '13.5px', lineHeight: '1',
+        color: 'var(--faint)', cursor: 'default', fontWeight: 500,
+      },
+      dashDisp: disp('dashboard'), holdDisp: disp('holdings'),
+      spendDisp: disp('spending'), anaDisp: disp('analytics'),
+      budgetsDisp: disp('budgets'), subsDisp: disp('subscriptions'), goalsDisp: disp('goals'), txnsDisp: disp('transactions'),
+      navDash: this.navStyle('dashboard'), navHold: this.navStyle('holdings'),
+      navSpend: this.navStyle('spending'), navAna: this.navStyle('analytics'),
+      navBudgets: this.navStyle('budgets'), navSubs: this.navStyle('subscriptions'), navGoals: this.navStyle('goals'), navTxns: this.navStyle('transactions'),
+      lightBtn: this.themeBtn('light'), darkBtn: this.themeBtn('dark'),
+      goDash: () => this.setState({ screen: 'dashboard' }),
+      goHold: () => this.setState({ screen: 'holdings' }),
+      goSpend: () => this.setState({ screen: 'spending' }),
+      goAna: () => this.setState({ screen: 'analytics' }),
+      goBudgets: () => this.setState({ screen: 'budgets' }),
+      goSubs: () => this.setState({ screen: 'subscriptions' }),
+      goGoals: () => this.setState({ screen: 'goals' }),
+      goTxns: () => this.setState({ screen: 'transactions' }),
+      setLight: () => { try { localStorage.setItem('aureus-theme', 'light'); } catch (e) {} this.setState({ theme: 'light' }); },
+      setDark: () => { try { localStorage.setItem('aureus-theme', 'dark'); } catch (e) {} this.setState({ theme: 'dark' }); },
+    };
+  }
+}
+</script>
+</body>
+</html>

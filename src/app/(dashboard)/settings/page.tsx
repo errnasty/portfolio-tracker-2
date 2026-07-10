@@ -29,7 +29,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <PageShell screen="SETTINGS" statusRight={<span>base=<span className="text-foreground">{currency}</span></span>}>
+    <PageShell screen="Plan" title="Settings" statusRight={<span>base=<span className="text-foreground">{currency}</span></span>}>
     <div className="space-y-4">
       <Card className="max-w-md">
         <CardHeader>

@@ -1,15 +1,33 @@
 import { cn } from '@/lib/utils'
 
-// Console-style status strip: "PTRK ▸ SCREEN ········· right".
-export function StatusBar({ screen, right, className }: {
+// Aureus page header: mono section label + serif title, right-aligned actions.
+// `screen` is the uppercase section (e.g. "Overview", "Money", "Invest", "Plan").
+// `title` is the serif H1 (defaults to screen if not provided).
+export function StatusBar({ screen, title, right, className }: {
   screen: string
+  title?: string
   right?: React.ReactNode
   className?: string
 }) {
   return (
-    <div className={cn('flex items-center gap-6 border-b border-border bg-background px-5 py-2 text-[11px]', className)}>
-      <span className="font-bold text-primary">PTRK ▸ {screen}</span>
-      {right != null && <span className="ml-auto text-muted-foreground">{right}</span>}
+    <div className={cn('flex items-end justify-between gap-4 pb-7 pt-1 flex-wrap', className)}>
+      <div>
+        <div className="animate-slide-up font-mono text-[11px] uppercase tracking-[0.16em] text-faint">{screen}</div>
+        <h1
+          className="animate-slide-up mt-2 font-display text-[34px] font-medium leading-none text-foreground"
+          style={{ animationDelay: '60ms' }}
+        >
+          {title ?? screen}
+        </h1>
+      </div>
+      {right != null && (
+        <div
+          className="animate-slide-up flex items-center gap-4 text-[13px] text-muted-foreground"
+          style={{ animationDelay: '120ms' }}
+        >
+          {right}
+        </div>
+      )}
     </div>
   )
 }

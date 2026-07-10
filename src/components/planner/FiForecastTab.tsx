@@ -180,10 +180,10 @@ export function FiForecastTab({ netWorthBase, baseCurrency, enriched, statsForMo
                   formatter={(v) => formatCurrency(v as number, baseCurrency)}
                   contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
                 />
-                <ReferenceLine y={target} stroke="#ffd166" strokeDasharray="4 4" label={{ value: 'FI target', fontSize: 10, fill: '#ffd166' }} />
-                <Line type="monotone" dataKey="p95" stroke="#6aa9ff" strokeWidth={1} strokeDasharray="3 3" dot={false} name="95th pct" />
-                <Line type="monotone" dataKey="p50" stroke="#6aa9ff" strokeWidth={2} dot={false} name="Median" />
-                <Line type="monotone" dataKey="p5" stroke="#6aa9ff" strokeWidth={1} strokeDasharray="3 3" dot={false} name="5th pct" />
+                <ReferenceLine y={target} stroke="#C6A96A" strokeDasharray="4 4" label={{ value: 'FI target', fontSize: 10, fill: '#C6A96A' }} />
+                <Line type="monotone" dataKey="p95" stroke="#3f6fb0" strokeWidth={1} strokeDasharray="3 3" dot={false} name="95th pct" />
+                <Line type="monotone" dataKey="p50" stroke="#3f6fb0" strokeWidth={2} dot={false} name="Median" />
+                <Line type="monotone" dataKey="p5" stroke="#3f6fb0" strokeWidth={1} strokeDasharray="3 3" dot={false} name="5th pct" />
               </ComposedChart>
             </ResponsiveContainer>
           )}
@@ -242,7 +242,7 @@ function WhatIfCard({ label, years, deltaYears, inverse }: {
       <CardContent className="py-4">
         <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
         <div className="mt-2 flex items-baseline gap-2">
-          <span className={`text-2xl font-bold tabular-nums ${deltaYears === null ? '' : improved ? 'text-emerald-400' : 'text-red-400'}`}>
+          <span className={`text-2xl font-bold tabular-nums ${deltaYears === null ? '' : improved ? 'text-up' : 'text-down'}`}>
             {deltaYears === null ? '—' : `${deltaYears >= 0 ? '−' : '+'}${Math.abs(deltaYears).toFixed(1)}y`}
           </span>
           <span className="text-xs text-muted-foreground">

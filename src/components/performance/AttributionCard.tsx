@@ -104,22 +104,22 @@ export function AttributionCard({ enriched, histories, baseCurrency, period }: P
           <Stat
             label="Sum of contributions"
             value={formatPercent(totalContribution)}
-            valueColor={totalContribution >= 0 ? 'text-emerald-400' : 'text-red-400'}
+            valueColor={totalContribution >= 0 ? 'text-up' : 'text-down'}
           />
           <Stat
             label="Winners"
             value={`${winners.length} (${formatPercent(totalWinPct)})`}
-            valueColor="text-emerald-400"
+            valueColor="text-up"
           />
           <Stat
             label="Losers"
             value={`${losers.length} (${formatPercent(totalLossPct)})`}
-            valueColor="text-red-400"
+            valueColor="text-down"
           />
           <Stat
             label="Net dollar impact"
             value={formatCurrency(totalValue * (totalContribution / 100), baseCurrency)}
-            valueColor={totalContribution >= 0 ? 'text-emerald-400' : 'text-red-400'}
+            valueColor={totalContribution >= 0 ? 'text-up' : 'text-down'}
           />
         </div>
 
@@ -142,16 +142,16 @@ export function AttributionCard({ enriched, histories, baseCurrency, period }: P
                       {r.weight.toFixed(1)}% × {formatPercent(r.ret, 1)}
                     </span>
                     <span
-                      className={`font-semibold ${positive ? 'text-emerald-400' : 'text-red-400'}`}
+                      className={`font-semibold ${positive ? 'text-up' : 'text-down'}`}
                     >
                       {formatPercent(r.contribution, 2)}
                     </span>
                   </div>
                 </div>
-                <div className="relative h-1.5 rounded-full bg-muted overflow-hidden">
+                <div className="relative h-1.5 rounded-full bg-[var(--hair)] overflow-hidden">
                   <div className="absolute top-0 bottom-0 left-1/2 w-px bg-foreground/20" />
                   <div
-                    className={`absolute top-0 bottom-0 ${positive ? 'bg-emerald-500' : 'bg-red-500'}`}
+                    className={`absolute top-0 bottom-0 ${positive ? 'bg-up' : 'bg-down'}`}
                     style={{
                       left: positive ? '50%' : `${50 - widthPct}%`,
                       width: `${widthPct}%`,

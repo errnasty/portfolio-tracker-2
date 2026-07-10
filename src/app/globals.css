@@ -1,37 +1,102 @@
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Hanken+Grotesk:wght@400;500;600;700&family=Spectral:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ── "Console" theme ────────────────────────────────────────────────────────
-   Dense terminal/ops-console aesthetic. Dark-native: both :root and .dark map
-   to the same console palette so the look is consistent regardless of toggle.
-   Tokens mirror the Claude design ref:
-     bg #06070a · panel #0c0d10 · rule #1f2228 · text #ece8e1 · mute #6a6e78
-     accent(yellow) #ffd166 · up #6fcf97 · down #ff7a59 · cool #6aa9ff */
+/* ── Aureus theme ───────────────────────────────────────────────────────────
+   Two coherent themes sharing one layout. :root = Ledger (light),
+   .dark = Onyx (dark). Everything token-driven via CSS variables.
+   Light: warm cream bg, forest green accent, Newsreader serif display.
+   Dark: pure black bg, champagne gold accent, Spectral serif display. */
+
 @layer base {
-  :root, .dark {
-    --background: 225 25% 3%;
-    --foreground: 40 22% 90%;
-    --card: 228 14% 6%;
-    --card-foreground: 40 22% 90%;
-    --popover: 228 16% 5%;
-    --popover-foreground: 40 22% 90%;
-    --primary: 42 100% 70%;
-    --primary-foreground: 225 25% 4%;
-    --secondary: 225 14% 9%;
-    --secondary-foreground: 40 22% 90%;
-    --muted: 222 12% 12%;
-    --muted-foreground: 222 7% 55%;
-    --accent: 222 13% 13%;
-    --accent-foreground: 40 22% 92%;
-    --destructive: 12 100% 67%;
-    --destructive-foreground: 225 25% 4%;
-    --border: 220 13% 14%;
-    --input: 220 13% 14%;
-    --ring: 42 100% 70%;
-    --radius: 0.25rem;
+  :root {
+    --background: 42 25% 95%;        /* #F6F3EC */
+    --foreground: 40 10% 9%;          /* #1B1A16 */
+    --card: 0 0% 100%;                /* #FFFFFF */
+    --card-foreground: 40 10% 9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 40 10% 9%;
+    --primary: 155 36% 27%;           /* #2E5E4E forest green */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 40 12% 96%;          /* #FBFAF6 sidebar */
+    --secondary-foreground: 40 10% 9%;
+    --muted: 36 8% 41%;               /* #726C60 */
+    --muted-foreground: 36 8% 41%;
+    --accent: 155 36% 27%;            /* same as primary in light */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 18 57% 42%;        /* #B4552F */
+    --destructive-foreground: 0 0% 100%;
+    --border: 38 24% 86%;             /* #E7E1D5 */
+    --input: 38 24% 86%;
+    --ring: 155 36% 27%;
+    --radius: 1rem;                   /* 16px */
+
+    /* Aureus extended tokens (not in default tailwind config) */
+    --bg: #F6F3EC;
+    --sidebar: #FBFAF6;
+    --ink: #1B1A16;
+    --faint: #9A9384;
+    --hair: #EFEAE0;
+    --stripe: rgba(0,0,0,0.02);
+    --accent-soft: #EAF0EC;
+    --accent-text: #FFFFFF;
+    --up: #2E7D5B;
+    --up-soft: rgba(46,125,91,0.10);
+    --down: #B4552F;
+    --cool: #3C6E8F;
+    --warn: #C6923E;
+    --display: 'Newsreader', Georgia, serif;
+
+    /* HSL-component versions for Tailwind opacity modifiers */
+    --up-hsl: 155 47% 33%;
+    --down-hsl: 18 58% 44%;
+    --cool-hsl: 205 43% 40%;
+    --warn-hsl: 38 56% 51%;
+  }
+
+  .dark {
+    --background: 0 0% 0%;             /* pure black */
+    --foreground: 40 10% 89%;          /* #ECEAE3 */
+    --card: 0 0% 6%;                   /* #0F0F0F near-black */
+    --card-foreground: 40 10% 89%;
+    --popover: 0 0% 6%;
+    --popover-foreground: 40 10% 89%;
+    --primary: 38 50% 61%;             /* #C6A96A champagne gold */
+    --primary-foreground: 0 0% 0%;     /* black */
+    --secondary: 0 0% 3%;              /* #080808 sidebar */
+    --secondary-foreground: 40 10% 89%;
+    --muted: 0 0% 18%;                /* #2E2E2E */
+    --muted-foreground: 0 0% 58%;     /* #949494 */
+    --accent: 38 50% 61%;              /* gold */
+    --accent-foreground: 0 0% 0%;
+    --destructive: 14 67% 63%;         /* #E0785B */
+    --destructive-foreground: 0 0% 0%;
+    --border: 0 0% 15%;               /* #262626 */
+    --input: 0 0% 15%;
+    --ring: 38 50% 61%;
+
+    --bg: #000000;
+    --sidebar: #080808;
+    --ink: #ECEAE3;
+    --faint: #5E606A;
+    --hair: #1A1A1A;
+    --stripe: rgba(255,255,255,0.02);
+    --accent-soft: rgba(198,169,106,0.14);
+    --accent-text: #000000;
+    --up: #64C68C;
+    --up-soft: rgba(100,198,140,0.12);
+    --down: #E0785B;
+    --cool: #74A7D8;
+    --warn: #D6B15E;
+    --display: 'Spectral', Georgia, serif;
+
+    /* HSL-component versions for Tailwind opacity modifiers */
+    --up-hsl: 143 43% 60%;
+    --down-hsl: 14 67% 63%;
+    --cool-hsl: 210 53% 66%;
+    --warn-hsl: 44 56% 60%;
   }
 }
 
@@ -41,52 +106,125 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+    font-family: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
     font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
   }
-  /* Headings use Geist (sans) for a touch of contrast against the mono body. */
-  h1, h2, h3, .font-sans {
-    font-family: 'Geist', system-ui, -apple-system, sans-serif;
+  /* Large figures use the serif display font */
+  h1, h2, h3, .font-display {
+    font-family: var(--display);
+  }
+  /* Mono labels: uppercase tracking */
+  .font-mono, .font-mono-label {
+    font-family: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', monospace;
   }
 }
 
-/* ── Motion: transitions & micro-interactions ───────────────────────────── */
+/* ── Keyframes (defined at root so they are never purged) ─────────────────── */
+@keyframes sectionIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes popIn { from { opacity: 0; transform: translateY(-8px) scale(0.985); } to { opacity: 1; transform: none; } }
+@keyframes drawerIn { from { transform: translateX(100%); } to { transform: none; } }
+@keyframes toastIn { from { opacity: 0; transform: translate(-50%, 14px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+/* Landing page animations */
+@keyframes auRise { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes auGlow { 0%, 100% { transform: scale(1); opacity: 0.82; } 50% { transform: scale(1.09); opacity: 1; } }
+@keyframes auFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
+@keyframes auScan { from { transform: scale(1.06) translateY(2%); } to { transform: scale(1.06) translateY(-2%); } }
+@keyframes dc-stagger-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes dc-shimmer { 100% { transform: translateX(100%); } }
+@keyframes dc-vt-in { from { opacity: 0; transform: translateY(8px); } }
+@keyframes dc-vt-out { to { opacity: 0; transform: translateY(-6px); } }
+
+/* ── New Aureus animations ───────────────────────────────────────────────── */
+@keyframes scaleIn { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
+@keyframes slideUpFade { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes barGrow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes pulseGlow { 0%, 100% { box-shadow: 0 0 0 0 rgba(198,169,106,0); } 50% { box-shadow: 0 0 20px 2px rgba(198,169,106,0.15); } }
+@keyframes indicatorSlide { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes countPulse { 0% { transform: scale(1); } 50% { transform: scale(1.04); } 100% { transform: scale(1); } }
+@keyframes expandIn { from { opacity: 0; max-height: 0; } to { opacity: 1; max-height: 500px; } }
+@keyframes shimmerBar { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes navIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes coinSpin { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
+@keyframes progressGrow { from { width: 0%; } to { width: var(--progress-width, 100%); } }
+
+/* ── Motion: transitions & micro-interactions ─────────────────────────────── */
 @layer utilities {
-  @keyframes dc-fade-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-  @keyframes dc-fade-in { from { opacity: 0; } to { opacity: 1; } }
-  /* Route content entrance — keyed by pathname so it re-runs per navigation. */
-  .animate-fade-up { animation: dc-fade-up 0.22s ease-out both; }
-  .animate-fade-in { animation: dc-fade-in 0.2s ease-out both; }
-  /* Clickable panels/rows: subtle lift + accent border (transform/opacity only). */
-  .lift { transition: transform 0.15s ease-out, border-color 0.15s ease-out, background-color 0.15s ease-out; }
-  .lift:hover { transform: translateY(-1px); border-color: hsl(var(--primary) / 0.45); }
-  .lift:active { transform: translateY(0); }
-  /* Press feedback for tappable controls. */
-  .press { transition: transform 0.12s ease-out, opacity 0.12s ease-out, background-color 0.15s ease-out; }
+  .animate-section-in { animation: sectionIn 0.34s cubic-bezier(0.2, 0.7, 0.3, 1); }
+  .animate-fade-in { animation: fadeIn 0.2s ease-out both; }
+  .animate-fade-up { animation: sectionIn 0.22s ease-out both; }
+  .animate-pop-in { animation: popIn 0.18s cubic-bezier(0.2, 0.7, 0.3, 1); }
+  .animate-drawer-in { animation: drawerIn 0.28s cubic-bezier(0.2, 0.7, 0.3, 1); }
+  .animate-toast-in { animation: toastIn 0.24s cubic-bezier(0.2, 0.7, 0.3, 1); }
+  .animate-spin-custom { animation: spin 0.7s linear infinite; }
+  .animate-au-rise { animation: auRise 0.85s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+  .animate-au-glow { animation: auGlow 6s ease-in-out infinite; }
+  .animate-au-float { animation: auFloat 7s ease-in-out infinite; }
+  .animate-au-scan { animation: auScan 16s ease-in-out infinite alternate; }
+
+  /* New Aureus animation utilities */
+  .animate-scale-in { animation: scaleIn 0.3s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+  .animate-slide-up { animation: slideUpFade 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+  .animate-bar-grow { animation: barGrow 0.6s cubic-bezier(0.2, 0.7, 0.3, 1) both; transform-origin: left; }
+  .animate-pulse-glow { animation: pulseGlow 3s ease-in-out infinite; }
+  .animate-count-pulse { animation: countPulse 0.4s ease-out; }
+  .animate-expand-in { animation: expandIn 0.3s ease-out both; overflow: hidden; }
+  .animate-nav-in { animation: navIn 0.25s ease-out both; }
+  .animate-coin-spin { animation: coinSpin 0.8s ease-in-out; }
+  .animate-progress-grow { animation: progressGrow 0.8s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+
+  /* Shimmer bar for loading states */
+  .shimmer-bar {
+    background: linear-gradient(90deg, transparent 0%, hsl(var(--foreground) / 0.04) 50%, transparent 100%);
+    background-size: 200% 100%;
+    animation: shimmerBar 1.5s infinite linear;
+  }
+
+  /* Clickable panels/rows: subtle lift + accent border */
+  .lift { transition: transform 0.15s ease-out, border-color 0.15s ease-out, background-color 0.15s ease-out, box-shadow 0.3s ease; }
+  .lift:hover { transform: translateY(-2px); box-shadow: 0 18px 40px rgba(80,70,45,0.10); }
+
+  /* Press feedback */
+  .press { transition: transform 0.12s ease-out, opacity 0.12s ease-out, background-color 0.15s ease-out, filter 0.15s ease; }
   .press:active { transform: scale(0.97); }
-  /* Hide scrollbar chrome while keeping scroll (used by the nav rail). */
+  .press:hover { filter: brightness(1.08); }
+
+  /* Hide scrollbar */
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   .no-scrollbar::-webkit-scrollbar { display: none; }
-  /* Stagger: direct children fade-up with an incremental delay (self-indexing). */
-  @keyframes dc-stagger-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-  .stagger > * { animation: dc-stagger-in 0.28s ease-out both; }
-  .stagger > *:nth-child(2) { animation-delay: 45ms; }
-  .stagger > *:nth-child(3) { animation-delay: 90ms; }
-  .stagger > *:nth-child(4) { animation-delay: 135ms; }
-  .stagger > *:nth-child(5) { animation-delay: 180ms; }
-  .stagger > *:nth-child(6) { animation-delay: 225ms; }
-  .stagger > *:nth-child(n+7) { animation-delay: 270ms; }
-  /* Skeleton shimmer sweep. */
-  @keyframes dc-shimmer { 100% { transform: translateX(100%); } }
+
+  /* Stagger: direct children fade-up with incremental delay */
+  .stagger > * { animation: dc-stagger-in 0.35s cubic-bezier(0.2,0.7,0.2,1) both; }
+  .stagger > *:nth-child(2) { animation-delay: 60ms; }
+  .stagger > *:nth-child(3) { animation-delay: 120ms; }
+  .stagger > *:nth-child(4) { animation-delay: 180ms; }
+  .stagger > *:nth-child(5) { animation-delay: 240ms; }
+  .stagger > *:nth-child(6) { animation-delay: 300ms; }
+  .stagger > *:nth-child(n+7) { animation-delay: 360ms; }
+
+  /* Skeleton shimmer */
   .shimmer { position: relative; overflow: hidden; }
   .shimmer::after {
     content: ''; position: absolute; inset: 0; transform: translateX(-100%);
     background: linear-gradient(90deg, transparent, hsl(var(--foreground) / 0.06), transparent);
     animation: dc-shimmer 1.4s infinite;
   }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: rgba(128,128,128,0.3); border-radius: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  /* Selection */
+  ::selection { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+
+  /* Stripe rows */
+  .stripe-odd > *:nth-child(odd) { background: var(--stripe); }
 }
 
-/* Honor reduced-motion: drop animation + transforms, keep instant. */
+/* Honor reduced-motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;
@@ -94,60 +232,31 @@
     transition-duration: 0.001ms !important;
   }
   .lift:hover, .press:active { transform: none !important; }
-  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }
 
 /* ── View Transitions ─────────────────────────────────────────────────────── */
-@keyframes dc-vt-in { from { opacity: 0; transform: translateY(8px); } }
-@keyframes dc-vt-out { to { opacity: 0; transform: translateY(-6px); } }
 ::view-transition-old(root) { animation: dc-vt-out 0.18s ease-in both; }
 ::view-transition-new(root) { animation: dc-vt-in 0.24s ease-out both; }
-/* Named shared elements (rail, hero numbers, status bar) morph automatically
-   via view-transition-name set inline on those elements. */
 
-/* ── Responsive table utilities ─────────────────────────────────────────── */
-/* Wrap a horizontally-scrolling table; the right edge gets a fade gradient
-   so users see there's more content when the table overflows. */
-.table-scroll {
-  position: relative;
-}
-.table-scroll > .table-scroll-inner {
-  overflow-x: auto;
-  scrollbar-width: thin;
-  -webkit-overflow-scrolling: touch;
-}
+/* ── Responsive table utilities ───────────────────────────────────────────── */
+.table-scroll { position: relative; }
+.table-scroll > .table-scroll-inner { overflow-x: auto; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
 .table-scroll::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 24px;
+  content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 24px;
   background: linear-gradient(to left, hsl(var(--card)), transparent);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 150ms;
+  pointer-events: none; opacity: 0; transition: opacity 150ms;
 }
-@media (max-width: 767px) {
-  .table-scroll.has-overflow::after {
-    opacity: 1;
-  }
-}
+@media (max-width: 767px) { .table-scroll.has-overflow::after { opacity: 1; } }
 
-/* Sticky first column — opt in by adding `sticky-first` to the table. */
-.sticky-first thead th:first-child,
-.sticky-first tbody td:first-child {
-  position: sticky;
-  left: 0;
-  background: hsl(var(--card));
-  z-index: 1;
+.sticky-first thead th:first-child, .sticky-first tbody td:first-child {
+  position: sticky; left: 0; background: hsl(var(--card)); z-index: 1;
 }
 .sticky-first.has-overflow thead th:first-child,
 .sticky-first.has-overflow tbody td:first-child {
   box-shadow: 4px 0 6px -4px rgba(0, 0, 0, 0.4);
 }
 
-/* Force light theme for printing — much better on paper. */
+/* Force light theme for printing */
 @media print {
   html, html.dark {
     --background: 0 0% 100%;

@@ -147,7 +147,7 @@ export default function DividendsPage() {
 
   if (!portfolioLoading && enriched.length === 0) {
     return (
-      <PageShell screen="DIVIDENDS">
+      <PageShell screen="Invest" title="Dividends">
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             Add holdings to see dividend tracking.
@@ -158,7 +158,7 @@ export default function DividendsPage() {
   }
 
   return (
-    <PageShell screen="DIVIDENDS" footerHints={<span><span className="text-primary">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g h</span> home</span>}>
+    <PageShell screen="Invest" title="Dividends" footerHints={<span><span className="text-[var(--accent)]">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g h</span> home</span>}>
     <div className="space-y-4">
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <SummaryCard
@@ -203,7 +203,7 @@ export default function DividendsPage() {
                   formatter={(v) => formatCurrency(v as number, base)}
                   contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
                 />
-                <Bar dataKey="amount" fill="#22c55e" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="amount" fill="#2f8f5b" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -255,14 +255,14 @@ export default function DividendsPage() {
                       <td className="px-4 py-2.5 text-right tabular-nums">
                         {h.ttmPerShare > 0 ? formatCurrency(h.ttmPerShare, h.currency) : '—'}
                       </td>
-                      <td className="px-4 py-2.5 text-right tabular-nums text-emerald-400">
+                      <td className="px-4 py-2.5 text-right tabular-nums text-up">
                         {h.yieldPct > 0 ? formatPercent(h.yieldPct, 2) : '—'}
                       </td>
                       <td className="px-4 py-2.5 text-right tabular-nums">
                         {h.annualIncomeBase > 0 ? formatCurrency(h.annualIncomeBase, base) : '—'}
                       </td>
                       {base === 'SGD' && (
-                        <td className="px-4 py-2.5 text-right tabular-nums text-red-400">
+                        <td className="px-4 py-2.5 text-right tabular-nums text-down">
                           {h.wht > 0 ? `−${formatCurrency(h.wht, base)} (${(h.dwtRate * 100).toFixed(0)}%)` : '—'}
                         </td>
                       )}
@@ -325,13 +325,13 @@ function TaxSummaryCard({ perHolding, base }: { perHolding: PerHoldingTax[]; bas
       <CardContent className="space-y-4">
         <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
           <Stat label="Gross 12m" value={formatCurrency(totalGross, base)} />
-          <Stat label="Estimated WHT" value={`−${formatCurrency(totalWht, base)}`} valueColor="text-red-400" />
-          <Stat label="Net to you" value={formatCurrency(totalNet, base)} valueColor="text-emerald-400" />
+          <Stat label="Estimated WHT" value={`−${formatCurrency(totalWht, base)}`} valueColor="text-down" />
+          <Stat label="Net to you" value={formatCurrency(totalNet, base)} valueColor="text-up" />
           <Stat label="Effective rate" value={`${effectiveRate.toFixed(1)}%`} />
         </div>
 
         {hypotheticalSavings > 0 && (
-          <div className="rounded-md bg-emerald-500/10 px-3 py-2 text-sm text-emerald-400">
+          <div className="rounded-md bg-up/10 px-3 py-2 text-sm text-up">
             <strong>Saving opportunity:</strong> If all your equity were held via Irish-domiciled UCITS
             (15% WHT instead of 30% on US holdings), your annual WHT would be approximately{' '}
             <strong>{formatCurrency(hypotheticalIrishWht, base)}</strong> — saving roughly{' '}
