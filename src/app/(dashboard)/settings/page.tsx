@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
-import { GmailCard } from '@/components/spending/GmailCard'
+import { ForwardAddressCard } from '@/components/spending/ForwardAddressCard'
 import { CategoryRulesCard } from '@/components/spending/CategoryRulesCard'
 import type { Currency } from '@/types'
 
@@ -58,7 +58,7 @@ export default function SettingsPage() {
 
       <CategoryRulesCard />
 
-      <GmailCard />
+      <ForwardAddressCard />
     </div>
     </PageShell>
   )

@@ -243,38 +243,25 @@ export function SpendingProvider({ children }: { children: React.ReactNode }) {
     init()
   }, [refreshCategories, refreshBankTransactions, refreshCategoryRules, refreshSubscriptionStatuses, refreshBudgets, refreshPayeeAliases])
 
-  // Auto-sync Gmail bank alerts once per session (if connected & not synced
-  // recently) so spending stays current without a manual "Sync now".
+  // Auto-refresh bank transactions once per session so any transactions
+  // received via the inbound email webhook appear without a manual refresh.
+  // The webhook inserts rows server-side; this just pulls them into the UI.
   useEffect(() => {
     if (loading) return
     let cancelled = false
     ;(async () => {
-      try { if (window.sessionStorage.getItem('gmail_autosync_done')) return } catch { return }
+      try { if (window.sessionStorage.getItem('inbound_autorefresh_done')) return } catch { return }
+      try { window.sessionStorage.setItem('inbound_autorefresh_done', '1') } catch { /* ignore */ }
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-      const { data: tok } = await supabase
-        .from('google_tokens').select('last_synced').eq('user_id', user.id).maybeSingle()
-      if (!tok) return // Gmail not connected
-      try { window.sessionStorage.setItem('gmail_autosync_done', '1') } catch { /* ignore */ }
-      // Throttle: skip if synced within the last 6h.
-      if (tok.last_synced && Date.now() - new Date(tok.last_synced).getTime() < 6 * 3600 * 1000) return
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
-      try {
-        const res = await fetch('/api/bank/gmail-sync', {
-          method: 'POST', headers: { Authorization: `Bearer ${session.access_token}` },
-        })
-        if (!res.ok || cancelled) return
-        const j = await res.json().catch(() => null)
-        if (j?.inserted > 0) {
-          await refreshBankTransactions()
-          await refreshAccounts()
-          toast.success(`Synced ${j.inserted} new transaction${j.inserted === 1 ? '' : 's'} from Gmail`)
-        }
-      } catch { /* silent — manual Sync still available */ }
+      // Check if user has an inbound address
+      const { data: addr } = await supabase
+        .from('inbound_addresses').select('address').eq('user_id', user.id).maybeSingle()
+      if (!addr) return // No inbound address provisioned yet
+      await refreshBankTransactions()
     })()
     return () => { cancelled = true }
-  }, [loading, refreshBankTransactions, refreshAccounts])
+  }, [loading, refreshBankTransactions])
 
   const addCategory: SpendingContextValue['addCategory'] = async ({ name, kind = 'expense', color = null, icon = null }) => {
     const { data: { user } } = await supabase.auth.getUser()

@@ -318,3 +318,13 @@ export const DEFAULT_BENCHMARKS: BenchmarkConfig[] = [
   { ticker: 'VEA', name: 'Developed Markets ex-US' },
   { ticker: 'EWS', name: 'Singapore (STI proxy)' },
 ]
+
+// Inbound forwarding address for bank email sync.
+export interface InboundAddress {
+  user_id: string
+  address: string              // e.g. "abc123@inbound.aureus.app"
+  address_local: string        // e.g. "abc123"
+  last_synced: string | null
+  total_synced: number
+  created_at: string
+}

@@ -373,6 +373,8 @@ create policy "Users manage own networth snapshots"
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+-- DEPRECATED: google_tokens is replaced by inbound_addresses (email forwarding).
+-- Kept for migration reference; new deployments should use inbound_addresses instead.
 -- Google OAuth tokens for Gmail alert sync (Phase B). Stores the long-lived
 -- refresh token so the server can mint Gmail access tokens to read DBS/POSB
 -- transaction-alert emails. RLS-own: only the user can read/write their row.
@@ -390,6 +392,28 @@ alter table google_tokens enable row level security;
 drop policy if exists "Users manage own google tokens" on google_tokens;
 create policy "Users manage own google tokens"
   on google_tokens for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+-- Inbound forwarding addresses for bank email sync. Each user gets a unique
+-- address (e.g. abc123@inbound.aureus.app) to forward/CC bank notification
+-- emails to. The /api/inbound/email webhook receives the raw email, parses it
+-- with parseDbsAlert(), and inserts a bank_transactions row.
+-- Replaces the old Google OAuth + Gmail API approach (google_tokens table).
+create table if not exists inbound_addresses (
+  user_id       uuid primary key references auth.users,
+  address       text not null unique,          -- e.g. "abc123@inbound.aureus.app"
+  address_local text not null,                  -- e.g. "abc123" (before the @)
+  last_synced   timestamptz,                    -- last time /api/inbound/email ran
+  total_synced  integer not null default 0,     -- lifetime count of imported txns
+  created_at    timestamptz not null default now()
+);
+
+alter table inbound_addresses enable row level security;
+
+drop policy if exists "Users manage own inbound address" on inbound_addresses;
+create policy "Users manage own inbound address"
+  on inbound_addresses for all
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
