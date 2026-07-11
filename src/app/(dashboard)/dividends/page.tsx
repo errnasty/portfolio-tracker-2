@@ -158,7 +158,7 @@ export default function DividendsPage() {
   }
 
   return (
-    <PageShell screen="Invest" title="Dividends" footerHints={<span><span className="text-[var(--accent)]">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g h</span> home</span>}>
+    <PageShell screen="Invest" title="Dividends" footerHints={<span><span className="text-accent">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g h</span> home</span>}>
     <div className="space-y-4">
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <SummaryCard

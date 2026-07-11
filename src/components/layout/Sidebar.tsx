@@ -36,7 +36,7 @@ function NavItems({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
                   className={cn(
                     'animate-nav-in flex items-center gap-2.5 rounded-[9px] px-3 py-2 text-[13.5px] font-medium leading-none transition-all duration-200',
                     active
-                      ? 'bg-[var(--accent-soft)] text-[var(--accent)] font-semibold'
+                      ? 'bg-[var(--accent-soft)] text-accent font-semibold'
                       : 'text-[var(--ink)] hover:bg-[var(--accent-soft)] hover:translate-x-1',
                   )}
                   style={{ animationDelay: `${idx * 30}ms` }}
@@ -163,7 +163,7 @@ export function Sidebar() {
         <div className="mt-auto border-t border-border pt-3.5">
           <ThemeToggle />
           <div className="mt-3 flex items-center gap-2.5 px-2.5 py-1 text-[13px] text-muted-foreground">
-            <div className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-[var(--accent-soft)] text-[12px] font-semibold text-[var(--accent)]">{userInitials}</div>
+            <div className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-[var(--accent-soft)] text-[12px] font-semibold text-accent">{userInitials}</div>
             <span>{userName}</span>
             <button onClick={handleSignOut} className="ml-auto text-xs text-faint transition-colors hover:text-foreground">
               Sign out

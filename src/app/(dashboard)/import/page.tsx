@@ -113,7 +113,7 @@ export default function ImportPage() {
   }, [allRows, importableRows])
 
   return (
-    <PageShell screen="Money" title="Import" footerHints={<span><span className="text-[var(--accent)]">▸</span> <span className="text-foreground">g s</span> spending · <span className="text-foreground">g o</span> holdings</span>}>
+    <PageShell screen="Money" title="Import" footerHints={<span><span className="text-accent">▸</span> <span className="text-foreground">g s</span> spending · <span className="text-foreground">g o</span> holdings</span>}>
     <div className="space-y-4">
       <Tabs value={format} onValueChange={(v) => { setFormat(v as Format); setParseResult(null); setGenericRows(null) }}>
         <TabsList>

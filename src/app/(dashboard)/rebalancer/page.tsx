@@ -89,7 +89,7 @@ export default function RebalancerPage() {
   }
 
   return (
-    <PageShell screen="Plan" title="Rebalancer" footerHints={<span><span className="text-[var(--accent)]">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g p</span> planner</span>}>
+    <PageShell screen="Plan" title="Rebalancer" footerHints={<span><span className="text-accent">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g p</span> planner</span>}>
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-end">
         {/* Mode toggle */}
@@ -158,7 +158,7 @@ export default function RebalancerPage() {
                         </div>
                         <div className="mt-1 h-1.5 w-full rounded-full bg-[var(--hair)]">
                           <div
-                            className="h-1.5 rounded-full bg-[var(--accent)] transition-all"
+                            className="h-1.5 rounded-full bg-accent transition-all"
                             style={{ width: `${Math.min(t.target_pct, 100)}%` }}
                           />
                         </div>

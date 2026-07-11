@@ -27,7 +27,7 @@ export default function SubscriptionsPage() {
     <PageShell
       screen="Money" title="Subscriptions"
       statusRight={<span>{subscriptions.length} recurring · <span className="text-warn">{formatCurrency(s.potentialMonthly * 12, base)}/yr</span> if cut</span>}
-      footerHints={<span><span className="text-[var(--accent)]">▸</span> <span className="text-foreground">g s</span> spending · <span className="text-foreground">g b</span> budgets</span>}
+      footerHints={<span><span className="text-accent">▸</span> <span className="text-foreground">g s</span> spending · <span className="text-foreground">g b</span> budgets</span>}
     >
     <div className="space-y-4">
       {/* Savings summary */}

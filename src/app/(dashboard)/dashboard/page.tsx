@@ -168,7 +168,7 @@ export default function DashboardPage() {
   const footerHints = (
     <>
       <span>
-        <span className="text-[var(--accent)]">▸</span>{' '}
+        <span className="text-accent">▸</span>{' '}
         <span className="text-foreground">g s</span> spending ·{' '}
         <span className="text-foreground">g o</span> holdings ·{' '}
         <span className="text-foreground">g b</span> budgets ·{' '}
@@ -249,9 +249,7 @@ export default function DashboardPage() {
                   <div className={`text-[10px] font-bold tracking-[0.14em] ${sevText(a.sev)}`}>{a.sev === 'high' ? '! ' : '~ '}{a.tag}</div>
                   <div className="font-sans mt-2 text-[15px] leading-snug text-foreground">{a.title}</div>
                   <div className="mt-1 text-xs leading-relaxed text-muted-foreground">{a.sub}</div>
-                  <Link href={a.href}>
-                    <button className="press mt-3 rounded-sm bg-[var(--accent)] px-3 py-1.5 text-[11px] font-bold text-[var(--accent-text)] hover:bg-[var(--accent)]/90">{a.cta} →</button>
-                  </Link>
+                  <Link href={a.href} className="press mt-3 inline-block rounded-sm bg-accent px-3 py-1.5 text-[11px] font-bold text-[var(--accent-text)] hover:bg-accent/90">{a.cta} →</Link>
                 </div>
               ))}
             </div>
@@ -352,7 +350,7 @@ export default function DashboardPage() {
                 {allocHoldings.map((h) => (
                   <div key={h.id}>
                     <div className="flex justify-between text-[11px]"><span>{h.ticker}</span><span className="tabular-nums text-muted-foreground">{h.allocationPct.toFixed(1)}%</span></div>
-                    <div className="mt-1 h-[5px] bg-[var(--hair)]"><div className="h-full bg-[var(--accent)]" style={{ transition: "width 0.6s cubic-bezier(0.2,0.7,0.3,1)", width: `${h.allocationPct}%` }} /></div>
+                    <div className="mt-1 h-[5px] bg-[var(--hair)]"><div className="h-full bg-accent" style={{ transition: "width 0.6s cubic-bezier(0.2,0.7,0.3,1)", width: `${h.allocationPct}%` }} /></div>
                   </div>
                 ))}
                 {totalCashBase > 0 && invested > 0 && (

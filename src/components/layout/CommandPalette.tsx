@@ -85,7 +85,7 @@ export function CommandPalette({ open, onOpenChange }: {
                 className={cn(
                   'animate-slide-up flex w-full items-center gap-3 rounded-[9px] px-3 py-2.5 text-left text-[14px] transition-colors',
                   idx === active
-                    ? 'bg-[var(--accent-soft)] font-semibold text-[var(--accent)]'
+                    ? 'bg-[var(--accent-soft)] font-semibold text-accent'
                     : 'text-foreground',
                 )}
               >

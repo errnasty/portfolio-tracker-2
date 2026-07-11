@@ -62,7 +62,7 @@ export function SheetButton({ variant, onClick, children }: {
       className={cn(
         'flex-1 rounded-[10px] py-2.5 text-[13.5px] font-semibold transition-all press',
         variant === 'primary'
-          ? 'bg-[var(--accent)] text-[var(--accent-text)] hover:brightness-1.08'
+          ? 'bg-accent text-[var(--accent-text)] hover:brightness-1.08'
           : 'border border-border bg-transparent text-foreground hover:bg-[var(--hair)]',
       )}
     >

@@ -137,7 +137,7 @@ export default function TransactionsPage() {
           <button onClick={openAdd} className="press flex items-center gap-1 hover:text-foreground"><Plus className="h-3.5 w-3.5" /> add</button>
         </span>
       )}
-      footerHints={<span><span className="text-[var(--accent)]">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g s</span> spending</span>}
+      footerHints={<span><span className="text-accent">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g s</span> spending</span>}
     >
     <div className="space-y-4">
       {/* Filters */}

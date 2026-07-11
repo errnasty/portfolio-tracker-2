@@ -119,7 +119,7 @@ export default function SignalsPage() {
           </button>
         </span>
       )}
-      footerHints={<span><span className="text-[var(--accent)]">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g h</span> home</span>}
+      footerHints={<span><span className="text-accent">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g h</span> home</span>}
     >
     <div className="space-y-4">
       {/* Counts strip */}

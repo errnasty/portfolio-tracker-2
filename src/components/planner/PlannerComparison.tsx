@@ -48,7 +48,7 @@ export function ComparisonBars({ title, description, rows, baseCurrency }: BarsP
             <span className="h-2 w-3 rounded-sm bg-muted-foreground/60" /> Current
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="h-2 w-3 rounded-sm bg-[var(--accent)]" /> Planned
+            <span className="h-2 w-3 rounded-sm bg-accent" /> Planned
           </span>
         </div>
       </CardHeader>
@@ -91,7 +91,7 @@ function Bar({
   baseCurrency: Currency
 }) {
   const widthPct = maxPct > 0 ? (pct / maxPct) * 100 : 0
-  const fill = variant === 'planned' ? 'bg-[var(--accent)]' : 'bg-muted-foreground/40'
+  const fill = variant === 'planned' ? 'bg-accent' : 'bg-muted-foreground/40'
   return (
     <div className="flex items-center gap-2">
       <div className="h-2 w-full rounded-full bg-muted">

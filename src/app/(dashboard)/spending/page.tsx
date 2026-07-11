@@ -152,7 +152,7 @@ export default function SpendingPage() {
 
   const footerHints = (
     <>
-      <span><span className="text-[var(--accent)]">▸</span> <span className="text-foreground">g h</span> home · <span className="text-foreground">g b</span> budgets · <span className="text-foreground">g o</span> holdings</span>
+      <span><span className="text-accent">▸</span> <span className="text-foreground">g h</span> home · <span className="text-foreground">g b</span> budgets · <span className="text-foreground">g o</span> holdings</span>
     </>
   )
 

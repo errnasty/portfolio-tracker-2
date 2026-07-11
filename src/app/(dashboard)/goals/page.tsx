@@ -94,7 +94,7 @@ export default function GoalsPage() {
     <PageShell
       screen="Plan" title="Goals"
       statusRight={<button onClick={openAdd} className="press flex items-center gap-1 hover:text-foreground"><Plus className="h-3.5 w-3.5" /> add goal</button>}
-      footerHints={<span><span className="text-[var(--accent)]">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g p</span> planner</span>}
+      footerHints={<span><span className="text-accent">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g p</span> planner</span>}
     >
     <div className="space-y-4">
       {loading ? (
@@ -271,7 +271,7 @@ function GoalCard({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <CardTitle className="text-base flex items-center gap-2">
-              <Target className="h-4 w-4 text-[var(--accent)]" /> {goal.name}
+              <Target className="h-4 w-4 text-accent" /> {goal.name}
             </CardTitle>
             <CardDescription>
               {formatCurrency(goal.target_amount, base)} by {goal.target_date}

@@ -226,7 +226,7 @@ export default function PlannerPage() {
 
   const footerHints = (
     <>
-      <span><span className="text-[var(--accent)]">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g r</span> rebalancer · <span className="text-foreground">g h</span> home</span>
+      <span><span className="text-accent">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g r</span> rebalancer · <span className="text-foreground">g h</span> home</span>
     </>
   )
 

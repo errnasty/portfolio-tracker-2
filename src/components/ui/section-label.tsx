@@ -12,7 +12,7 @@ export function SectionLabel({
   href?: string
   className?: string
 }) {
-  const toneClass = tone === 'cool' ? 'text-cool' : tone === 'mute' ? 'text-faint' : 'text-[var(--accent)]'
+  const toneClass = tone === 'cool' ? 'text-cool' : tone === 'mute' ? 'text-faint' : 'text-accent'
   const body = (
     <>
       <span className={cn('font-mono text-[11px] font-medium uppercase tracking-[0.14em]', toneClass)}>

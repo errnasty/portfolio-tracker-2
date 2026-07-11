@@ -58,7 +58,7 @@ export default function BudgetsPage() {
     <PageShell
       screen="Money" title="Budgets"
       statusRight={<span>{month} · {expenseCats.length} categories</span>}
-      footerHints={<span><span className="text-[var(--accent)]">▸</span> <span className="text-foreground">g s</span> spending · <span className="text-foreground">g h</span> home</span>}
+      footerHints={<span><span className="text-accent">▸</span> <span className="text-foreground">g s</span> spending · <span className="text-foreground">g h</span> home</span>}
     >
     <div className="space-y-4">
       <div className="overflow-hidden rounded-lg border border-border bg-card">

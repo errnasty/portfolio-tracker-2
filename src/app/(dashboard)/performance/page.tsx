@@ -132,7 +132,7 @@ export default function PerformancePage() {
           <RefreshCw className="h-3.5 w-3.5" /> refresh
         </button>
       )}
-      footerHints={<span><span className="text-[var(--accent)]">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g h</span> home</span>}
+      footerHints={<span><span className="text-accent">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g h</span> home</span>}
     >
     <div className="space-y-4">
       {/* Controls */}
@@ -145,7 +145,7 @@ export default function PerformancePage() {
               onClick={() => setPeriod(p.value)}
               className={`px-3 py-1.5 text-sm transition-colors ${
                 period === p.value
-                  ? 'bg-[var(--accent)] text-[var(--accent-text)]'
+                  ? 'bg-accent text-[var(--accent-text)]'
                   : 'text-muted-foreground hover:bg-accent'
               }`}
             >
@@ -162,7 +162,7 @@ export default function PerformancePage() {
               onClick={() => toggleBenchmark(b.ticker)}
               className={`rounded-full border px-3 py-1 text-xs transition-colors ${
                 activeBenchmarks.includes(b.ticker)
-                  ? 'border-primary bg-[var(--accent)]/10 text-[var(--accent)]'
+                  ? 'border-primary bg-accent/10 text-accent'
                   : 'border-border text-muted-foreground hover:border-foreground'
               }`}
             >
