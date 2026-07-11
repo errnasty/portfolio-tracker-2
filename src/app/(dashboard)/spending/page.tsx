@@ -28,7 +28,9 @@ function thisMonth() {
 }
 function addMonth(ym: string, delta: number): string {
   const [y, m] = ym.split('-').map(Number)
-  return new Date(y, m - 1 + delta, 1).toISOString().slice(0, 7)
+  // Build in UTC: a local-midnight Date read back via toISOString() shifts to the
+  // previous month for any UTC+ timezone (e.g. Singapore), corrupting the trend.
+  return new Date(Date.UTC(y, m - 1 + delta, 1)).toISOString().slice(0, 7)
 }
 
 export default function SpendingPage() {

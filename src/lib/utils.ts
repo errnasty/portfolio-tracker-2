@@ -7,6 +7,8 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatCurrency(value: number, currency: Currency | string, compact = false): string {
+  // Guard against NaN/Infinity (e.g. a zero-denominator ratio) rendering as "$NaN".
+  if (!Number.isFinite(value)) value = 0
   const opts: Intl.NumberFormatOptions = {
     style: 'currency',
     currency,
@@ -24,6 +26,7 @@ export function formatCurrency(value: number, currency: Currency | string, compa
 }
 
 export function formatPercent(value: number, digits = 2): string {
+  if (!Number.isFinite(value)) return '—'
   return `${value >= 0 ? '+' : ''}${value.toFixed(digits)}%`
 }
 

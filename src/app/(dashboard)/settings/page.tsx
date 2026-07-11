@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { usePortfolio } from '@/context/PortfolioContext'
 import { PageShell } from '@/components/ui/page-shell'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -21,6 +21,12 @@ export default function SettingsPage() {
   const { settings, updateSettings } = usePortfolio()
   const [currency, setCurrency] = useState<Currency>((settings?.base_currency as Currency) ?? 'USD')
   const [saved, setSaved] = useState(false)
+
+  // settings loads async; sync the selector once it arrives so a saved
+  // non-USD base currency isn't shown as USD on first paint.
+  useEffect(() => {
+    if (settings?.base_currency) setCurrency(settings.base_currency as Currency)
+  }, [settings?.base_currency])
 
   const handleSave = async () => {
     await updateSettings({ base_currency: currency })
