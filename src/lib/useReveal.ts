@@ -5,8 +5,9 @@ import { useEffect } from 'react'
 // IntersectionObserver-based scroll reveal. Add `data-reveal` to any element
 // and it will fade+rise into view when scrolled to. Optional `data-reveal-delay`
 // sets a per-element delay in ms. Used by the landing page and dashboard panels.
-export function useReveal() {
+export function useReveal(enabled: boolean = true) {
   useEffect(() => {
+    if (!enabled) return
     const els = document.querySelectorAll('[data-reveal]')
     if (!els.length) return
 
@@ -33,5 +34,5 @@ export function useReveal() {
 
     els.forEach((el) => io.observe(el))
     return () => io.disconnect()
-  }, [])
+  }, [enabled])
 }

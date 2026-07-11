@@ -155,19 +155,6 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="my-6 flex items-center gap-3.5 text-[12px] text-faint">
-            <span className="h-px flex-1 bg-border" />or<span className="h-px flex-1 bg-border" />
-          </div>
-
-          <div className="flex flex-col gap-3">
-            <button className="flex w-full items-center justify-center gap-2.5 rounded-[12px] border border-border bg-card py-3 text-[14px] font-medium text-foreground transition-all press">
-              <span className="font-mono text-[#93702C]">G</span> Continue with Google
-            </button>
-            <button className="flex w-full items-center justify-center gap-2.5 rounded-[12px] border border-border bg-card py-3 text-[14px] font-medium text-foreground transition-all press">
-              <span className="text-[#93702C]">◍</span> Continue with Apple
-            </button>
-          </div>
-
           <p className="mt-6 text-[12px] leading-relaxed text-faint">
             By continuing you agree to Aureus&apos;s{' '}
             <a href="#" className="text-muted-foreground underline">Terms</a> and{' '}

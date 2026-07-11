@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
+import { useTheme } from 'next-themes'
 import { LogOut, Menu, X, Search } from 'lucide-react'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
@@ -89,19 +90,16 @@ export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [theme, setThemeState] = useState<string | undefined>(undefined)
+  const { resolvedTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
   const [userInitials, setUserInitials] = useState('··')
   const [userName, setUserName] = useState('Loading…')
 
-  useEffect(() => {
-    // Read theme for logo swap
-    const stored = localStorage.getItem('theme')
-    setThemeState(stored || 'light')
-    const interval = setInterval(() => {
-      setThemeState(localStorage.getItem('theme') || 'light')
-    }, 200)
-    return () => clearInterval(interval)
-  }, [])
+  useEffect(() => setMounted(true), [])
+
+  // Actual applied theme (resolves system preference). Undefined until mounted
+  // so the logo art doesn't cause a hydration mismatch.
+  const theme = mounted ? resolvedTheme : undefined
 
   useEffect(() => {
     // Fetch the logged-in user's display name

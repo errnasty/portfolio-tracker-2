@@ -42,7 +42,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="flex min-h-screen bg-background">
               <Sidebar />
               <main className="flex-1 pt-12 md:pl-[250px] md:pt-0">
-                <div key={pathname} className="mx-auto max-w-[1180px] animate-section-in px-6 py-10 pb-18 md:px-12 md:py-10">
+                <div key={pathname} className="mx-auto max-w-[1180px] animate-section-in px-6 py-10 pb-[72px] md:px-12 md:py-10">
                   {children}
                 </div>
               </main>
