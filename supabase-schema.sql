@@ -417,6 +417,20 @@ create policy "Users manage own inbound address"
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+-- Atomic balance increment RPC (used by /api/inbound/email webhook).
+-- Avoids the read-modify-write race when two webhooks fire concurrently.
+create or replace function increment_account_balance(
+  p_account_id uuid,
+  p_delta      numeric
+) returns void as $$
+begin
+  update accounts
+    set current_balance = current_balance + p_delta,
+        updated_at = now()
+    where id = p_account_id;
+end;
+$$ language plpgsql security definer;
+
 -- ETF / ticker composition cache (public reference data — no per-user rows)
 -- Holds dynamically-fetched country/sector breakdowns + top holdings so we
 -- don't hammer Yahoo on every page load. TTL is enforced in the API route.

@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { convertToBase } from '@/lib/calculations'
 import { usePortfolio } from '@/context/PortfolioContext'
 import { DEFAULT_CATEGORIES, guessCategoryName } from '@/lib/categorize'
+import { findFuzzyDuplicate } from '@/lib/txn-dedupe'
 import { detectSubscriptions } from '@/lib/subscriptions'
 import type {
   Category, CategoryRule, BankTransaction, SpendingStats, FxRates, Currency,
@@ -36,6 +37,9 @@ interface SpendingContextValue {
   statsForMonth: (ym: string) => SpendingStats
   // Best category id for a transaction: user rules first, then built-in keywords.
   categorize: (description: string, merchant?: string | null) => string | null
+  // AI-powered categorization (free OpenRouter model, keyword fallback).
+  // Returns category id or null. Async because it calls the server.
+  aiCategorize: (description: string, merchant: string | null, amount: number, currency?: string) => Promise<string | null>
   subscriptions: Subscription[]
   subscriptionSummary: { totalMonthly: number; activeMonthly: number; potentialMonthly: number; cancelledMonthly: number }
   setSubscriptionStatus: (key: string, status: SubscriptionState, opts?: { label?: string; monthlyAmount?: number }) => Promise<void>
@@ -389,12 +393,34 @@ export function SpendingProvider({ children }: { children: React.ReactNode }) {
       for (const r of ex ?? []) if (r.external_id) existing.add(r.external_id)
     }
 
+    // Fuzzy dedup: also check existing transactions for same date+amount+description.
+    // This catches cross-source duplicates (e.g. CSV import + email webhook) that
+    // have different external_ids but are the same transaction.
+    const dates = [...new Set(rows.map((r) => r.date))]
+    const { data: priorTxns } = await supabase
+      .from('bank_transactions')
+      .select('id, date, amount, payee_key, description')
+      .eq('user_id', user.id)
+      .in('date', dates)
+
+    const priorRows = (priorTxns ?? []).map((t) => ({
+      id: t.id, date: t.date, amount: t.amount, payee_key: t.payee_key, description: t.description,
+    }))
+
     const seenBatch = new Set<string>()
     const payload = rows
       .filter((r) => {
-        if (!r.external_id) return true
-        if (existing.has(r.external_id) || seenBatch.has(r.external_id)) return false
-        seenBatch.add(r.external_id)
+        // external_id dedup
+        if (r.external_id && (existing.has(r.external_id) || seenBatch.has(r.external_id))) return false
+        if (r.external_id) seenBatch.add(r.external_id)
+
+        // Fuzzy dedup against existing DB rows
+        const dup = findFuzzyDuplicate(
+          { date: r.date, amount: r.amount, payee_key: r.payee_key ?? null, description: r.description },
+          priorRows,
+        )
+        if (dup) return false
+
         return true
       })
       .map((r) => ({ ...r, user_id: user.id }))
@@ -442,6 +468,38 @@ export function SpendingProvider({ children }: { children: React.ReactNode }) {
     const g = guessCategoryName(description, merchant)
     return g ? (catIdByName[g] ?? null) : null
   }, [sortedRules, catIdByName])
+
+  // AI-powered categorization via the /api/categorize endpoint (OpenRouter
+  // free model). Falls back to the sync categorize() if the API call fails.
+  const aiCategorize = useCallback(async (
+    description: string, merchant: string | null, amount: number, currency?: string,
+  ): Promise<string | null> => {
+    // Fast path: user rules + keywords first (instant).
+    const quick = categorize(description, merchant)
+    if (quick) return quick
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return null
+
+      const resp = await fetch('/api/categorize', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ description, merchant, amount, currency }),
+      })
+      if (!resp.ok) return null
+      const result = await resp.json()
+      if (result.category) {
+        return catIdByName[result.category] ?? null
+      }
+      return null
+    } catch {
+      return null
+    }
+  }, [categorize, catIdByName])
 
   const catNameById = useMemo(
     () => Object.fromEntries(categories.map((c) => [c.id, c.name])) as Record<string, string>,
@@ -499,7 +557,7 @@ export function SpendingProvider({ children }: { children: React.ReactNode }) {
       refreshCategories, refreshBankTransactions, refreshCategoryRules,
       addCategory, deleteCategory, addCategoryRule, deleteCategoryRule,
       addBankTransaction, updateBankTransaction, deleteBankTransaction, bulkInsertBankTransactions,
-      statsForMonth, categorize,
+      statsForMonth, categorize, aiCategorize,
       subscriptions, subscriptionSummary, setSubscriptionStatus,
       budgets, refreshBudgets, upsertBudget, deleteBudget,
       payeeAliases, refreshPayeeAliases, upsertPayeeAlias, resolveDescription,

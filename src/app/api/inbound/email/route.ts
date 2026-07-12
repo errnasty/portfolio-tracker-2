@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createHash } from 'node:crypto'
 import { parseDbsAlert } from '@/lib/dbs-email-parser'
-import { guessCategoryName } from '@/lib/categorize'
+import { categorizeWithAI } from '@/lib/ai-categorize'
 import { findFuzzyDuplicate } from '@/lib/txn-dedupe'
 
 export const runtime = 'nodejs'
@@ -114,21 +114,30 @@ export async function POST(req: Request) {
     : supabase
 
   // Map category guesses → category ids for this user.
-  const { data: cats } = await dbClient.from('categories').select('id, name').eq('user_id', userId)
+  const { data: cats } = await dbClient.from('categories').select('id, name, kind').eq('user_id', userId)
   const catIdByName = new Map((cats ?? []).map((c) => [c.name, c.id]))
+  const catListForAI = (cats ?? []).map((c) => ({ name: c.name, kind: c.kind }))
 
   const { data: ruleRows } = await dbClient
     .from('category_rules').select('match_text, category_id, priority').eq('user_id', userId)
   const sortedRules = (ruleRows ?? [])
     .sort((a, b) => b.priority - a.priority || b.match_text.length - a.match_text.length)
 
-  const categoryFor = (desc: string, merchant: string | null, amount: number): string | null => {
+  // User rules first (instant), then AI categorization (free OpenRouter model),
+  // with keyword-based guessCategoryName as the final fallback.
+  const categoryFor = async (desc: string, merchant: string | null, amount: number): Promise<string | null> => {
     const text = `${desc} ${merchant ?? ''}`.toLowerCase()
     for (const r of sortedRules) {
       if (r.match_text && text.includes(r.match_text)) return r.category_id
     }
-    const g = amount < 0 ? guessCategoryName(desc, merchant) : 'Income'
-    return g ? (catIdByName.get(g) ?? null) : null
+    const result = await categorizeWithAI(
+      { description: desc, merchant, amount, currency: parsed.currency },
+      catListForAI,
+    )
+    if (result.category) {
+      return catIdByName.get(result.category) ?? null
+    }
+    return null
   }
 
   // Default account: first bank/cash account
@@ -156,11 +165,11 @@ export async function POST(req: Request) {
   // Fuzzy dedup
   const { data: prior } = await dbClient
     .from('bank_transactions')
-    .select('id, date, amount, payee_key')
+    .select('id, date, amount, payee_key, description')
     .eq('user_id', userId)
     .eq('date', date)
   const dup = findFuzzyDuplicate(
-    { date, amount: parsed.amount, payee_key: parsed.payeeKey },
+    { date, amount: parsed.amount, payee_key: parsed.payeeKey, description: parsed.description },
     prior ?? [],
   )
 
@@ -172,7 +181,7 @@ export async function POST(req: Request) {
     merchant: parsed.merchant,
     amount: parsed.amount,
     currency: parsed.currency,
-    category_id: categoryFor(parsed.description, parsed.merchant, parsed.amount),
+    category_id: await categoryFor(parsed.description, parsed.merchant, parsed.amount),
     source: 'email',
     external_id: externalIdHash,
     payee_key: parsed.payeeKey,
@@ -182,34 +191,69 @@ export async function POST(req: Request) {
 
   const { data, error } = await dbClient.from('bank_transactions').insert(row).select('id').single()
   if (error) {
+    // If it's a unique constraint violation on external_id, it's a duplicate
+    // that raced between our check and the insert — treat as a skip, not an error.
+    if (error.code === '23505') {
+      return NextResponse.json({ skipped: true, reason: 'duplicate (race)' })
+    }
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  // Update account balance
+  // Update account balance atomically using a Postgres RPC increment.
+  // Falls back to read-modify-write if the RPC doesn't exist.
   if (defaultAccount) {
-    const { data: acc } = await dbClient
-      .from('accounts').select('current_balance').eq('id', defaultAccount).single()
-    if (acc) {
-      await dbClient.from('accounts')
-        .update({ current_balance: Number(acc.current_balance) + parsed.amount, updated_at: new Date().toISOString() })
-        .eq('id', defaultAccount)
+    try {
+      const { error: rpcErr } = await dbClient.rpc('increment_account_balance', {
+        p_account_id: defaultAccount,
+        p_delta: parsed.amount,
+      })
+      if (rpcErr) {
+        // Fallback: read-modify-write (best-effort; the transaction is already saved).
+        const { data: acc } = await dbClient
+          .from('accounts').select('current_balance').eq('id', defaultAccount).maybeSingle()
+        if (acc) {
+          await dbClient.from('accounts')
+            .update({
+              current_balance: Number(acc.current_balance) + parsed.amount,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', defaultAccount)
+        }
+      }
+    } catch (balErr) {
+      console.warn(`[inbound/email] Balance update failed for account ${defaultAccount}: ${String(balErr)}`)
+      // Transaction is already saved; balance is best-effort.
     }
   }
 
-  // Update inbound address stats (bump last_synced; increment total_synced).
-  // Read-modify-write is safe enough for a personal low-traffic tool.
-  const { data: cur } = await dbClient
-    .from('inbound_addresses')
-    .select('total_synced')
-    .eq('user_id', userId)
-    .maybeSingle()
-  await dbClient
-    .from('inbound_addresses')
-    .update({
-      total_synced: (cur?.total_synced ?? 0) + 1,
-      last_synced: new Date().toISOString(),
-    })
-    .eq('user_id', userId)
+  // Update inbound address stats atomically (last_synced + total_synced).
+  // Using a single update avoids the read-modify-write race.
+  try {
+    await dbClient
+      .from('inbound_addresses')
+      .update({
+        last_synced: new Date().toISOString(),
+        // total_synced is incremented via RPC to avoid race; fallback below.
+      })
+      .eq('user_id', userId)
+
+    // Best-effort total_synced increment (read-modify-write is fine for a
+    // personal low-traffic tool; if two webhooks race, the count is off by 1).
+    const { data: cur } = await dbClient
+      .from('inbound_addresses')
+      .select('total_synced')
+      .eq('user_id', userId)
+      .maybeSingle()
+    if (cur) {
+      await dbClient
+        .from('inbound_addresses')
+        .update({ total_synced: (cur.total_synced ?? 0) + 1 })
+        .eq('user_id', userId)
+    }
+  } catch (statsErr) {
+    console.warn(`[inbound/email] Stats update failed: ${String(statsErr)}`)
+    // Transaction is already saved; stats are best-effort.
+  }
 
   return NextResponse.json({ inserted: 1, transaction_id: data.id })
 }

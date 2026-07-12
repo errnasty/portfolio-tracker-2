@@ -16,7 +16,7 @@ import { formatCurrency } from '@/lib/utils'
 export function PosbImport() {
   const router = useRouter()
   const { accounts } = usePortfolio()
-  const { categories, bulkInsertBankTransactions, categorize } = useSpending()
+  const { categories, bulkInsertBankTransactions, categorize, aiCategorize } = useSpending()
   const incomeId = categories.find((c) => c.name === 'Income')?.id
 
   const [filename, setFilename] = useState('')
@@ -49,14 +49,40 @@ export function PosbImport() {
       // Pre-select all importable rows + auto-categorize.
       const sel = new Set<number>()
       const guesses: Record<number, string> = {}
+      // First pass: instant keyword-based categorization.
+      const needsAI: { index: number; desc: string; merchant: string | null; amount: number }[] = []
       parsed.rows.forEach((row, i) => {
         if (!row.txn) return
         sel.add(i)
-        // Dynamic categorize: user rules first, then built-in keywords.
         const cid = categorize(row.txn.description, row.txn.merchant)
-        if (cid) guesses[i] = cid
-        else if (row.txn.amount >= 0 && incomeId) guesses[i] = incomeId
+        if (cid) {
+          guesses[i] = cid
+        } else if (row.txn.amount >= 0 && incomeId) {
+          guesses[i] = incomeId
+        } else {
+          // Collect rows that need AI categorization (no keyword match, expense).
+          needsAI.push({ index: i, desc: row.txn.description, merchant: row.txn.merchant, amount: row.txn.amount })
+        }
       })
+      // Second pass: AI categorization for unmatched rows (async, best-effort).
+      if (needsAI.length > 0) {
+        setCats({ ...guesses })
+        // Run AI categorization in the background — don't block the UI.
+        Promise.all(
+          needsAI.map(async ({ index, desc, merchant, amount }) => {
+            const cid = await aiCategorize(desc, merchant, amount, 'SGD')
+            return { index, cid }
+          }),
+        ).then((results) => {
+          setCats((prev) => {
+            const next = { ...prev }
+            for (const { index, cid } of results) {
+              if (cid) next[index] = cid
+            }
+            return next
+          })
+        }).catch(() => { /* best-effort; user can still set manually */ })
+      }
       setSelected(sel)
       setCats(guesses)
       if (!accountId && accounts[0]) setAccountId(accounts[0].id)

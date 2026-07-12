@@ -4,10 +4,11 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { useSpending } from '@/context/SpendingContext'
-import { provisionInboundAddress, getInboundAddress, INBOUND_DOMAIN } from '@/lib/inbound'
+import { getInboundAddress, provisionInboundAddress, INBOUND_DOMAIN } from '@/lib/inbound'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Mail, Copy, RefreshCw, CheckCircle2, Loader2, ChevronDown, ChevronUp } from 'lucide-react'
+import { Mail, Copy, RefreshCw, CheckCircle2, Loader2, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react'
+import type { InboundAddress } from '@/types'
 
 export function ForwardAddressCard() {
   const { refreshBankTransactions } = useSpending()
@@ -16,24 +17,59 @@ export function ForwardAddressCard() {
   const [syncing, setSyncing] = useState(false)
   const [lastSynced, setLastSynced] = useState<string | null>(null)
   const [showInstructions, setShowInstructions] = useState(false)
+  const [missingTable, setMissingTable] = useState(false)
 
   useEffect(() => {
     let active = true
     ;(async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user || !active) return
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session || !active) return
 
-      let addr = await getInboundAddress(user.id)
-      if (!addr) {
-        addr = await provisionInboundAddress(user.id, user.email ?? undefined)
+      // Try client-side first (uses anon key + RLS).
+      let addr: InboundAddress | null = null
+      try {
+        addr = await getInboundAddress(session.user.id)
+        if (!addr) {
+          addr = await provisionInboundAddress(session.user.id, session.user.email ?? undefined)
+        }
+      } catch (clientErr) {
+        // If the table is missing, the client-side approach fails with
+        // a "Could not find the table" schema-cache error. Fall back to
+        // the server-side provisioning endpoint which uses the service
+        // role key (bypasses RLS) and gives a clearer error.
+        const msg = String(clientErr)
+        if (/could not find the table|schema cache|relation .* does not exist/i.test(msg)) {
+          setMissingTable(true)
+          // Attempt server-side provisioning as a fallback.
+          try {
+            const resp = await fetch('/api/inbound/provision', {
+              headers: { authorization: `Bearer ${session.access_token}` },
+            })
+            if (resp.ok) {
+              addr = await resp.json() as InboundAddress
+              setMissingTable(false)
+            } else {
+              const body = await resp.json().catch(() => ({ error: resp.statusText }))
+              throw new Error(body.error ?? `Server returned ${resp.status}`)
+            }
+          } catch (serverErr) {
+            // Both paths failed — show the migration banner.
+            if (active) {
+              toast.error(`Failed to set up forwarding address: ${String(serverErr)}`)
+            }
+            return
+          }
+        } else {
+          if (active) toast.error(`Failed to set up forwarding address: ${msg}`)
+          return
+        }
       }
-      if (active) {
+
+      if (active && addr) {
         setAddress(addr.address)
         setLastSynced(addr.last_synced)
       }
-    })().catch((e) => {
-      toast.error(`Failed to set up forwarding address: ${String(e)}`)
-    }).finally(() => {
+    })().finally(() => {
       if (active) setLoading(false)
     })
     return () => { active = false }
@@ -52,11 +88,6 @@ export function ForwardAddressCard() {
   const sync = async () => {
     setSyncing(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { toast.error('Not signed in'); return }
-      // The webhook is triggered by the email provider — there's no "sync" API
-      // to call from the client. But we can refresh transactions to show any
-      // that were already received.
       await refreshBankTransactions()
       setLastSynced(new Date().toISOString())
       toast.success('Transactions refreshed')
@@ -73,6 +104,35 @@ export function ForwardAddressCard() {
         <CardContent className="flex items-center gap-2 py-6">
           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           <span className="text-sm text-muted-foreground">Setting up your address…</span>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // If the table is missing and server-side provisioning also failed,
+  // show a migration banner with instructions instead of a broken card.
+  if (missingTable && !address) {
+    return (
+      <Card className="max-w-md">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 text-warn" /> Bank email forwarding
+          </CardTitle>
+          <CardDescription>
+            The <code className="text-xs font-mono">inbound_addresses</code> table hasn&apos;t been
+            created in your Supabase database yet.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Run the migration SQL in your Supabase SQL Editor:
+          </p>
+          <pre className="rounded-md bg-muted p-3 text-xs overflow-x-auto">{`-- Supabase → SQL Editor → New Query
+-- Run supabase/migrations/001_inbound_addresses.sql
+-- (found in your project repo)`}</pre>
+          <p className="text-xs text-muted-foreground">
+            After running the migration, refresh this page.
+          </p>
         </CardContent>
       </Card>
     )
