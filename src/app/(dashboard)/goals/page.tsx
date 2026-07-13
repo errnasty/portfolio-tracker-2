@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Plus, Pencil, Trash2, Target, TrendingUp } from 'lucide-react'
 import { deleteWithUndo } from '@/lib/toast-undo'
 import { ResponsiveContainer, ComposedChart, Line, Area, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine, Legend } from 'recharts'
@@ -17,6 +18,7 @@ import {
   monteCarlo, monthsBetween,
   requiredMonthlyDeterministic, requiredMonthlyForSuccess,
 } from '@/lib/projection'
+import { useQuickAction } from '@/lib/quick-actions'
 import type { Goal, Currency } from '@/types'
 import { CheckCircle2, AlertTriangle, Sparkles } from 'lucide-react'
 
@@ -27,6 +29,7 @@ interface GoalForm {
   monthly_contribution: string
   expected_return_pct: string
   expected_volatility_pct: string
+  basis: 'portfolio' | 'networth'
 }
 
 const EMPTY_FORM: GoalForm = {
@@ -36,12 +39,15 @@ const EMPTY_FORM: GoalForm = {
   monthly_contribution: '1000',
   expected_return_pct: '7',
   expected_volatility_pct: '15',
+  basis: 'networth',
 }
 
 export default function GoalsPage() {
-  const { goals, stats, settings, loading, addGoal, updateGoal, deleteGoal } = usePortfolio()
+  const { goals, stats, settings, netWorthBase, loading, addGoal, updateGoal, deleteGoal } = usePortfolio()
   const base = (settings?.base_currency ?? 'USD') as Currency
-  const startingValue = stats?.totalValue ?? 0
+  // Per-goal starting value: full net worth (all accounts + holdings) or
+  // portfolio only (holdings + investable cash — the legacy behavior).
+  const startingFor = (g: Goal) => (g.basis === 'networth' ? netWorthBase : (stats?.totalValue ?? 0))
 
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState<GoalForm>(EMPTY_FORM)
@@ -56,6 +62,7 @@ export default function GoalsPage() {
     setEditId(null)
     setOpen(true)
   }
+  useQuickAction('add-goal', openAdd)
 
   const openEdit = (g: Goal) => {
     setForm({
@@ -65,6 +72,7 @@ export default function GoalsPage() {
       monthly_contribution: String(g.monthly_contribution),
       expected_return_pct: String(g.expected_return_pct),
       expected_volatility_pct: String(g.expected_volatility_pct),
+      basis: g.basis ?? 'portfolio',
     })
     setEditId(g.id)
     setOpen(true)
@@ -81,6 +89,7 @@ export default function GoalsPage() {
         monthly_contribution: parseFloat(form.monthly_contribution) || 0,
         expected_return_pct: parseFloat(form.expected_return_pct) || 0,
         expected_volatility_pct: parseFloat(form.expected_volatility_pct) || 0,
+        basis: form.basis,
       }
       if (editId) await updateGoal(editId, payload)
       else await addGoal(payload)
@@ -113,7 +122,7 @@ export default function GoalsPage() {
             <GoalCard
               key={g.id}
               goal={g}
-              startingValue={startingValue}
+              startingValue={startingFor(g)}
               base={base}
               onEdit={() => openEdit(g)}
               onDelete={() => setDeleteId(g.id)}
@@ -143,9 +152,22 @@ export default function GoalsPage() {
                 <Input type="date" value={form.target_date} onChange={(e) => setForm({ ...form, target_date: e.target.value })} />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>Monthly contribution ({base})</Label>
-              <Input type="number" min="0" step="any" value={form.monthly_contribution} onChange={(e) => setForm({ ...form, monthly_contribution: e.target.value })} />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Monthly contribution ({base})</Label>
+                <Input type="number" min="0" step="any" value={form.monthly_contribution} onChange={(e) => setForm({ ...form, monthly_contribution: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Count towards goal</Label>
+                <Select value={form.basis} onValueChange={(v) => setForm({ ...form, basis: v as GoalForm['basis'] })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="networth">Total net worth</SelectItem>
+                    <SelectItem value="portfolio">Portfolio only</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-[10px] text-muted-foreground">Net worth includes bank accounts; portfolio is holdings + investable cash.</p>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
@@ -188,6 +210,7 @@ export default function GoalsPage() {
                   monthly_contribution: row.monthly_contribution,
                   expected_return_pct: row.expected_return_pct,
                   expected_volatility_pct: row.expected_volatility_pct,
+                  basis: row.basis,
                 }),
               })
             }}>Delete</Button>
@@ -277,6 +300,7 @@ function GoalCard({
               {formatCurrency(goal.target_amount, base)} by {goal.target_date}
               {' · '}{months} month{months === 1 ? '' : 's'} to go
               {' · '}{formatCurrency(goal.monthly_contribution, base)}/mo at {goal.expected_return_pct}% / {goal.expected_volatility_pct}%
+              {' · '}{(goal.basis ?? 'portfolio') === 'networth' ? 'from net worth' : 'from portfolio'}
             </CardDescription>
           </div>
           <div className="flex items-center gap-1">

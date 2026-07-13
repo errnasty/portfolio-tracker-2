@@ -10,6 +10,10 @@ import { ViewTransitionProvider } from '@/components/motion/ViewTransitionProvid
 import { KeyboardProvider } from '@/components/layout/KeyboardProvider'
 import { WhatsNewDialog } from '@/components/layout/WhatsNewDialog'
 import { OnboardingTour } from '@/components/layout/OnboardingTour'
+import { QuickAddDialog } from '@/components/layout/QuickAddDialog'
+import { RecurringPoster } from '@/components/layout/RecurringPoster'
+import { dispatchQuickAction } from '@/lib/quick-actions'
+import { Plus } from 'lucide-react'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -50,6 +54,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </main>
               <WhatsNewDialog />
               <OnboardingTour />
+              <QuickAddDialog />
+              <RecurringPoster />
+              {/* Mobile quick-entry FAB — two taps to log an expense. */}
+              <button
+                aria-label="Quick add transaction"
+                onClick={() => dispatchQuickAction('add-expense')}
+                className="fixed bottom-5 right-5 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform active:scale-95 md:hidden"
+              >
+                <Plus className="h-6 w-6" />
+              </button>
             </div>
           </KeyboardProvider>
         </ViewTransitionProvider>

@@ -12,7 +12,7 @@ import {
   Sparkles, Landmark, Mail, Wallet, Banknote, CalendarClock, Briefcase,
   PartyPopper, Copy, ChevronDown, ChevronUp, ArrowRight, Command, Moon,
   Keyboard, Bot, ListChecks, Upload, PiggyBank, HandHeart, Users, PieChart,
-  Sliders, ArrowLeftRight, BookOpen,
+  Sliders, ArrowLeftRight, BookOpen, Smartphone,
 } from 'lucide-react'
 
 // Event other components fire to launch the tour (welcome dialog, Guide page).
@@ -44,8 +44,9 @@ const STEPS: TourStep[] = [
       { icon: Wallet, title: 'Home = net worth', desc: 'Bank accounts, cash, and your portfolio roll into one number, snapshotted daily.' },
     ],
     chips: [
-      { icon: Command, label: '⌘K palette' },
-      { icon: Keyboard, label: 'g + key shortcuts' },
+      { icon: Command, label: '⌘K palette & quick actions' },
+      { icon: Keyboard, label: 'a = add expense' },
+      { icon: Smartphone, label: 'Installable app' },
       { icon: Moon, label: 'Dark mode' },
     ],
   },

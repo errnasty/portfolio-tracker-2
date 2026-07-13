@@ -1,11 +1,18 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
 import { useTheme } from 'next-themes'
-import { Moon, Sun, CornerDownLeft, Search } from 'lucide-react'
+import { toast } from 'sonner'
+import {
+  Moon, Sun, CornerDownLeft, Search, Plus, ArrowLeftRight, Users, CalendarClock,
+  Briefcase, Target, RefreshCw, Compass, Banknote,
+} from 'lucide-react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { NAV_ROUTES } from '@/lib/nav-registry'
 import { fuzzyScore } from '@/lib/fuzzy'
 import { useViewTransitionRouter } from '@/components/motion/ViewTransitionProvider'
+import { usePortfolio } from '@/context/PortfolioContext'
+import { dispatchQuickAction, triggerQuickAction, type QuickActionKind } from '@/lib/quick-actions'
+import { startTour } from '@/components/layout/OnboardingTour'
 import { cn } from '@/lib/utils'
 
 interface Item {
@@ -24,20 +31,37 @@ export function CommandPalette({ open, onOpenChange }: {
   const [active, setActive] = useState(0)
   const navigate = useViewTransitionRouter()
   const { theme, setTheme } = useTheme()
+  const { refreshPrices } = usePortfolio()
 
   const items: Item[] = useMemo(() => {
     const routes: Item[] = NAV_ROUTES.map((r) => ({
       key: r.href, label: r.label, hint: r.group, icon: r.icon,
       run: () => navigate(r.href),
     }))
-    const actions: Item[] = [{
-      key: 'toggle-theme',
-      label: theme === 'light' ? 'Switch to dark' : 'Switch to light',
-      hint: 'Theme', icon: theme === 'light' ? Moon : Sun,
-      run: () => setTheme(theme === 'light' ? 'dark' : 'light'),
-    }]
+    const quick = (kind: QuickActionKind, href: string) => () =>
+      triggerQuickAction(kind, href, navigate)
+    const actions: Item[] = [
+      { key: 'add-expense', label: 'Add expense (quick)', hint: 'Quick add', icon: Plus, run: () => dispatchQuickAction('add-expense') },
+      { key: 'add-income', label: 'Add income', hint: 'Quick add', icon: Banknote, run: quick('add-income', '/income') },
+      { key: 'transfer', label: 'Transfer between accounts', hint: 'Quick add', icon: ArrowLeftRight, run: quick('transfer', '/spending') },
+      { key: 'add-iou', label: 'Add IOU', hint: 'Quick add', icon: Users, run: quick('add-iou', '/people') },
+      { key: 'add-payment', label: 'Add planned payment', hint: 'Quick add', icon: CalendarClock, run: quick('add-payment', '/payments') },
+      { key: 'add-holding', label: 'Add holding', hint: 'Quick add', icon: Briefcase, run: quick('add-holding', '/holdings') },
+      { key: 'add-goal', label: 'Add goal', hint: 'Quick add', icon: Target, run: quick('add-goal', '/goals') },
+      {
+        key: 'refresh-prices', label: 'Refresh prices', hint: 'Action', icon: RefreshCw,
+        run: () => { refreshPrices(); toast.success('Refreshing prices…') },
+      },
+      { key: 'replay-tour', label: 'Replay the tour', hint: 'Action', icon: Compass, run: () => startTour() },
+      {
+        key: 'toggle-theme',
+        label: theme === 'light' ? 'Switch to dark' : 'Switch to light',
+        hint: 'Theme', icon: theme === 'light' ? Moon : Sun,
+        run: () => setTheme(theme === 'light' ? 'dark' : 'light'),
+      },
+    ]
     return [...routes, ...actions]
-  }, [navigate, theme, setTheme])
+  }, [navigate, theme, setTheme, refreshPrices])
 
   const results = useMemo(() => {
     return items

@@ -100,6 +100,15 @@ create table if not exists goals (
   updated_at            timestamptz default now()
 );
 
+-- What the goal projection starts from: 'portfolio' (holdings + investable
+-- cash) or 'networth' (all accounts + holdings).
+alter table goals add column if not exists basis text not null default 'portfolio';
+do $$ begin
+  alter table goals
+    add constraint goals_basis_check check (basis in ('portfolio', 'networth'));
+exception when duplicate_object then null;
+         when others then null; end $$;
+
 alter table goals enable row level security;
 
 drop policy if exists "Users manage own goals" on goals;
@@ -464,6 +473,17 @@ create table if not exists planned_payments (
   created_at  timestamptz default now(),
   updated_at  timestamptz default now()
 );
+
+-- Recurring posting: when true, each passed due date books a real
+-- bank_transactions row (flow 'bill' = money out, 'income' = money in)
+-- and the due date advances. Powers auto-posted salary/rent.
+alter table planned_payments add column if not exists post_as_transaction boolean not null default false;
+alter table planned_payments add column if not exists flow text not null default 'bill';
+do $$ begin
+  alter table planned_payments
+    add constraint planned_payments_flow_check check (flow in ('bill', 'income'));
+exception when duplicate_object then null;
+         when others then null; end $$;
 
 create index if not exists idx_planned_payments_user_due
   on planned_payments(user_id, due_date);

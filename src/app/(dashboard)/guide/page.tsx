@@ -8,7 +8,7 @@ import { CHANGELOG } from '@/lib/changelog'
 import { startTour } from '@/components/layout/OnboardingTour'
 import {
   Landmark, Mail, Tags, PiggyBank, Briefcase, CalendarClock, Users, HandHeart,
-  Sparkles, Keyboard, Wallet, TrendingUp, Compass,
+  Sparkles, Keyboard, Wallet, TrendingUp, Compass, Smartphone,
 } from 'lucide-react'
 
 const STEPS: { icon: React.ElementType; title: string; body: React.ReactNode }[] = [
@@ -49,7 +49,8 @@ const EXTRAS: { icon: React.ElementType; title: string; body: React.ReactNode }[
   { icon: HandHeart, title: 'Tithing', body: <>Enable the tithing pool on <TLink href="/income" className="text-accent hover:underline">Income</TLink> to set aside a share of everything you earn; Giving-category spending clears it automatically.</> },
   { icon: Wallet, title: 'Transfers', body: <>Moving money between your own accounts isn&apos;t spending. Use the transfer button on Spending, or the ⇄ icon on any transaction to reclassify it.</> },
   { icon: TrendingUp, title: 'Net worth', body: <>The <TLink href="/dashboard" className="text-accent hover:underline">Home</TLink> page combines accounts and holdings into net worth, snapshotted daily so you can watch the trend.</> },
-  { icon: Keyboard, title: 'Keyboard-first', body: <>Press <kbd className="rounded border border-border bg-muted px-1 font-mono text-[11px]">⌘K</kbd> for the command palette, or go-sequences like <span className="font-mono">g h</span> (home), <span className="font-mono">g s</span> (spending), <span className="font-mono">g b</span> (budgets).</> },
+  { icon: Keyboard, title: 'Keyboard-first', body: <>Press <kbd className="rounded border border-border bg-muted px-1 font-mono text-[11px]">⌘K</kbd> for the command palette — it also adds expenses, transfers, IOUs, bills and holdings from anywhere. Press <kbd className="rounded border border-border bg-muted px-1 font-mono text-[11px]">a</kbd> to log an expense instantly, or use go-sequences like <span className="font-mono">g s</span> (spending).</> },
+  { icon: Smartphone, title: 'Install it', body: <>Aureus is a PWA — on your phone choose “Add to Home Screen” from the browser menu (desktop: the install icon in the address bar) and it opens like a native app.</> },
 ]
 
 export default function GuidePage() {

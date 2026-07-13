@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { advanceDate, nextOnOrAfter, buildUpcoming, googleCalendarUrl, buildIcs } from '../payments'
+import { advanceDate, nextOnOrAfter, buildUpcoming, googleCalendarUrl, buildIcs, duePostings, nextDueAfterPostings } from '../payments'
 import type { PlannedPayment, Subscription } from '@/types'
 
 function pp(over: Partial<PlannedPayment>): PlannedPayment {
@@ -73,6 +73,29 @@ describe('buildUpcoming', () => {
       today: '2026-07-13',
     })
     expect(items[0].daysUntil).toBe(-12)
+  })
+})
+
+describe('recurring postings', () => {
+  it('lists every passed occurrence oldest-first and computes the next due', () => {
+    const p = { due_date: '2026-05-01', repeat: 'monthly' as const }
+    expect(duePostings(p, '2026-07-13')).toEqual(['2026-05-01', '2026-06-01', '2026-07-01'])
+    expect(nextDueAfterPostings(p, '2026-07-13')).toBe('2026-08-01')
+  })
+
+  it('posts an occurrence landing exactly today and advances past it', () => {
+    const p = { due_date: '2026-07-13', repeat: 'monthly' as const }
+    expect(duePostings(p, '2026-07-13')).toEqual(['2026-07-13'])
+    expect(nextDueAfterPostings(p, '2026-07-13')).toBe('2026-08-13')
+  })
+
+  it('handles one-off and future payments', () => {
+    expect(duePostings({ due_date: '2026-07-01', repeat: 'none' }, '2026-07-13')).toEqual(['2026-07-01'])
+    expect(duePostings({ due_date: '2026-08-01', repeat: 'monthly' }, '2026-07-13')).toEqual([])
+  })
+
+  it('is bounded for very stale recurring payments', () => {
+    expect(duePostings({ due_date: '2020-01-01', repeat: 'monthly' }, '2026-07-13').length).toBe(24)
   })
 })
 

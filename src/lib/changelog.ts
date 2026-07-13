@@ -17,6 +17,30 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.3',
+    date: '2026-07-13',
+    title: 'Capture everything, type almost nothing',
+    items: [
+      { title: 'Smart quick-add', desc: 'Press "a" (or the + button on mobile) and type "14.50 lunch grab" — amount, description and category are parsed for you. Start with + for income.' },
+      { title: 'Recurring transactions', desc: 'Mark a planned payment "post as transaction" and salary or rent books itself every cycle — no bank email needed.', href: '/payments' },
+      { title: 'Review queue superpowers', desc: 'Confirm all at once, set categories inline, and tick "remember" to save a rule that also fixes past uncategorized transactions.', href: '/spending' },
+      { title: 'Rules apply backwards', desc: 'Every category rule now has an “apply to existing” button that cleans up your history, not just future imports.', href: '/settings' },
+    ],
+  },
+  {
+    version: '2026.07.2',
+    date: '2026-07-13',
+    title: 'Quick wins: install it, add anything from anywhere',
+    items: [
+      { title: 'Install as an app', desc: 'Aureus is now a PWA — add it to your phone or desktop home screen from the browser menu for an app-like experience.' },
+      { title: 'Quick actions', desc: 'Press ⌘K and type "add" — expense, income, transfer, IOU, bill, holding, or goal from anywhere. Or just press "a" to log an expense.' },
+      { title: 'Balance reconciliation', desc: 'In any account\'s detail view, type the real balance from your bank and the difference is booked automatically.', href: '/accounts' },
+      { title: 'Crypto holdings', desc: 'Search BTC-USD, ETH-USD and friends in the holdings dialog — priced live, shown as their own asset class.', href: '/holdings' },
+      { title: 'Goals from net worth', desc: 'Goals can now count your full net worth (accounts included), not just the portfolio — per-goal setting.', href: '/goals' },
+      { title: 'Multi-currency imports fixed', desc: 'IBKR/CSV imports and the holdings dialog no longer coerce GBP, AUD, JPY (etc.) positions to USD.' },
+    ],
+  },
+  {
     version: '2026.07.1',
     date: '2026-07-13',
     title: 'Accounts tab, guided tour & smarter tithing',

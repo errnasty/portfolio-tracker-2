@@ -120,6 +120,38 @@ export function buildUpcoming(opts: {
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate) || a.name.localeCompare(b.name))
 }
 
+// ── Recurring posting ──────────────────────────────────────────────────────
+
+// Every due date of a payment that has already passed (inclusive of today),
+// oldest first — these become posted transactions. Bounded so bad data can't
+// flood the ledger. For repeat 'none' there is at most one posting.
+export function duePostings(
+  p: Pick<PlannedPayment, 'due_date' | 'repeat'>,
+  today: string,
+  max = 24,
+): string[] {
+  const out: string[] = []
+  let cur = p.due_date
+  while (cur <= today && out.length < max) {
+    out.push(cur)
+    if (p.repeat === 'none') break
+    const next = advanceDate(cur, p.repeat)
+    if (next <= cur) break     // safety: never loop on a non-advancing date
+    cur = next
+  }
+  return out
+}
+
+// The due date a recurring payment should carry after posting everything due.
+export function nextDueAfterPostings(
+  p: Pick<PlannedPayment, 'due_date' | 'repeat'>,
+  today: string,
+): string {
+  const next = nextOnOrAfter(p.due_date, today, p.repeat)
+  // An occurrence landing exactly on today gets posted, so advance past it.
+  return next <= today ? advanceDate(next, p.repeat) : next
+}
+
 // ── Calendar exports ───────────────────────────────────────────────────────
 
 // All-day Google Calendar event link (no API/OAuth needed).

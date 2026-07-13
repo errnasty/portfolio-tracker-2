@@ -19,6 +19,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ReviewQueueCard } from '@/components/spending/ReviewQueueCard'
 import { TransferDialog } from '@/components/spending/TransferDialog'
 import { ArrowLeftRight, Plus, Trash2, Upload } from 'lucide-react'
+import { useQuickAction } from '@/lib/quick-actions'
 import type { BankTransaction, Currency } from '@/types'
 
 const PIE_COLORS = ['#b5732f', '#3f6fb0', '#b07a86', '#C6A96A', '#7a6f9a', '#2f8f5b', '#9a4a3f', '#3f8f86', '#7a6f9a', '#9a8f7a']
@@ -139,6 +140,7 @@ export default function SpendingPage() {
 
   // ── Transfers ───────────────────────────────────────────────────────────
   const [transferOpen, setTransferOpen] = useState(false)
+  useQuickAction('transfer', () => setTransferOpen(true))
   // Row being converted into a transfer (pick the counterpart account).
   const [convertTxn, setConvertTxn] = useState<BankTransaction | null>(null)
   const [convertAccountId, setConvertAccountId] = useState('')

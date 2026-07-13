@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { TitheCard } from '@/components/income/TitheCard'
 import { Plus, Trash2 } from 'lucide-react'
+import { useQuickAction } from '@/lib/quick-actions'
 import type { Currency } from '@/types'
 
 // Strongest brand hues first (validated); the labeled list below the donut
@@ -119,6 +120,8 @@ export default function IncomePage() {
       setSaving(false)
     }
   }
+
+  useQuickAction('add-income', openAdd)
 
   const statusRight = (
     <span className="flex items-center gap-4">

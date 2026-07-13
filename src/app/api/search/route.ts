@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
 
       const data = await res.json()
       const quotes: SearchResult[] = (data?.quotes ?? [])
-        .filter((q: any) => q.symbol && ['EQUITY', 'ETF', 'MUTUALFUND', 'INDEX'].includes(q.quoteType))
+        .filter((q: any) => q.symbol && ['EQUITY', 'ETF', 'MUTUALFUND', 'INDEX', 'CRYPTOCURRENCY'].includes(q.quoteType))
         .map((q: any) => ({
           symbol: q.symbol,
           shortname: q.shortname ?? q.symbol,
