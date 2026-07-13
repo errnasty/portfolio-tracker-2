@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { usePortfolio } from '@/context/PortfolioContext'
 import { PageShell } from '@/components/ui/page-shell'
+import { SubNav } from '@/components/ui/sub-nav'
+import { SUB_NAVS } from '@/lib/nav-registry'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { BreakdownChart } from '@/components/analytics/BreakdownChart'
@@ -48,6 +50,7 @@ export default function AnalyticsPage() {
   if (!portfolioLoading && enriched.length === 0) {
     return (
       <PageShell screen="Invest" title="Analytics">
+        <SubNav links={[...SUB_NAVS.analytics]} />
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             Add some holdings to see portfolio analytics.
@@ -72,6 +75,7 @@ export default function AnalyticsPage() {
       footerHints={<span><span className="text-accent">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g h</span> home</span>}
     >
     <div className="space-y-4">
+      <SubNav links={[...SUB_NAVS.analytics]} />
       {loading && Object.keys(analytics).length === 0 ? (
         <div className="grid gap-4 md:grid-cols-2">
           <Skeleton className="h-80" />

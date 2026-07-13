@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton'
 import { Plus, Pencil, Trash2, Search, Loader2 } from 'lucide-react'
 import { PageShell } from '@/components/ui/page-shell'
+import { SubNav } from '@/components/ui/sub-nav'
+import { SUB_NAVS } from '@/lib/nav-registry'
 import { HeroBand, HeroMetric } from '@/components/ui/hero-band'
 import { SectionLabel } from '@/components/ui/section-label'
 import { TableScroll } from '@/components/ui/table-scroll'
@@ -224,6 +226,7 @@ export default function HoldingsPage() {
   return (
     <PageShell screen="Invest" title="Holdings" statusRight={statusRight} footerHints={footerHints}>
     <div className="space-y-4">
+      <SubNav links={[...SUB_NAVS.holdings]} />
       <div className="overflow-hidden rounded-lg border border-border bg-card">
         <HeroBand>
           <HeroMetric

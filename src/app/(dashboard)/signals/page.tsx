@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { usePortfolio } from '@/context/PortfolioContext'
 import { PageShell } from '@/components/ui/page-shell'
+import { SubNav } from '@/components/ui/sub-nav'
+import { SUB_NAVS } from '@/lib/nav-registry'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -99,6 +101,7 @@ export default function SignalsPage() {
   if (!portfolioLoading && enriched.length === 0) {
     return (
       <PageShell screen="Invest" title="Signals">
+        <SubNav links={[...SUB_NAVS.analytics]} />
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             Add holdings to monitor valuation signals.
@@ -122,6 +125,7 @@ export default function SignalsPage() {
       footerHints={<span><span className="text-accent">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g h</span> home</span>}
     >
     <div className="space-y-4">
+      <SubNav links={[...SUB_NAVS.analytics]} />
       {/* Counts strip */}
       <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
         <CountChip severity="critical" count={counts.critical} />

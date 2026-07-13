@@ -10,9 +10,11 @@ describe('guessCategoryName', () => {
     expect(guessCategoryName('SHOPEE SINGAPORE')).toBe('Shopping')
   })
 
-  it('detects income narratives', () => {
-    expect(guessCategoryName('MONTHLY SALARY GIRO')).toBe('Income')
+  it('detects income narratives, split by source', () => {
+    expect(guessCategoryName('MONTHLY SALARY GIRO')).toBe('Salary')
     expect(guessCategoryName('REFUND FROM AMAZON')).toBe('Income')
+    expect(guessCategoryName('INTEREST EARNED')).toBe('Interest')
+    expect(guessCategoryName('BONUS INTEREST CREDIT')).toBe('Interest')
   })
 
   it('detects transfers', () => {
@@ -57,9 +59,9 @@ describe('guessCategoryName', () => {
       ['PayNow Transfer 5028469 To: INTERACTIVE BR SG- REC TRUST AC', 'Transfers'],
       // Pure peer transfer → generic Transfers.
       ['PayNow Transfer 6122733 To: CHARMAINE TAY OTHR', 'Transfers'],
-      ['Incoming PayNow Ref 8305441 From: TAY KAI YUN CHARMAINE', 'Income'],
-      ['MINDEF SAF 12098585', 'Income'],
-      ['SEND BACK FROM PAYLAH! : 87751322', 'Income'],
+      ['Incoming PayNow Ref 8305441 From: TAY KAI YUN CHARMAINE', 'From people'],
+      ['MINDEF SAF 12098585', 'Salary'],
+      ['SEND BACK FROM PAYLAH! : 87751322', 'From people'],
     ]
     for (const [desc, expected] of cases) {
       expect(guessCategoryName(desc), desc).toBe(expected)

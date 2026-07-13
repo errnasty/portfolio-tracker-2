@@ -8,6 +8,7 @@ import { SpendingProvider } from '@/context/SpendingContext'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { ViewTransitionProvider } from '@/components/motion/ViewTransitionProvider'
 import { KeyboardProvider } from '@/components/layout/KeyboardProvider'
+import { WhatsNewDialog } from '@/components/layout/WhatsNewDialog'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -46,6 +47,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   {children}
                 </div>
               </main>
+              <WhatsNewDialog />
             </div>
           </KeyboardProvider>
         </ViewTransitionProvider>

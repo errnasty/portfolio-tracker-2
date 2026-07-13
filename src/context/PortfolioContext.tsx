@@ -28,6 +28,7 @@ import type {
   Currency, TargetAllocation, UserSettings, Transaction, DerivedPosition, Goal,
   Account, NetWorthSnapshot,
 } from '@/types'
+import { CURRENCY_CODES } from '@/types'
 
 interface PortfolioContextValue {
   holdings: Holding[]
@@ -167,7 +168,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
 
   const fetchFxRates = useCallback(async (base: Currency) => {
     try {
-      const res = await fetch(`/api/fx?base=${base}&symbols=USD,SGD,EUR`)
+      const res = await fetch(`/api/fx?base=${base}&symbols=${CURRENCY_CODES.join(',')}`)
       if (res.ok) {
         const data = await res.json()
         setFxRates(data)

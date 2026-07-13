@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Wallet, Repeat, Briefcase, TrendingUp, Sliders, Settings,
   PieChart, Activity, Beaker, ListChecks, Coins, Target, FileText, Bell, PiggyBank,
-  Upload,
+  Upload, Banknote, CalendarClock, Users, BookOpen,
 } from 'lucide-react'
 
 export interface NavRoute {
@@ -10,6 +10,9 @@ export interface NavRoute {
   icon: React.ElementType
   group: NavGroup
   seq?: string
+  // Hidden routes stay reachable (command palette, sub-nav tabs, deep links)
+  // but don't render in the sidebar — that's how it stays uncluttered.
+  hidden?: boolean
 }
 
 export const NAV_GROUPS = ['Overview', 'Money', 'Invest', 'Plan'] as const
@@ -19,26 +22,54 @@ export type NavGroup = (typeof NAV_GROUPS)[number]
 // command palette, and the keyboard go-to sequences.
 export const NAV_ROUTES: NavRoute[] = [
   { href: '/dashboard', label: 'Home', icon: LayoutDashboard, group: 'Overview', seq: 'g h' },
+  { href: '/guide', label: 'Guide', icon: BookOpen, group: 'Overview' },
 
   { href: '/spending', label: 'Spending', icon: Wallet, group: 'Money', seq: 'g s' },
-  { href: '/subscriptions', label: 'Subscriptions', icon: Repeat, group: 'Money' },
+  { href: '/income', label: 'Income', icon: Banknote, group: 'Money', seq: 'g i' },
   { href: '/budgets', label: 'Budgets', icon: PiggyBank, group: 'Money', seq: 'g b' },
-  { href: '/import', label: 'Import', icon: Upload, group: 'Money' },
+  { href: '/payments', label: 'Payments', icon: CalendarClock, group: 'Money', seq: 'g y' },
+  { href: '/people', label: 'People', icon: Users, group: 'Money' },
+  // Tabs under Payments:
+  { href: '/subscriptions', label: 'Subscriptions', icon: Repeat, group: 'Money', hidden: true },
+  // Linked from Spending's status bar:
+  { href: '/import', label: 'Import', icon: Upload, group: 'Money', hidden: true },
 
   { href: '/holdings', label: 'Holdings', icon: Briefcase, group: 'Invest', seq: 'g o' },
-  { href: '/performance', label: 'Performance', icon: TrendingUp, group: 'Invest' },
   { href: '/analytics', label: 'Analytics', icon: PieChart, group: 'Invest' },
-  { href: '/risk', label: 'Risk', icon: Activity, group: 'Invest' },
-  { href: '/transactions', label: 'Transactions', icon: ListChecks, group: 'Invest' },
-  { href: '/dividends', label: 'Dividends', icon: Coins, group: 'Invest' },
   { href: '/rebalancer', label: 'Rebalancer', icon: Sliders, group: 'Invest', seq: 'g r' },
   { href: '/planner', label: 'Planner', icon: Beaker, group: 'Invest', seq: 'g p' },
-  { href: '/signals', label: 'Signals', icon: Bell, group: 'Invest' },
-  { href: '/report', label: 'Report', icon: FileText, group: 'Invest' },
+  // Tabs under Holdings:
+  { href: '/transactions', label: 'Transactions', icon: ListChecks, group: 'Invest', hidden: true },
+  { href: '/dividends', label: 'Dividends', icon: Coins, group: 'Invest', hidden: true },
+  // Tabs under Analytics:
+  { href: '/performance', label: 'Performance', icon: TrendingUp, group: 'Invest', hidden: true },
+  { href: '/risk', label: 'Risk', icon: Activity, group: 'Invest', hidden: true },
+  { href: '/signals', label: 'Signals', icon: Bell, group: 'Invest', hidden: true },
+  { href: '/report', label: 'Report', icon: FileText, group: 'Invest', hidden: true },
 
   { href: '/goals', label: 'Goals', icon: Target, group: 'Plan', seq: 'g g' },
   { href: '/settings', label: 'Settings', icon: Settings, group: 'Plan' },
 ]
+
+// Link-tab rows for pages that share one sidebar entry (see SubNav).
+export const SUB_NAVS = {
+  holdings: [
+    { href: '/holdings', label: 'Holdings' },
+    { href: '/transactions', label: 'Transactions' },
+    { href: '/dividends', label: 'Dividends' },
+  ],
+  analytics: [
+    { href: '/analytics', label: 'Analytics' },
+    { href: '/performance', label: 'Performance' },
+    { href: '/risk', label: 'Risk' },
+    { href: '/signals', label: 'Signals' },
+    { href: '/report', label: 'Report' },
+  ],
+  payments: [
+    { href: '/payments', label: 'Upcoming' },
+    { href: '/subscriptions', label: 'Subscriptions' },
+  ],
+} as const
 
 // href -> nav route (for active-state + status-bar screen labels).
 export const NAV_BY_HREF: Record<string, NavRoute> =
@@ -48,4 +79,6 @@ export const NAV_BY_HREF: Record<string, NavRoute> =
 export const NAV_SEQUENCES: Record<string, string> =
   Object.fromEntries(NAV_ROUTES.filter((r) => r.seq).map((r) => [r.seq!, r.href]))
 
-export const routesByGroup = (group: NavGroup) => NAV_ROUTES.filter((r) => r.group === group)
+// Sidebar shows only non-hidden routes; the command palette shows all.
+export const routesByGroup = (group: NavGroup) =>
+  NAV_ROUTES.filter((r) => r.group === group && !r.hidden)

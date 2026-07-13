@@ -18,8 +18,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { AccountsCard } from '@/components/spending/AccountsCard'
 import { ReviewQueueCard } from '@/components/spending/ReviewQueueCard'
-import { Plus, Trash2, Upload } from 'lucide-react'
-import type { Currency } from '@/types'
+import { TransferDialog } from '@/components/spending/TransferDialog'
+import { ArrowLeftRight, Plus, Trash2, Upload } from 'lucide-react'
+import type { BankTransaction, Currency } from '@/types'
 
 const PIE_COLORS = ['#b5732f', '#3f6fb0', '#b07a86', '#C6A96A', '#7a6f9a', '#2f8f5b', '#9a4a3f', '#3f8f86', '#7a6f9a', '#9a8f7a']
 
@@ -41,6 +42,7 @@ export default function SpendingPage() {
   const {
     bankTransactions, categories, categoryById, statsForMonth, loading, error,
     addBankTransaction, updateBankTransaction, deleteBankTransaction, categorize, resolveDescription,
+    convertToTransfer,
   } = useSpending()
   const base = (settings?.base_currency ?? 'USD') as Currency
 
@@ -139,6 +141,26 @@ export default function SpendingPage() {
     updateBankTransaction(id, { category_id: value || null })
   }
 
+  // ── Transfers ───────────────────────────────────────────────────────────
+  const [transferOpen, setTransferOpen] = useState(false)
+  // Row being converted into a transfer (pick the counterpart account).
+  const [convertTxn, setConvertTxn] = useState<BankTransaction | null>(null)
+  const [convertAccountId, setConvertAccountId] = useState('')
+  const [converting, setConverting] = useState(false)
+
+  const handleConvert = async () => {
+    if (!convertTxn || !convertAccountId) return
+    setConverting(true)
+    try {
+      await convertToTransfer(convertTxn.id, convertAccountId)
+      setConvertTxn(null)
+    } catch {
+      // toasted in context
+    } finally {
+      setConverting(false)
+    }
+  }
+
   const savingsRate = stats.income > 0 ? (stats.net / stats.income) * 100 : 0
   const prevExpense = trend.length >= 2 ? trend[trend.length - 2].expense : 0
   const momDelta = stats.expense - prevExpense
@@ -148,6 +170,7 @@ export default function SpendingPage() {
     <span className="flex items-center gap-4">
       <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="h-6 w-[130px] border-0 bg-transparent px-0 text-[11px] text-foreground focus-visible:ring-0" />
       <Link href="/import" className="flex items-center gap-1 hover:text-foreground"><Upload className="h-3.5 w-3.5" /> import</Link>
+      <button onClick={() => setTransferOpen(true)} className="press flex items-center gap-1 hover:text-foreground"><ArrowLeftRight className="h-3.5 w-3.5" /> transfer</button>
       <button onClick={openAdd} className="press flex items-center gap-1 hover:text-foreground"><Plus className="h-3.5 w-3.5" /> add</button>
     </span>
   )
@@ -277,7 +300,7 @@ export default function SpendingPage() {
                     <TableHead className="h-9">Description</TableHead>
                     <TableHead className="h-9">Category</TableHead>
                     <TableHead className="h-9 text-right">Amount</TableHead>
-                    <TableHead className="h-9 w-8" />
+                    <TableHead className="h-9 w-16" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -304,13 +327,23 @@ export default function SpendingPage() {
                           {isIncome ? '+' : ''}{formatCurrency(Number(t.amount), t.currency)}
                         </TableCell>
                         <TableCell className="py-2">
-                          <Button
-                            variant="ghost" size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-down"
-                            onClick={() => deleteBankTransaction(t.id)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                          <div className="flex items-center">
+                            <Button
+                              variant="ghost" size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                              title="Mark as transfer between your accounts"
+                              onClick={() => { setConvertTxn(t); setConvertAccountId('') }}
+                            >
+                              <ArrowLeftRight className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost" size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-down"
+                              onClick={() => deleteBankTransaction(t.id)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     )
@@ -372,6 +405,41 @@ export default function SpendingPage() {
         accounts={accounts} netBase={accountsNetBase} base={base} fxRates={fxRates}
         loadError={accountsError} onAdd={addAccount} onUpdate={updateAccount} onDelete={deleteAccount}
       />
+
+      <TransferDialog open={transferOpen} onOpenChange={setTransferOpen} />
+
+      {/* Convert an expense/income row into a transfer pair */}
+      <Dialog open={!!convertTxn} onOpenChange={(o) => { if (!o) setConvertTxn(null) }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Mark as transfer</DialogTitle></DialogHeader>
+          {convertTxn && (
+            <div className="space-y-4 py-2">
+              <p className="text-sm text-muted-foreground">
+                “{resolveDescription(convertTxn)}” ({formatCurrency(Number(convertTxn.amount), convertTxn.currency)}) will be
+                recategorized as a transfer — removed from {Number(convertTxn.amount) < 0 ? 'spending' : 'income'} — and the
+                matching {Number(convertTxn.amount) < 0 ? 'deposit' : 'withdrawal'} will be added to the account you pick.
+              </p>
+              <div className="space-y-2">
+                <Label>{Number(convertTxn.amount) < 0 ? 'Money went to' : 'Money came from'}</Label>
+                <Select value={convertAccountId} onValueChange={setConvertAccountId}>
+                  <SelectTrigger><SelectValue placeholder="Pick account" /></SelectTrigger>
+                  <SelectContent>
+                    {accounts.filter((a) => a.id !== convertTxn.account_id).map((a) => (
+                      <SelectItem key={a.id} value={a.id}>{a.name} ({a.currency})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConvertTxn(null)}>Cancel</Button>
+            <Button onClick={handleConvert} disabled={converting || !convertAccountId}>
+              {converting ? 'Converting…' : 'Mark as transfer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Add transaction dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
