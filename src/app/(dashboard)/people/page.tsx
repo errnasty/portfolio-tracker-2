@@ -18,6 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Check, ChevronDown, ChevronUp, Plus, Users } from 'lucide-react'
+import { useQuickAction } from '@/lib/quick-actions'
 import type { Currency, Iou, IouDirection } from '@/types'
 import { CURRENCY_CODES } from '@/types'
 
@@ -96,6 +97,7 @@ export default function PeoplePage() {
     setForm({ person: '', direction: 'owed_to_me', amount: '', currency: base, tag: '', date: today(), notes: '' })
     setOpen(true)
   }
+  useQuickAction('add-iou', openAdd)
 
   const handleSave = async () => {
     const amt = parseFloat(form.amount)

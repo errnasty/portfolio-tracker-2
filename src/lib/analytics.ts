@@ -137,7 +137,8 @@ export function assetTypeBreakdown(
         : t === 'ETF' ? 'ETF'
           : t === 'MUTUALFUND' ? 'Mutual Fund'
             : t === 'INDEX' ? 'Index'
-              : 'Other'
+              : t === 'CRYPTOCURRENCY' ? 'Crypto'
+                : 'Other'
     map.set(label, (map.get(label) ?? 0) + h.currentValueBase)
   }
   return aggregate(map)

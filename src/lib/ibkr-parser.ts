@@ -1,4 +1,5 @@
 import type { Currency, Transaction, TransactionType } from '@/types'
+import { CURRENCY_CODES } from '@/types'
 
 // IBKR Activity Statement is a multi-section CSV. Each row begins with the
 // section name, followed by either "Header" (column names) or "Data" (a row).
@@ -83,8 +84,10 @@ function normalizeSymbol(symbol: string): string {
 }
 
 function asCurrency(c: string): Currency {
-  const upper = c.toUpperCase()
-  if (upper === 'SGD' || upper === 'EUR' || upper === 'USD') return upper
+  const upper = c.trim().toUpperCase() as Currency
+  // Preserve any supported currency (GBP, AUD, JPY, …) instead of coercing
+  // to USD — a mis-denominated import silently corrupts cost basis.
+  if (CURRENCY_CODES.includes(upper)) return upper
   return 'USD'
 }
 

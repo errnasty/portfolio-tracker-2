@@ -100,6 +100,15 @@ create table if not exists goals (
   updated_at            timestamptz default now()
 );
 
+-- What the goal projection starts from: 'portfolio' (holdings + investable
+-- cash) or 'networth' (all accounts + holdings).
+alter table goals add column if not exists basis text not null default 'portfolio';
+do $$ begin
+  alter table goals
+    add constraint goals_basis_check check (basis in ('portfolio', 'networth'));
+exception when duplicate_object then null;
+         when others then null; end $$;
+
 alter table goals enable row level security;
 
 drop policy if exists "Users manage own goals" on goals;

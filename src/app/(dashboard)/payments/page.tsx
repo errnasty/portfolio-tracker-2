@@ -22,6 +22,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { CalendarPlus, CalendarCheck, Check, Plus, Trash2, Zap } from 'lucide-react'
+import { useQuickAction } from '@/lib/quick-actions'
 import type { Currency, PaymentRepeat, PlannedPayment } from '@/types'
 import { CURRENCY_CODES } from '@/types'
 
@@ -121,6 +122,7 @@ export default function PaymentsPage() {
     setForm({ name: '', amount: '', currency: base, due_date: today(), repeat: 'monthly', autopay: false, notes: '' })
     setOpen(true)
   }
+  useQuickAction('add-payment', openAdd)
 
   const handleSave = async () => {
     const amt = parseFloat(form.amount)

@@ -96,6 +96,9 @@ export function derivePayeeKey(raw: string | null): string | null {
   return name ? `name:${name}` : null
 }
 
+// NOTE: a bare '$' maps to SGD because this parser only handles DBS/POSB
+// (Singapore) alerts. When adding other banks (OCBC/UOB/US cards), give each
+// its own parser + currency default instead of widening this map blindly.
 const CUR_MAP: Record<string, string> = { 'S$': 'SGD', 'US$': 'USD', '$': 'SGD' }
 
 export function parseDbsAlert(subject: string, body: string): ParsedEmailTxn | null {

@@ -191,8 +191,8 @@ export function FiForecastTab({ netWorthBase, baseCurrency, enriched, statsForMo
       </Card>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <WhatIfCard label="Save +$1,000/mo" years={saveMoreYears} deltaYears={delta(baseYears, saveMoreYears)} />
-        <WhatIfCard label="Spend −$500/mo" years={spendLessYears} deltaYears={delta(baseYears, spendLessYears)} />
+        <WhatIfCard label={`Save +${formatCurrency(1000, baseCurrency)}/mo`} years={saveMoreYears} deltaYears={delta(baseYears, saveMoreYears)} />
+        <WhatIfCard label={`Spend −${formatCurrency(500, baseCurrency)}/mo`} years={spendLessYears} deltaYears={delta(baseYears, spendLessYears)} />
         <WhatIfCard label="Return −1%" years={lowerReturnYears} deltaYears={delta(baseYears, lowerReturnYears)} inverse />
       </div>
 

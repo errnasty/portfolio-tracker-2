@@ -171,6 +171,8 @@ export interface Goal {
   monthly_contribution: number
   expected_return_pct: number
   expected_volatility_pct: number
+  // What the projection starts from (column added 2026-07; default 'portfolio').
+  basis?: 'portfolio' | 'networth'
   created_at: string
   updated_at: string
 }

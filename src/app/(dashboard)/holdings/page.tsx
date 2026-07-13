@@ -20,10 +20,12 @@ import { TableScroll } from '@/components/ui/table-scroll'
 import { InlineNumberCell } from '@/components/holdings/InlineNumberCell'
 import { CashHoldingsCard } from '@/components/holdings/CashHoldingsCard'
 import { deleteWithUndo } from '@/lib/toast-undo'
+import { useQuickAction } from '@/lib/quick-actions'
 import type { Currency, Holding, HoldingFormData } from '@/types'
+import { CURRENCY_CODES } from '@/types'
 import type { SearchResult } from '@/app/api/search/route'
 
-const CURRENCIES: Currency[] = ['USD', 'SGD', 'EUR']
+const CURRENCIES: Currency[] = CURRENCY_CODES
 const EMPTY_FORM: HoldingFormData = { ticker: '', name: '', shares: '', cost_basis_per_share: '', cost_basis_currency: 'USD' }
 
 // ── Ticker search component ────────────────────────────────────────────────
@@ -141,6 +143,7 @@ export default function HoldingsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null)
 
   const openAdd = () => { setForm(EMPTY_FORM); setEditId(null); setOpen(true) }
+  useQuickAction('add-holding', openAdd)
   const openEdit = (h: Holding) => {
     setForm({
       ticker: h.ticker,
@@ -154,7 +157,8 @@ export default function HoldingsPage() {
   }
 
   const handleTickerSelect = (ticker: string, name: string, currency: string) => {
-    const mappedCurrency = (['USD', 'SGD', 'EUR'].includes(currency) ? currency : 'USD') as Currency
+    const upper = currency.toUpperCase() as Currency
+    const mappedCurrency = CURRENCY_CODES.includes(upper) ? upper : 'USD'
     setForm((prev) => ({ ...prev, ticker, name, cost_basis_currency: mappedCurrency }))
   }
 
