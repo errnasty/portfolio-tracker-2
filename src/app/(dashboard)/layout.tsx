@@ -9,6 +9,7 @@ import { Sidebar } from '@/components/layout/Sidebar'
 import { ViewTransitionProvider } from '@/components/motion/ViewTransitionProvider'
 import { KeyboardProvider } from '@/components/layout/KeyboardProvider'
 import { WhatsNewDialog } from '@/components/layout/WhatsNewDialog'
+import { OnboardingTour } from '@/components/layout/OnboardingTour'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -48,6 +49,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </div>
               </main>
               <WhatsNewDialog />
+              <OnboardingTour />
             </div>
           </KeyboardProvider>
         </ViewTransitionProvider>

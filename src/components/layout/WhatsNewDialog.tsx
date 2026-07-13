@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { CHANGELOG, LATEST_VERSION, SEEN_VERSION_KEY, entriesSince, type ChangelogEntry } from '@/lib/changelog'
+import { startTour } from '@/components/layout/OnboardingTour'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { TLink } from '@/components/motion/TLink'
-import { BookOpen, Sparkles } from 'lucide-react'
+import { BookOpen, Compass, Sparkles } from 'lucide-react'
 
 // Shows once per app update (and a welcome variant on first-ever visit).
 // Tracks the last-seen changelog version in localStorage.
@@ -42,7 +43,7 @@ export function WhatsNewDialog() {
         {firstVisit && (
           <p className="text-sm text-muted-foreground">
             Everything financial in one place — spending, budgets, and your investment portfolio.
-            Here&apos;s what the app can do; the guide walks you through setting up in five minutes.
+            The two-minute tour walks you through the app screen by screen.
           </p>
         )}
 
@@ -73,7 +74,13 @@ export function WhatsNewDialog() {
           <Button variant="outline" size="sm" asChild>
             <TLink href="/guide" onClick={dismiss}><BookOpen className="mr-2 h-3.5 w-3.5" /> Open the guide</TLink>
           </Button>
-          <Button size="sm" onClick={dismiss}>Got it</Button>
+          {firstVisit ? (
+            <Button size="sm" onClick={() => { dismiss(); startTour() }}>
+              <Compass className="mr-2 h-3.5 w-3.5" /> Show me around
+            </Button>
+          ) : (
+            <Button size="sm" onClick={dismiss}>Got it</Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

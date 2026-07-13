@@ -182,6 +182,7 @@ export interface UserSettings {
   tithe_enabled?: boolean
   tithe_rate?: number          // percent of income, default 10
   tithe_start?: string | null  // YYYY-MM-DD; null = all history
+  tithe_base?: 'salary' | 'all' // which income accrues (default 'salary')
 }
 
 export interface TitheClearance {

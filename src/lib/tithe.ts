@@ -1,7 +1,9 @@
-// Tithing pool math. The pool accrues `ratePct`% of all income from
-// `startDate` onward. Anything spent in the Giving category counts as tithed
-// automatically; manual clearances cover tithes given outside tracked
-// accounts (e.g. cash offerings). All amounts are in the base currency.
+// Tithing pool math. The pool accrues `ratePct`% of qualifying income from
+// `startDate` onward — by default only Salary-category income, or all income
+// when the user widens the base (`incomeCategoryIds` = null). Anything spent
+// in the Giving category counts as tithed automatically; manual clearances
+// cover tithes given outside tracked accounts (e.g. cash offerings).
+// All amounts are in the base currency.
 
 export interface TitheTxn {
   date: string                 // YYYY-MM-DD
@@ -37,8 +39,11 @@ export function computeTithe(opts: {
   ratePct: number
   startDate?: string | null
   clearances?: TitheClearanceInput[]
+  // Which income counts toward the pool: a set of category ids (e.g. just
+  // Salary — the default in the UI), or null/undefined for all income.
+  incomeCategoryIds?: Set<string> | null
 }): TitheResult {
-  const { txns, transferCategoryIds, givingCategoryIds, ratePct, startDate, clearances = [] } = opts
+  const { txns, transferCategoryIds, givingCategoryIds, ratePct, startDate, clearances = [], incomeCategoryIds = null } = opts
   const rate = (Number(ratePct) || 0) / 100
   const months = new Map<string, TitheMonth>()
   const monthOf = (date: string) => date.slice(0, 7)
@@ -56,6 +61,7 @@ export function computeTithe(opts: {
     const amt = Number(t.amount) || 0
     if (t.category_id && transferCategoryIds.has(t.category_id)) continue
     if (amt > 0) {
+      if (incomeCategoryIds && !(t.category_id && incomeCategoryIds.has(t.category_id))) continue
       totalIncome += amt
       bucket(monthOf(t.date)).income += amt
     } else if (amt < 0 && t.category_id && givingCategoryIds.has(t.category_id)) {

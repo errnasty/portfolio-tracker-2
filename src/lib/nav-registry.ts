@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Wallet, Repeat, Briefcase, TrendingUp, Sliders, Settings,
   PieChart, Activity, Beaker, ListChecks, Coins, Target, FileText, Bell, PiggyBank,
-  Upload, Banknote, CalendarClock, Users, BookOpen,
+  Upload, Banknote, CalendarClock, Users, BookOpen, Landmark,
 } from 'lucide-react'
 
 export interface NavRoute {
@@ -25,6 +25,7 @@ export const NAV_ROUTES: NavRoute[] = [
   { href: '/guide', label: 'Guide', icon: BookOpen, group: 'Overview' },
 
   { href: '/spending', label: 'Spending', icon: Wallet, group: 'Money', seq: 'g s' },
+  { href: '/accounts', label: 'Accounts', icon: Landmark, group: 'Money', seq: 'g a' },
   { href: '/income', label: 'Income', icon: Banknote, group: 'Money', seq: 'g i' },
   { href: '/budgets', label: 'Budgets', icon: PiggyBank, group: 'Money', seq: 'g b' },
   { href: '/payments', label: 'Payments', icon: CalendarClock, group: 'Money', seq: 'g y' },

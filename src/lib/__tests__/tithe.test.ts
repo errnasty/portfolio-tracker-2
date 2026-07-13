@@ -61,6 +61,25 @@ describe('computeTithe', () => {
     ])
   })
 
+  it('accrues only from the chosen income categories (salary-only default)', () => {
+    const r = computeTithe({
+      txns: [
+        { date: '2026-07-01', amount: 3000, category_id: SALARY },     // counts
+        { date: '2026-07-02', amount: 500, category_id: 'cat-people' },// other income, skipped
+        { date: '2026-07-03', amount: 200, category_id: null },       // uncategorized, skipped
+        { date: '2026-07-15', amount: -100, category_id: GIVING },    // giving still clears
+      ],
+      transferCategoryIds: new Set([TRANSFER]),
+      givingCategoryIds: new Set([GIVING]),
+      ratePct: 10,
+      incomeCategoryIds: new Set([SALARY]),
+    })
+    expect(r.totalIncome).toBe(3000)
+    expect(r.accrued).toBe(300)
+    expect(r.givenViaGiving).toBe(100)
+    expect(r.owed).toBe(200)
+  })
+
   it('ignores negative/zero clearances and handles empty input', () => {
     const r = computeTithe({
       txns: [],
