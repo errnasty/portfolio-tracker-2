@@ -11,6 +11,11 @@ export interface DefaultCategory {
 }
 
 export const DEFAULT_CATEGORIES: DefaultCategory[] = [
+  // Income buckets: salary, money from people, interest — 'Income' stays as
+  // the generic catch-all (refunds, cashback, dividends, anything unmatched).
+  { name: 'Salary',            kind: 'income',   color: '#2E7D5B', icon: 'BriefcaseBusiness' },
+  { name: 'From people',       kind: 'income',   color: '#3f8f86', icon: 'Users' },
+  { name: 'Interest',          kind: 'income',   color: '#C6A96A', icon: 'Percent' },
   { name: 'Income',            kind: 'income',   color: '#2E7D5B', icon: 'Banknote' },
   { name: 'Groceries',         kind: 'expense',  color: '#3f8f86', icon: 'ShoppingCart' },
   { name: 'Food & Dining',     kind: 'expense',  color: '#b5732f', icon: 'Utensils' },
@@ -32,10 +37,18 @@ export const DEFAULT_CATEGORIES: DefaultCategory[] = [
 // Singapore merchants / DBS-POSB statement narratives.
 const RULES: { category: string; keywords: string[] }[] = [
   // Income / money in (checked first so "Incoming PayNow", refunds, NS pay win).
+  // Specific income buckets before the generic 'Income' catch-all.
+  { category: 'Salary', keywords: [
+    'salary', 'payroll', 'giro salary', 'sal /', 'mindef saf',
+  ] },
+  { category: 'Interest', keywords: [
+    'interest earned', 'credit interest', 'interest credit', 'bonus interest',
+  ] },
+  { category: 'From people', keywords: [
+    'incoming paynow', 'send back from paylah', 'ang pow', 'reimburse',
+  ] },
   { category: 'Income', keywords: [
-    'salary', 'payroll', 'giro salary', 'sal /', 'interest earned', 'credit interest',
-    'refund', 'cashback', 'cash back', 'dividend', 'ang pow', 'reimburse',
-    'incoming paynow', 'send back from paylah', 'mindef saf',
+    'refund', 'cashback', 'cash back', 'dividend',
   ] },
   // Investment / brokerage top-ups → Transfers (kept high so they beat the
   // generic "PayNow Transfer" catch-all and aren't counted as spending).

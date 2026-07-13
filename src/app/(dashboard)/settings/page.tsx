@@ -10,12 +10,10 @@ import { Button } from '@/components/ui/button'
 import { ForwardAddressCard } from '@/components/spending/ForwardAddressCard'
 import { CategoryRulesCard } from '@/components/spending/CategoryRulesCard'
 import type { Currency } from '@/types'
+import { SUPPORTED_CURRENCIES } from '@/types'
 
-const CURRENCIES: { value: Currency; label: string }[] = [
-  { value: 'USD', label: 'USD — US Dollar' },
-  { value: 'SGD', label: 'SGD — Singapore Dollar' },
-  { value: 'EUR', label: 'EUR — Euro' },
-]
+const CURRENCIES: { value: Currency; label: string }[] =
+  SUPPORTED_CURRENCIES.map((c) => ({ value: c.code, label: c.label }))
 
 export default function SettingsPage() {
   const { settings, updateSettings } = usePortfolio()

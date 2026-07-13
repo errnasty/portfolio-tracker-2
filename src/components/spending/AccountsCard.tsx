@@ -7,12 +7,15 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Landmark, Plus, Pencil, Trash2, AlertTriangle, Wallet, CreditCard, Coins } from 'lucide-react'
+import { Landmark, Plus, Pencil, Trash2, AlertTriangle, Wallet, CreditCard, Coins, ArrowLeftRight } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { convertToBase } from '@/lib/calculations'
+import { AccountDetailDialog } from '@/components/spending/AccountDetailDialog'
+import { TransferDialog } from '@/components/spending/TransferDialog'
 import type { Account, AccountType, Currency, FxRates } from '@/types'
+import { CURRENCY_CODES } from '@/types'
 
-const CURRENCIES: Currency[] = ['SGD', 'USD', 'EUR']
+const CURRENCIES: Currency[] = CURRENCY_CODES
 const TYPES: { value: AccountType; label: string }[] = [
   { value: 'bank', label: 'Bank' },
   { value: 'cash', label: 'Cash' },
@@ -43,6 +46,9 @@ export function AccountsCard({ accounts, netBase, base, fxRates, loadError, onAd
   const [currency, setCurrency] = useState<Currency>(base)
   const [balance, setBalance] = useState('')
   const [saving, setSaving] = useState(false)
+  const [detailId, setDetailId] = useState<string | null>(null)
+  const [transferOpen, setTransferOpen] = useState(false)
+  const [transferFromId, setTransferFromId] = useState<string | null>(null)
 
   const openAdd = () => {
     setEditingId(null); setName(''); setType('bank'); setInstitution('POSB')
@@ -80,6 +86,13 @@ export function AccountsCard({ accounts, netBase, base, fxRates, loadError, onAd
 
   const sorted = [...accounts].sort((a, b) => Number(b.current_balance) - Number(a.current_balance))
 
+  // Combined totals per currency (credit balances subtract — money owed).
+  const byCurrency = new Map<string, number>()
+  for (const a of accounts) {
+    const v = (a.type === 'credit' ? -1 : 1) * (Number(a.current_balance) || 0)
+    byCurrency.set(String(a.currency), (byCurrency.get(String(a.currency)) ?? 0) + v)
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -94,9 +107,16 @@ export function AccountsCard({ accounts, netBase, base, fxRates, loadError, onAd
                 : `${sorted.length} account${sorted.length === 1 ? '' : 's'} · net ${formatCurrency(netBase, base)}`}
             </CardDescription>
           </div>
-          <Button variant="outline" size="sm" onClick={openAdd}>
-            <Plus className="mr-1 h-3.5 w-3.5" /> Add
-          </Button>
+          <div className="flex gap-2">
+            {accounts.length >= 2 && (
+              <Button variant="outline" size="sm" onClick={() => { setTransferFromId(null); setTransferOpen(true) }}>
+                <ArrowLeftRight className="mr-1 h-3.5 w-3.5" /> Transfer
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={openAdd}>
+              <Plus className="mr-1 h-3.5 w-3.5" /> Add
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -124,7 +144,13 @@ export function AccountsCard({ accounts, netBase, base, fxRates, loadError, onAd
               const inBase = fxRates ? convertToBase(bal, a.currency, fxRates) : 0
               const isCredit = a.type === 'credit'
               return (
-                <div key={a.id} className="rounded-md border border-border p-3 group">
+                <div
+                  key={a.id}
+                  className="rounded-md border border-border p-3 group cursor-pointer transition-colors hover:border-faint"
+                  onClick={() => setDetailId(a.id)}
+                  role="button"
+                  title="View account details"
+                >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
@@ -141,13 +167,13 @@ export function AccountsCard({ accounts, netBase, base, fxRates, loadError, onAd
                       )}
                     </div>
                     <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(a)}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); openEdit(a) }}>
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
                       <Button
                         variant="ghost" size="icon"
                         className="h-7 w-7 text-muted-foreground hover:text-down"
-                        onClick={() => onDelete(a.id)}
+                        onClick={(e) => { e.stopPropagation(); onDelete(a.id) }}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -158,7 +184,27 @@ export function AccountsCard({ accounts, netBase, base, fxRates, loadError, onAd
             })}
           </div>
         )}
+
+        {/* Combined view across accounts: per-currency sums + net in base */}
+        {sorted.length > 1 && (
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border pt-3 text-xs text-muted-foreground">
+            <span className="text-[10px] uppercase tracking-wide">Combined</span>
+            {Array.from(byCurrency.entries()).map(([cur, total]) => (
+              <span key={cur} className="tabular-nums">{formatCurrency(total, cur)}</span>
+            ))}
+            <span className="ml-auto tabular-nums text-foreground">net ≈ {formatCurrency(netBase, base)}</span>
+          </div>
+        )}
       </CardContent>
+
+      <AccountDetailDialog
+        account={sorted.find((a) => a.id === detailId) ?? null}
+        base={base}
+        fxRates={fxRates}
+        onClose={() => setDetailId(null)}
+        onTransfer={(fromId) => { setTransferFromId(fromId); setTransferOpen(true) }}
+      />
+      <TransferDialog open={transferOpen} onOpenChange={setTransferOpen} defaultFromId={transferFromId} />
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md">

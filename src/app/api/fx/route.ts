@@ -12,6 +12,18 @@ const FALLBACK_USD_RATES: Record<string, number> = {
   EUR: 0.92,
   GBP: 0.79,
   JPY: 155,
+  AUD: 1.52,
+  CNY: 7.2,
+  HKD: 7.8,
+  MYR: 4.7,
+  IDR: 16200,
+  THB: 36,
+  PHP: 58,
+  INR: 84,
+  KRW: 1380,
+  NZD: 1.66,
+  CAD: 1.37,
+  CHF: 0.9,
 }
 
 function buildFallback(base: string, symbols: string[]) {

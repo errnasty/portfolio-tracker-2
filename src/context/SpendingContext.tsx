@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
-import { convertToBase } from '@/lib/calculations'
+import { convertToBase, convertBetween } from '@/lib/calculations'
 import { usePortfolio } from '@/context/PortfolioContext'
 import { DEFAULT_CATEGORIES, guessCategoryName } from '@/lib/categorize'
 import { findFuzzyDuplicate } from '@/lib/txn-dedupe'
@@ -34,6 +34,21 @@ interface SpendingContextValue {
   updateBankTransaction: (id: string, data: Partial<BankTransaction>) => Promise<void>
   deleteBankTransaction: (id: string) => Promise<void>
   bulkInsertBankTransactions: (rows: BankTxnInsert[]) => Promise<{ inserted: number }>
+  // Move money between two of your own accounts. Writes a matched pair of
+  // Transfers-category rows (excluded from income/spending) and nudges both
+  // balances. amountTo defaults to the FX conversion of amountFrom.
+  transferBetweenAccounts: (opts: {
+    fromAccountId: string
+    toAccountId: string
+    amountFrom: number
+    amountTo?: number
+    date: string
+    notes?: string | null
+  }) => Promise<void>
+  // Reclassify an existing expense/income row as a transfer and create the
+  // matching opposite row on the counterpart account ("this wasn't spending,
+  // it went to my savings account" — and vice versa).
+  convertToTransfer: (txnId: string, counterpartAccountId: string) => Promise<void>
   statsForMonth: (ym: string) => SpendingStats
   // Best category id for a transaction: user rules first, then built-in keywords.
   categorize: (description: string, merchant?: string | null) => string | null
@@ -75,28 +90,35 @@ function computeStats(
   let income = 0
   let expense = 0
   const byCat = new Map<string, { name: string; amount: number }>()
+  const incomeByCat = new Map<string, { name: string; amount: number }>()
 
   for (const t of txns) {
     if (!t.date.startsWith(ym)) continue
     if (t.category_id && transferIds.has(t.category_id)) continue
     const base = toBase(Number(t.amount) || 0, t.currency)
+    const key = t.category_id ?? '__uncat__'
+    const name = t.category_id ? (catName.get(t.category_id) ?? 'Other') : 'Uncategorized'
     if (base >= 0) {
       income += base
+      const prev = incomeByCat.get(key)
+      incomeByCat.set(key, { name, amount: (prev?.amount ?? 0) + base })
     } else {
       const mag = -base
       expense += mag
-      const key = t.category_id ?? '__uncat__'
-      const name = t.category_id ? (catName.get(t.category_id) ?? 'Other') : 'Uncategorized'
       const prev = byCat.get(key)
       byCat.set(key, { name, amount: (prev?.amount ?? 0) + mag })
     }
   }
 
-  const byCategory = Array.from(byCat.entries())
-    .map(([key, v]) => ({ category_id: key === '__uncat__' ? null : key, name: v.name, amount: v.amount }))
-    .sort((a, b) => b.amount - a.amount)
+  const toSorted = (m: Map<string, { name: string; amount: number }>) =>
+    Array.from(m.entries())
+      .map(([key, v]) => ({ category_id: key === '__uncat__' ? null : key, name: v.name, amount: v.amount }))
+      .sort((a, b) => b.amount - a.amount)
 
-  return { month: ym, income, expense, net: income - expense, byCategory }
+  return {
+    month: ym, income, expense, net: income - expense,
+    byCategory: toSorted(byCat), incomeByCategory: toSorted(incomeByCat),
+  }
 }
 
 export function SpendingProvider({ children }: { children: React.ReactNode }) {
@@ -154,7 +176,7 @@ export function SpendingProvider({ children }: { children: React.ReactNode }) {
     // (e.g. Giving/Education) so categorize() resolves. The one-time guard means
     // deleting a default category afterwards sticks (we don't re-add it).
     let backfilled = false
-    try { backfilled = window.localStorage.getItem('categories_backfill_v2') === '1' } catch { /* ignore */ }
+    try { backfilled = window.localStorage.getItem('categories_backfill_v3') === '1' } catch { /* ignore */ }
     if (cats.length === 0 || !backfilled) {
       const missing = DEFAULT_CATEGORIES.filter((d) => !cats.some((c) => c.name === d.name))
       if (missing.length > 0) {
@@ -169,7 +191,7 @@ export function SpendingProvider({ children }: { children: React.ReactNode }) {
           .from('categories').select('*').eq('user_id', user.id)
         if (after) cats = after
       }
-      try { window.localStorage.setItem('categories_backfill_v2', '1') } catch { /* ignore */ }
+      try { window.localStorage.setItem('categories_backfill_v3', '1') } catch { /* ignore */ }
     }
     setCategories(
       [...cats].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0) || a.name.localeCompare(b.name)),
@@ -378,6 +400,90 @@ export function SpendingProvider({ children }: { children: React.ReactNode }) {
     await refreshBankTransactions()
   }
 
+  // The Transfers category id (kind='transfer'); prefers the seeded "Transfers".
+  const transferCategoryId = useMemo(() => {
+    const transfers = categories.filter((c) => c.kind === 'transfer')
+    return (transfers.find((c) => c.name === 'Transfers') ?? transfers[0])?.id ?? null
+  }, [categories])
+
+  const transferBetweenAccounts: SpendingContextValue['transferBetweenAccounts'] = async ({
+    fromAccountId, toAccountId, amountFrom, amountTo, date, notes = null,
+  }) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const fromAcc = accounts.find((a) => a.id === fromAccountId)
+    const toAcc = accounts.find((a) => a.id === toAccountId)
+    if (!fromAcc || !toAcc || fromAccountId === toAccountId || !(amountFrom > 0)) {
+      toast.error('Pick two different accounts and a positive amount')
+      throw new Error('Invalid transfer')
+    }
+    const fromCur = String(fromAcc.currency)
+    const toCur = String(toAcc.currency)
+    let received = amountTo
+    if (received === undefined || !(received > 0)) {
+      if (fromCur === toCur) received = amountFrom
+      else if (fxRates) received = convertBetween(amountFrom, fromCur, toCur, fxRates)
+      else { toast.error('FX rates unavailable — enter the received amount manually'); throw new Error('FX unavailable') }
+    }
+    const pair = [
+      {
+        user_id: user.id, account_id: fromAccountId, date,
+        description: `Transfer to ${toAcc.name}`, merchant: null,
+        amount: -amountFrom, currency: fromCur, category_id: transferCategoryId,
+        source: 'manual' as const, external_id: null, notes,
+      },
+      {
+        user_id: user.id, account_id: toAccountId, date,
+        description: `Transfer from ${fromAcc.name}`, merchant: null,
+        amount: received, currency: toCur, category_id: transferCategoryId,
+        source: 'manual' as const, external_id: null, notes,
+      },
+    ]
+    const { error: err } = await supabase.from('bank_transactions').insert(pair)
+    if (err) { toast.error(`Transfer failed: ${err.message}`); throw err }
+    await adjustAccountBalance(fromAccountId, -amountFrom)
+    await adjustAccountBalance(toAccountId, received)
+    await refreshBankTransactions()
+    toast.success(`Transferred ${amountFrom.toFixed(2)} ${fromCur} → ${toAcc.name}`)
+  }
+
+  const convertToTransfer: SpendingContextValue['convertToTransfer'] = async (txnId, counterpartAccountId) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const txn = bankTransactions.find((t) => t.id === txnId)
+    const counterpart = accounts.find((a) => a.id === counterpartAccountId)
+    if (!txn || !counterpart) { toast.error('Transaction or account not found'); return }
+    if (txn.account_id === counterpartAccountId) {
+      toast.error('Pick a different account than the transaction’s own')
+      return
+    }
+    const amt = Number(txn.amount) || 0
+    // Counterpart gets the opposite flow, converted into its own currency.
+    const counterCur = String(counterpart.currency)
+    let counterAmt = -amt
+    if (String(txn.currency) !== counterCur) {
+      if (!fxRates) { toast.error('FX rates unavailable'); return }
+      counterAmt = convertBetween(-amt, String(txn.currency), counterCur, fxRates)
+    }
+    const sourceName = accounts.find((a) => a.id === txn.account_id)?.name ?? 'account'
+    const { error: err } = await supabase.from('bank_transactions').insert({
+      user_id: user.id, account_id: counterpartAccountId, date: txn.date,
+      description: amt < 0 ? `Transfer from ${sourceName}` : `Transfer to ${sourceName}`,
+      merchant: null, amount: counterAmt, currency: counterCur,
+      category_id: transferCategoryId, source: 'manual' as const, external_id: null,
+      notes: `Counterpart of: ${txn.description}`,
+    })
+    if (err) { toast.error(`Convert failed: ${err.message}`); throw err }
+    // Reclassify the original row as a transfer so it leaves income/spending.
+    const { error: updErr } = await supabase.from('bank_transactions')
+      .update({ category_id: transferCategoryId, updated_at: new Date().toISOString() })
+      .eq('id', txnId)
+    if (updErr) { toast.error(`Convert failed: ${updErr.message}`); throw updErr }
+    await adjustAccountBalance(counterpartAccountId, counterAmt)
+    await refreshBankTransactions()
+    toast.success(`Marked as transfer ${amt < 0 ? 'to' : 'from'} ${counterpart.name}`)
+  }
+
   const bulkInsertBankTransactions = async (rows: BankTxnInsert[]) => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user || rows.length === 0) return { inserted: 0 }
@@ -557,6 +663,7 @@ export function SpendingProvider({ children }: { children: React.ReactNode }) {
       refreshCategories, refreshBankTransactions, refreshCategoryRules,
       addCategory, deleteCategory, addCategoryRule, deleteCategoryRule,
       addBankTransaction, updateBankTransaction, deleteBankTransaction, bulkInsertBankTransactions,
+      transferBetweenAccounts, convertToTransfer,
       statsForMonth, categorize, aiCategorize,
       subscriptions, subscriptionSummary, setSubscriptionStatus,
       budgets, refreshBudgets, upsertBudget, deleteBudget,

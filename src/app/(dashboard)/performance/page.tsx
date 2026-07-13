@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { usePortfolio } from '@/context/PortfolioContext'
 import { PageShell } from '@/components/ui/page-shell'
+import { SubNav } from '@/components/ui/sub-nav'
+import { SUB_NAVS } from '@/lib/nav-registry'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -135,6 +137,7 @@ export default function PerformancePage() {
       footerHints={<span><span className="text-accent">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g h</span> home</span>}
     >
     <div className="space-y-4">
+      <SubNav links={[...SUB_NAVS.analytics]} />
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-4">
         {/* Period selector */}

@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { usePortfolio } from '@/context/PortfolioContext'
 import { PageShell } from '@/components/ui/page-shell'
+import { SubNav } from '@/components/ui/sub-nav'
+import { SUB_NAVS } from '@/lib/nav-registry'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -81,6 +83,7 @@ export default function RiskPage() {
   if (!portfolioLoading && enriched.length === 0) {
     return (
       <PageShell screen="Invest" title="Risk">
+        <SubNav links={[...SUB_NAVS.analytics]} />
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             Add some holdings to see risk metrics.
@@ -93,6 +96,7 @@ export default function RiskPage() {
   return (
     <PageShell screen="Invest" title="Risk" footerHints={<span><span className="text-accent">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g h</span> home</span>}>
     <div className="space-y-4">
+      <SubNav links={[...SUB_NAVS.analytics]} />
       {/* Controls — wrap on mobile */}
       <Card>
         <CardContent className="p-3 md:p-4">

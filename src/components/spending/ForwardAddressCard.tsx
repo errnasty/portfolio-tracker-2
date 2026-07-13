@@ -7,7 +7,7 @@ import { useSpending } from '@/context/SpendingContext'
 import { getInboundAddress, provisionInboundAddress, INBOUND_DOMAIN } from '@/lib/inbound'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Mail, Copy, RefreshCw, CheckCircle2, Loader2, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react'
+import { Mail, Copy, RefreshCw, CheckCircle2, Loader2, ChevronDown, ChevronUp, AlertCircle, ShieldCheck, ExternalLink } from 'lucide-react'
 import type { InboundAddress } from '@/types'
 
 export function ForwardAddressCard() {
@@ -18,6 +18,7 @@ export function ForwardAddressCard() {
   const [lastSynced, setLastSynced] = useState<string | null>(null)
   const [showInstructions, setShowInstructions] = useState(false)
   const [missingTable, setMissingTable] = useState(false)
+  const [verify, setVerify] = useState<Pick<InboundAddress, 'verify_code' | 'verify_link' | 'verify_received_at'> | null>(null)
 
   useEffect(() => {
     let active = true
@@ -68,6 +69,7 @@ export function ForwardAddressCard() {
       if (active && addr) {
         setAddress(addr.address)
         setLastSynced(addr.last_synced)
+        if (addr.verify_code || addr.verify_link) setVerify(addr)
       }
     })().finally(() => {
       if (active) setLoading(false)
@@ -89,12 +91,38 @@ export function ForwardAddressCard() {
     setSyncing(true)
     try {
       await refreshBankTransactions()
+      // Also re-check for a newly arrived forwarding-verification email.
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        const addr = await getInboundAddress(session.user.id)
+        if (addr?.verify_code || addr?.verify_link) setVerify(addr)
+      }
       setLastSynced(new Date().toISOString())
-      toast.success('Transactions refreshed')
+      toast.success('Refreshed')
     } catch (e) {
       toast.error(`Refresh failed: ${String(e)}`)
     } finally {
       setSyncing(false)
+    }
+  }
+
+  // Clear a handled verification so the banner goes away.
+  const dismissVerify = async () => {
+    setVerify(null)
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    await supabase.from('inbound_addresses')
+      .update({ verify_code: null, verify_link: null, verify_from: null, verify_received_at: null })
+      .eq('user_id', session.user.id)
+  }
+
+  const copyCode = async () => {
+    if (!verify?.verify_code) return
+    try {
+      await navigator.clipboard.writeText(verify.verify_code)
+      toast.success('Code copied')
+    } catch {
+      toast.error('Could not copy — select and copy manually')
     }
   }
 
@@ -158,6 +186,39 @@ export function ForwardAddressCard() {
           </Button>
         </div>
 
+        {/* Forwarding verification (Gmail sends its confirmation email HERE,
+            not to the user's inbox — surface the captured code + link). */}
+        {verify && (
+          <div className="space-y-2 rounded-md border border-accent/40 bg-[var(--accent-soft)] p-3">
+            <div className="flex items-center gap-1.5 text-sm font-medium">
+              <ShieldCheck className="h-4 w-4 text-accent" /> Forwarding verification received
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Your mail provider asked to confirm forwarding to this address
+              {verify.verify_received_at ? ` (${new Date(verify.verify_received_at).toLocaleString()})` : ''}.
+              Paste this code back into Gmail, or click the confirm link.
+            </p>
+            {verify.verify_code && (
+              <div className="flex items-center gap-2">
+                <code className="flex-1 rounded-md border border-border bg-card px-3 py-2 text-base font-mono tracking-widest">{verify.verify_code}</code>
+                <Button size="icon" variant="outline" onClick={copyCode} title="Copy code">
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              {verify.verify_link && (
+                <Button size="sm" asChild>
+                  <a href={verify.verify_link} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="mr-2 h-3.5 w-3.5" /> Confirm forwarding
+                  </a>
+                </Button>
+              )}
+              <Button size="sm" variant="ghost" onClick={dismissVerify}>Dismiss</Button>
+            </div>
+          </div>
+        )}
+
         {/* Status */}
         {lastSynced && (
           <div className="flex items-center gap-1.5 text-sm text-up">
@@ -175,13 +236,25 @@ export function ForwardAddressCard() {
         </button>
 
         {showInstructions && (
-          <ol className="list-decimal space-y-1.5 pl-4 text-xs text-muted-foreground">
-            <li>Log in to your bank&apos;s app or website (DBS/POSB, OCBC, etc.)</li>
-            <li>Find the notification/email alerts settings</li>
-            <li>Add <code className="font-mono text-foreground">{address}</code> as a recipient for transaction alerts</li>
-            <li>New transactions will appear here automatically within seconds of the email arriving</li>
-            <li>You can also manually forward any bank email to this address</li>
-          </ol>
+          <div className="space-y-3 text-xs text-muted-foreground">
+            <div>
+              <div className="mb-1 font-medium text-foreground">Option A — Gmail auto-forwarding (recommended)</div>
+              <ol className="list-decimal space-y-1.5 pl-4">
+                <li>Gmail → Settings → See all settings → <strong>Forwarding and POP/IMAP</strong> → <strong>Add a forwarding address</strong> → paste <code className="font-mono text-foreground">{address}</code></li>
+                <li>Gmail emails a confirmation to that address — it lands <em>here</em>, and the code appears in a banner on this card (hit Refresh after ~a minute)</li>
+                <li>Paste the code back into Gmail (or click the confirm link in the banner)</li>
+                <li>Then create a filter: Settings → <strong>Filters and Blocked Addresses</strong> → new filter with From = your bank&apos;s alert address (e.g. <code className="font-mono">ibanking.alert@dbs.com</code>) → action &quot;Forward to&quot; your address above</li>
+              </ol>
+            </div>
+            <div>
+              <div className="mb-1 font-medium text-foreground">Option B — straight from your bank</div>
+              <ol className="list-decimal space-y-1.5 pl-4">
+                <li>In your bank&apos;s alert settings (DBS/POSB, OCBC, etc.), add <code className="font-mono text-foreground">{address}</code> as a recipient for transaction alerts</li>
+                <li>No verification step needed — banks send directly</li>
+              </ol>
+            </div>
+            <p>You can also manually forward any single bank email to this address. Nothing ever connects to your bank account itself — only notification emails are parsed.</p>
+          </div>
         )}
 
         {/* Refresh button */}

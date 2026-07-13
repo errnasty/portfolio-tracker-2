@@ -1,4 +1,28 @@
-export type Currency = 'USD' | 'SGD' | 'EUR'
+// Currencies the app supports for accounts, transactions, and display.
+// All are covered by the Frankfurter FX API (ECB reference rates).
+export const SUPPORTED_CURRENCIES = [
+  { code: 'SGD', label: 'SGD — Singapore Dollar' },
+  { code: 'USD', label: 'USD — US Dollar' },
+  { code: 'EUR', label: 'EUR — Euro' },
+  { code: 'AUD', label: 'AUD — Australian Dollar' },
+  { code: 'GBP', label: 'GBP — British Pound' },
+  { code: 'JPY', label: 'JPY — Japanese Yen' },
+  { code: 'CNY', label: 'CNY — Chinese Yuan' },
+  { code: 'HKD', label: 'HKD — Hong Kong Dollar' },
+  { code: 'MYR', label: 'MYR — Malaysian Ringgit' },
+  { code: 'IDR', label: 'IDR — Indonesian Rupiah' },
+  { code: 'THB', label: 'THB — Thai Baht' },
+  { code: 'PHP', label: 'PHP — Philippine Peso' },
+  { code: 'INR', label: 'INR — Indian Rupee' },
+  { code: 'KRW', label: 'KRW — South Korean Won' },
+  { code: 'NZD', label: 'NZD — New Zealand Dollar' },
+  { code: 'CAD', label: 'CAD — Canadian Dollar' },
+  { code: 'CHF', label: 'CHF — Swiss Franc' },
+] as const
+
+export type Currency = (typeof SUPPORTED_CURRENCIES)[number]['code']
+
+export const CURRENCY_CODES: Currency[] = SUPPORTED_CURRENCIES.map((c) => c.code)
 
 export interface Holding {
   id: string
@@ -154,6 +178,19 @@ export interface Goal {
 export interface UserSettings {
   user_id: string
   base_currency: Currency
+  // Tithing pool (see src/lib/tithe.ts). Optional: columns added 2026-07.
+  tithe_enabled?: boolean
+  tithe_rate?: number          // percent of income, default 10
+  tithe_start?: string | null  // YYYY-MM-DD; null = all history
+}
+
+export interface TitheClearance {
+  id: string
+  user_id: string
+  date: string
+  amount: number               // base currency
+  notes: string | null
+  created_at: string
 }
 
 export interface RebalanceRecommendation {
@@ -309,6 +346,7 @@ export interface SpendingStats {
   expense: number             // base currency (positive magnitude)
   net: number                 // income - expense
   byCategory: CategorySpend[] // expense breakdown, base currency
+  incomeByCategory: CategorySpend[] // income breakdown, base currency
 }
 
 export const DEFAULT_BENCHMARKS: BenchmarkConfig[] = [
@@ -319,6 +357,47 @@ export const DEFAULT_BENCHMARKS: BenchmarkConfig[] = [
   { ticker: 'EWS', name: 'Singapore (STI proxy)' },
 ]
 
+// ── Planned payments (upcoming deadlines) ──────────────────────────────────
+
+export type PaymentRepeat = 'none' | 'weekly' | 'monthly' | 'quarterly' | 'yearly'
+
+export interface PlannedPayment {
+  id: string
+  user_id: string
+  name: string
+  amount: number
+  currency: Currency | string
+  due_date: string             // YYYY-MM-DD
+  repeat: PaymentRepeat
+  category_id: string | null
+  account_id: string | null
+  autopay: boolean
+  notes: string | null
+  paid_at: string | null       // set when a one-off payment is settled
+  created_at: string
+  updated_at: string
+}
+
+// ── IOUs (money owed between you and people) ───────────────────────────────
+
+export type IouDirection = 'owed_to_me' | 'i_owe'
+
+export interface Iou {
+  id: string
+  user_id: string
+  person: string
+  direction: IouDirection
+  amount: number
+  currency: Currency | string
+  tag: string | null           // friend group / occasion
+  date: string
+  notes: string | null
+  settled: boolean
+  settled_at: string | null
+  created_at: string
+  updated_at: string
+}
+
 // Inbound forwarding address for bank email sync.
 export interface InboundAddress {
   user_id: string
@@ -327,4 +406,9 @@ export interface InboundAddress {
   last_synced: string | null
   total_synced: number
   created_at: string
+  // Captured forwarding-verification email (e.g. Gmail's confirmation):
+  verify_code?: string | null
+  verify_link?: string | null
+  verify_from?: string | null
+  verify_received_at?: string | null
 }

@@ -48,7 +48,16 @@ export async function POST(req: Request) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   )
 
+  // Service client bypasses RLS — required for the address lookup below
+  // (the webhook has no user session, so anon-key reads are RLS-blocked).
+  // Falls back to the anon client, which only works if RLS is off.
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const dbClient = serviceKey
+    ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey)
+    : supabase
+
   let toAddress = ''
+  let fromAddress = ''
   let subject = ''
   let textBody = ''
   let htmlBody = ''
@@ -58,12 +67,14 @@ export async function POST(req: Request) {
   if (contentType.includes('multipart/form-data')) {
     const formData = await req.formData()
     toAddress = (formData.get('to') as string) ?? ''
+    fromAddress = (formData.get('from') as string) ?? ''
     subject = (formData.get('subject') as string) ?? ''
     textBody = (formData.get('text') as string) ?? ''
     htmlBody = (formData.get('html') as string) ?? ''
   } else if (contentType.includes('application/json')) {
     const json = await req.json()
     toAddress = json.to ?? ''
+    fromAddress = json.from ?? ''
     subject = json.subject ?? ''
     textBody = json.text ?? ''
     htmlBody = json.html ?? ''
@@ -71,6 +82,7 @@ export async function POST(req: Request) {
     // Raw RFC 822 email
     const raw = await req.text()
     toAddress = extractHeader(raw, 'To')
+    fromAddress = extractHeader(raw, 'From')
     subject = extractHeader(raw, 'Subject')
     // Split headers from body
     const sep = raw.indexOf('\r\n\r\n') >= 0 ? '\r\n\r\n' : '\n\n'
@@ -85,7 +97,7 @@ export async function POST(req: Request) {
   }
 
   // Look up the user by inbound address
-  const { data: addr } = await supabase
+  const { data: addr } = await dbClient
     .from('inbound_addresses')
     .select('user_id')
     .eq('address_local', toLocal)
@@ -97,21 +109,43 @@ export async function POST(req: Request) {
 
   const userId = addr.user_id
 
+  // ── Forwarding-address verification emails ──────────────────────────────
+  // Gmail (and Outlook) require the destination of an auto-forward rule to
+  // confirm before any mail flows. That confirmation email lands here — not
+  // in an inbox the user can read — so capture the code + link and surface
+  // them on the Settings page (ForwardAddressCard).
+  const bodyAll = `${subject}\n${textBody}\n${htmlBody}`
+  const isVerificationEmail =
+    /forwarding-noreply@google\.com/i.test(fromAddress) ||
+    /gmail forwarding confirmation/i.test(subject) ||
+    /mail-settings\.google\.com\/mail\/vf-/i.test(bodyAll)
+
+  if (isVerificationEmail) {
+    const code = subject.match(/\(#(\d{5,})\)/)?.[1]
+      ?? bodyAll.match(/confirmation code[:\s]*(\d{5,})/i)?.[1]
+      ?? null
+    const link = bodyAll.match(/https:\/\/mail-settings\.google\.com\/mail\/vf-[^\s"'<>()\]]+/i)?.[0] ?? null
+    const { error: verifyErr } = await dbClient
+      .from('inbound_addresses')
+      .update({
+        verify_code: code,
+        verify_link: link,
+        verify_from: fromAddress || null,
+        verify_received_at: new Date().toISOString(),
+      })
+      .eq('user_id', userId)
+    if (verifyErr) {
+      return NextResponse.json({ error: verifyErr.message }, { status: 500 })
+    }
+    return NextResponse.json({ verification: true, code_found: !!code, link_found: !!link })
+  }
+
   // Parse the email
   const body = textBody || stripHtml(htmlBody)
   const parsed = parseDbsAlert(subject, body)
   if (!parsed) {
     return NextResponse.json({ error: 'Could not parse transaction from email' }, { status: 422 })
   }
-
-  // Create a service client with service role to bypass RLS (we've already
-  // authenticated the user via the address lookup).
-  // NOTE: If service role key is not available, fall back to inserting with
-  // the anon client — the user must have RLS policies that allow service inserts.
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  const dbClient = serviceKey
-    ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey)
-    : supabase
 
   // Map category guesses → category ids for this user.
   const { data: cats } = await dbClient.from('categories').select('id, name, kind').eq('user_id', userId)
