@@ -33,7 +33,7 @@ const REPEAT_LABEL: Record<PaymentRepeat, string> = {
 function today() { return new Date().toISOString().slice(0, 10) }
 
 export default function PaymentsPage() {
-  const { settings, fxRates } = usePortfolio()
+  const { settings, fxRates, accounts } = usePortfolio()
   const { subscriptions, loading: spendingLoading } = useSpending()
   const base = (settings?.base_currency ?? 'USD') as Currency
 
@@ -115,11 +115,15 @@ export default function PaymentsPage() {
   const [form, setForm] = useState({
     name: '', amount: '', currency: base as Currency, due_date: today(),
     repeat: 'monthly' as PaymentRepeat, autopay: false, notes: '',
+    post_as_transaction: false, flow: 'bill' as 'bill' | 'income', account_id: '',
   })
   const [saving, setSaving] = useState(false)
 
   const openAdd = () => {
-    setForm({ name: '', amount: '', currency: base, due_date: today(), repeat: 'monthly', autopay: false, notes: '' })
+    setForm({
+      name: '', amount: '', currency: base, due_date: today(), repeat: 'monthly', autopay: false, notes: '',
+      post_as_transaction: false, flow: 'bill', account_id: accounts[0]?.id ?? '',
+    })
     setOpen(true)
   }
   useQuickAction('add-payment', openAdd)
@@ -135,6 +139,9 @@ export default function PaymentsPage() {
         user_id: user.id, name: form.name.trim(), amount: amt, currency: form.currency,
         due_date: form.due_date, repeat: form.repeat, autopay: form.autopay,
         notes: form.notes.trim() || null,
+        post_as_transaction: form.post_as_transaction,
+        flow: form.flow,
+        account_id: form.post_as_transaction ? (form.account_id || null) : null,
       })
       if (error) { toast.error(`Save failed: ${error.message}`); return }
       setOpen(false)
@@ -233,6 +240,11 @@ export default function PaymentsPage() {
                           {i.autopay && (
                             <Badge variant="secondary" className="gap-1 text-[10px]"><Zap className="h-2.5 w-2.5" /> auto</Badge>
                           )}
+                          {i.planned?.post_as_transaction && (
+                            <Badge variant="secondary" className="gap-1 text-[10px]">
+                              {i.planned.flow === 'income' ? '+ posts income' : '− posts bill'}
+                            </Badge>
+                          )}
                         </div>
                         <div className="text-[10px] text-muted-foreground">
                           {i.source === 'subscription' ? 'detected subscription' : i.planned?.notes ?? 'planned'}
@@ -326,6 +338,37 @@ export default function PaymentsPage() {
               />
               Paid automatically (GIRO / card on file)
             </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox" checked={form.post_as_transaction}
+                onChange={(e) => setForm((f) => ({ ...f, post_as_transaction: e.target.checked }))}
+                className="h-4 w-4 rounded border-border"
+              />
+              Post as a transaction each time it&apos;s due (great for salary / rent)
+            </label>
+            {form.post_as_transaction && (
+              <div className="grid grid-cols-2 gap-3 rounded-md border border-border p-3">
+                <div className="space-y-2">
+                  <Label>Direction</Label>
+                  <Select value={form.flow} onValueChange={(v) => setForm((f) => ({ ...f, flow: v as 'bill' | 'income' }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="bill">Money out (bill)</SelectItem>
+                      <SelectItem value="income">Money in (salary)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Account</Label>
+                  <Select value={form.account_id} onValueChange={(v) => setForm((f) => ({ ...f, account_id: v }))}>
+                    <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+                    <SelectContent>
+                      {accounts.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>

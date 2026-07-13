@@ -29,10 +29,10 @@ update `src/lib/changelog.ts`, the onboarding tour, the guide page, and the nav 
 | # | Item | Why / How | Effort |
 |---|------|-----------|--------|
 | 1.1 | **Command palette actions** ✅ | The `Item.run` abstraction in `CommandPalette.tsx` already exists (only theme-toggle uses it). Add: *Add expense / income / transfer / IOU / planned payment / holding*, *Refresh prices*, *Replay tour*, *Jump to ticker*. Global `a` key opens quick-add. Cheapest high-value win in the codebase. | S |
-| 1.2 | **Quick-add with smart parsing** | One input: type `14.50 lunch grab` → amount + description parsed, category auto-guessed via existing `categorize()`, account defaulted. One Enter to save from anywhere (palette + a mobile floating action button). | M |
-| 1.3 | **Recurring transactions** | Salary, rent, allowance auto-post monthly. Reuse the `planned_payments` recurrence machinery (`advanceDate` in `src/lib/payments.ts`): add a `post_as_transaction` flag — when a due autopay payment passes, insert the bank transaction and advance the date (client-side on load, like the existing net-worth snapshot pattern). Gets salary in automatically without bank emails. | M |
+| 1.2 | **Quick-add with smart parsing** ✅ | One input: type `14.50 lunch grab` → amount + description parsed, category auto-guessed via existing `categorize()`, account defaulted. One Enter to save from anywhere (palette + a mobile floating action button). | M |
+| 1.3 | **Recurring transactions** ✅ | Salary, rent, allowance auto-post monthly. Reuse the `planned_payments` recurrence machinery (`advanceDate` in `src/lib/payments.ts`): add a `post_as_transaction` flag — when a due autopay payment passes, insert the bank transaction and advance the date (client-side on load, like the existing net-worth snapshot pattern). Gets salary in automatically without bank emails. | M |
 | 1.4 | **More banks in email ingestion** | `parseDbsAlert` is one tolerant parser; refactor to a parser registry and add OCBC/UOB/credit-card alert formats (same webhook, same review queue). Each new bank is mostly regex + fixtures/tests (pattern: `src/lib/__tests__/dbs-email-parser.fixtures.test.ts`). | M per bank |
-| 1.5 | **Review queue power-ups** | Bulk-confirm; "create rule from this row" (pre-filled `CategoryRulesCard` dialog); "apply rule retroactively" (batch update where description matches). Removes the last repetitive chore in categorization. | S–M |
+| 1.5 | **Review queue power-ups** ✅ | Bulk-confirm; "create rule from this row" (pre-filled `CategoryRulesCard` dialog); "apply rule retroactively" (batch update where description matches). Removes the last repetitive chore in categorization. | S–M |
 | 1.6 | **Balance reconciliation** ✅ | On any account: "Set actual balance" → app computes the delta and books an adjustment transaction. Keeping balances truthful becomes a 5-second task. | S |
 | 1.7 | **Import UX** | Drag-and-drop, and a column-mapping step for arbitrary bank CSVs (map Date/Description/Amount visually instead of requiring exact headers in `posb-parser.ts` / the generic parser). | M |
 
@@ -61,7 +61,7 @@ update `src/lib/changelog.ts`, the onboarding tour, the guide page, and the nav 
 | # | Item | Why / How | Effort |
 |---|------|-----------|--------|
 | 4.1 | **PWA install** ✅ | Web manifest + icons + `viewport`/`themeColor` metadata in `src/app/layout.tsx` + minimal service worker. The responsive shell (sidebar drawer, `TableScroll`, responsive grids) already exists — this makes it a home-screen app on the phone. | S |
-| 4.2 | **Mobile quick-entry FAB** | Floating + button on mobile → quick-add sheet (1.2). Phone entry becomes two taps. | S after 1.2 |
+| 4.2 | **Mobile quick-entry FAB** ✅ | Floating + button on mobile → quick-add sheet (1.2). Phone entry becomes two taps. | S after 1.2 |
 | 4.3 | **New-user dashboard** | Panels currently hide until data exists, leaving a sparse first-run page. Replace with guided empty-state cards ("Add your first account", "Forward a bank email") reusing `OnboardingTour` step content/links. | S |
 | 4.4 | **Net worth page** | Full-size trend (daily snapshots exist in `networth_snapshots`, currently only a hero sparkline) with range selector + stacked composition (cash/investments/assets/liabilities — add composition columns to the daily snapshot writer). | M |
 | 4.5 | **Global search in palette** | Search transactions/payees/tickers from ⌘K (client-side over loaded `bankTransactions` + the existing `/api/search`). | S–M |

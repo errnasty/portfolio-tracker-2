@@ -30,6 +30,9 @@ interface SpendingContextValue {
   deleteCategory: (id: string) => Promise<void>
   addCategoryRule: (matchText: string, categoryId: string, priority?: number) => Promise<void>
   deleteCategoryRule: (id: string) => Promise<void>
+  // Apply a keyword→category rule to existing *uncategorized* transactions.
+  // Returns how many rows were updated.
+  applyRuleRetroactively: (matchText: string, categoryId: string) => Promise<number>
   addBankTransaction: (t: BankTxnInsert) => Promise<void>
   updateBankTransaction: (id: string, data: Partial<BankTransaction>) => Promise<void>
   deleteBankTransaction: (id: string) => Promise<void>
@@ -322,6 +325,23 @@ export function SpendingProvider({ children }: { children: React.ReactNode }) {
     const { error: err } = await supabase.from('category_rules').delete().eq('id', id)
     if (err) { toast.error(`Delete rule failed: ${err.message}`); throw err }
     await refreshCategoryRules()
+  }
+
+  const applyRuleRetroactively = async (matchText: string, categoryId: string): Promise<number> => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return 0
+    // Escape ILIKE wildcards so a literal % / _ in the keyword can't match everything.
+    const pattern = `%${matchText.trim().replace(/[%_]/g, '\\$&')}%`
+    const { data, error: err } = await supabase.from('bank_transactions')
+      .update({ category_id: categoryId, updated_at: new Date().toISOString() })
+      .eq('user_id', user.id)
+      .is('category_id', null)
+      .ilike('description', pattern)
+      .select('id')
+    if (err) { toast.error(`Apply rule failed: ${err.message}`); return 0 }
+    const n = data?.length ?? 0
+    if (n > 0) await refreshBankTransactions()
+    return n
   }
 
   const setSubscriptionStatus = async (
@@ -661,7 +681,7 @@ export function SpendingProvider({ children }: { children: React.ReactNode }) {
     <SpendingContext.Provider value={{
       categories, bankTransactions, categoryRules, categoryById, spendingStats, loading, error,
       refreshCategories, refreshBankTransactions, refreshCategoryRules,
-      addCategory, deleteCategory, addCategoryRule, deleteCategoryRule,
+      addCategory, deleteCategory, addCategoryRule, deleteCategoryRule, applyRuleRetroactively,
       addBankTransaction, updateBankTransaction, deleteBankTransaction, bulkInsertBankTransactions,
       transferBetweenAccounts, convertToTransfer,
       statsForMonth, categorize, aiCategorize,

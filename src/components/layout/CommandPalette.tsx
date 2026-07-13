@@ -11,7 +11,7 @@ import { NAV_ROUTES } from '@/lib/nav-registry'
 import { fuzzyScore } from '@/lib/fuzzy'
 import { useViewTransitionRouter } from '@/components/motion/ViewTransitionProvider'
 import { usePortfolio } from '@/context/PortfolioContext'
-import { triggerQuickAction, type QuickActionKind } from '@/lib/quick-actions'
+import { dispatchQuickAction, triggerQuickAction, type QuickActionKind } from '@/lib/quick-actions'
 import { startTour } from '@/components/layout/OnboardingTour'
 import { cn } from '@/lib/utils'
 
@@ -41,7 +41,7 @@ export function CommandPalette({ open, onOpenChange }: {
     const quick = (kind: QuickActionKind, href: string) => () =>
       triggerQuickAction(kind, href, navigate)
     const actions: Item[] = [
-      { key: 'add-expense', label: 'Add expense', hint: 'Quick add', icon: Plus, run: quick('add-expense', '/spending') },
+      { key: 'add-expense', label: 'Add expense (quick)', hint: 'Quick add', icon: Plus, run: () => dispatchQuickAction('add-expense') },
       { key: 'add-income', label: 'Add income', hint: 'Quick add', icon: Banknote, run: quick('add-income', '/income') },
       { key: 'transfer', label: 'Transfer between accounts', hint: 'Quick add', icon: ArrowLeftRight, run: quick('transfer', '/spending') },
       { key: 'add-iou', label: 'Add IOU', hint: 'Quick add', icon: Users, run: quick('add-iou', '/people') },

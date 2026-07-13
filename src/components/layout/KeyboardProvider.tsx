@@ -4,7 +4,7 @@ import { CommandPalette } from './CommandPalette'
 import { useKeySequences } from '@/lib/useKeySequences'
 import { NAV_SEQUENCES } from '@/lib/nav-registry'
 import { useViewTransitionRouter } from '@/components/motion/ViewTransitionProvider'
-import { triggerQuickAction } from '@/lib/quick-actions'
+import { dispatchQuickAction } from '@/lib/quick-actions'
 
 const isEditable = (el: EventTarget | null) => {
   const n = el as HTMLElement | null
@@ -23,9 +23,9 @@ export function KeyboardProvider({ children }: { children: React.ReactNode }) {
       const cmdK = e.key.toLowerCase() === 'k' && (e.metaKey || e.ctrlKey)
       const bareK = e.key.toLowerCase() === 'k' && !e.metaKey && !e.ctrlKey && !e.altKey && !isEditable(e.target)
       if (cmdK || bareK) { e.preventDefault(); setOpen((v) => !v) }
-      // `a` = quick-add an expense from anywhere.
+      // `a` = quick-add from anywhere (globally-mounted QuickAddDialog).
       const bareA = e.key.toLowerCase() === 'a' && !e.metaKey && !e.ctrlKey && !e.altKey && !isEditable(e.target)
-      if (bareA) { e.preventDefault(); triggerQuickAction('add-expense', '/spending', navigate) }
+      if (bareA) { e.preventDefault(); dispatchQuickAction('add-expense') }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)

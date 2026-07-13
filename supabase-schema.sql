@@ -474,6 +474,17 @@ create table if not exists planned_payments (
   updated_at  timestamptz default now()
 );
 
+-- Recurring posting: when true, each passed due date books a real
+-- bank_transactions row (flow 'bill' = money out, 'income' = money in)
+-- and the due date advances. Powers auto-posted salary/rent.
+alter table planned_payments add column if not exists post_as_transaction boolean not null default false;
+alter table planned_payments add column if not exists flow text not null default 'bill';
+do $$ begin
+  alter table planned_payments
+    add constraint planned_payments_flow_check check (flow in ('bill', 'income'));
+exception when duplicate_object then null;
+         when others then null; end $$;
+
 create index if not exists idx_planned_payments_user_due
   on planned_payments(user_id, due_date);
 

@@ -377,6 +377,10 @@ export interface PlannedPayment {
   autopay: boolean
   notes: string | null
   paid_at: string | null       // set when a one-off payment is settled
+  // Recurring posting (columns added 2026-07): book a real transaction each
+  // time the due date passes. flow 'bill' = money out, 'income' = money in.
+  post_as_transaction?: boolean
+  flow?: 'bill' | 'income'
   created_at: string
   updated_at: string
 }

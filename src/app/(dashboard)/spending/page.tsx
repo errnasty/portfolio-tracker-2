@@ -140,7 +140,6 @@ export default function SpendingPage() {
 
   // ── Transfers ───────────────────────────────────────────────────────────
   const [transferOpen, setTransferOpen] = useState(false)
-  useQuickAction('add-expense', openAdd)
   useQuickAction('transfer', () => setTransferOpen(true))
   // Row being converted into a transfer (pick the counterpart account).
   const [convertTxn, setConvertTxn] = useState<BankTransaction | null>(null)

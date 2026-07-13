@@ -19,6 +19,12 @@ export type QuickActionKind =
 const EVENT = 'aureus:quick-action'
 const PENDING_KEY = 'aureus_pending_quick_action'
 
+// For actions handled by globally-mounted components (e.g. the quick-add
+// dialog): fire the event directly, no navigation needed.
+export function dispatchQuickAction(kind: QuickActionKind) {
+  window.dispatchEvent(new CustomEvent(EVENT, { detail: kind }))
+}
+
 export function triggerQuickAction(
   kind: QuickActionKind,
   href: string,

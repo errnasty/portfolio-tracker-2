@@ -1,21 +1,35 @@
 'use client'
 
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { useSpending } from '@/context/SpendingContext'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Plus, Trash2, Wand2 } from 'lucide-react'
+import { History, Plus, Trash2, Wand2 } from 'lucide-react'
 
 // Dynamic categorization rules. A rule maps a keyword (substring, case-
 // insensitive) to a category and runs before the built-in keyword list, so the
 // user can teach the app new merchants without code changes.
 export function CategoryRulesCard() {
-  const { categoryRules, categories, categoryById, addCategoryRule, deleteCategoryRule } = useSpending()
+  const { categoryRules, categories, categoryById, addCategoryRule, deleteCategoryRule, applyRuleRetroactively } = useSpending()
   const [matchText, setMatchText] = useState('')
   const [categoryId, setCategoryId] = useState('')
   const [saving, setSaving] = useState(false)
+  const [applyingId, setApplyingId] = useState<string | null>(null)
+
+  const applyToExisting = async (ruleId: string, text: string, catId: string) => {
+    setApplyingId(ruleId)
+    try {
+      const n = await applyRuleRetroactively(text, catId)
+      toast.success(n > 0
+        ? `Categorized ${n} past transaction${n === 1 ? '' : 's'}`
+        : 'No uncategorized transactions match')
+    } finally {
+      setApplyingId(null)
+    }
+  }
 
   const add = async () => {
     if (!matchText.trim() || !categoryId) return
@@ -67,13 +81,24 @@ export function CategoryRulesCard() {
                   <span className="font-mono text-xs">&ldquo;{r.match_text}&rdquo;</span>
                   <span className="text-muted-foreground"> → {categoryById[r.category_id]?.name ?? 'Unknown'}</span>
                 </div>
-                <Button
-                  variant="ghost" size="icon"
-                  className="h-7 w-7 text-muted-foreground hover:text-down"
-                  onClick={() => deleteCategoryRule(r.id)}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+                <div className="flex items-center gap-0.5">
+                  <Button
+                    variant="ghost" size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                    title="Apply to existing uncategorized transactions"
+                    disabled={applyingId === r.id}
+                    onClick={() => applyToExisting(r.id, r.match_text, r.category_id)}
+                  >
+                    <History className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost" size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-down"
+                    onClick={() => deleteCategoryRule(r.id)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
