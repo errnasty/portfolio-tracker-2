@@ -16,7 +16,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { AccountsCard } from '@/components/spending/AccountsCard'
 import { ReviewQueueCard } from '@/components/spending/ReviewQueueCard'
 import { TransferDialog } from '@/components/spending/TransferDialog'
 import { ArrowLeftRight, Plus, Trash2, Upload } from 'lucide-react'
@@ -35,10 +34,7 @@ function addMonth(ym: string, delta: number): string {
 }
 
 export default function SpendingPage() {
-  const {
-    settings, accounts, accountsNetBase, accountsError, fxRates,
-    addAccount, updateAccount, deleteAccount,
-  } = usePortfolio()
+  const { settings, accounts } = usePortfolio()
   const {
     bankTransactions, categories, categoryById, statsForMonth, loading, error,
     addBankTransaction, updateBankTransaction, deleteBankTransaction, categorize, resolveDescription,
@@ -400,11 +396,6 @@ export default function SpendingPage() {
           </div>
         </CardContent>
       </Card>
-
-      <AccountsCard
-        accounts={accounts} netBase={accountsNetBase} base={base} fxRates={fxRates}
-        loadError={accountsError} onAdd={addAccount} onUpdate={updateAccount} onDelete={deleteAccount}
-      />
 
       <TransferDialog open={transferOpen} onOpenChange={setTransferOpen} />
 

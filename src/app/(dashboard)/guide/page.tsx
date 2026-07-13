@@ -2,18 +2,20 @@
 
 import { PageShell } from '@/components/ui/page-shell'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { TLink } from '@/components/motion/TLink'
 import { CHANGELOG } from '@/lib/changelog'
+import { startTour } from '@/components/layout/OnboardingTour'
 import {
   Landmark, Mail, Tags, PiggyBank, Briefcase, CalendarClock, Users, HandHeart,
-  Sparkles, Keyboard, Wallet, TrendingUp,
+  Sparkles, Keyboard, Wallet, TrendingUp, Compass,
 } from 'lucide-react'
 
 const STEPS: { icon: React.ElementType; title: string; body: React.ReactNode }[] = [
   {
     icon: Landmark,
     title: '1 · Add your accounts',
-    body: <>Head to <TLink href="/spending" className="text-accent hover:underline">Spending</TLink> and add each bank, cash, credit and e-wallet account with its currency and current balance. Different currencies are fine — everything rolls up into your base currency (set in <TLink href="/settings" className="text-accent hover:underline">Settings</TLink>).</>,
+    body: <>Head to <TLink href="/accounts" className="text-accent hover:underline">Accounts</TLink> and add each bank, cash, credit and e-wallet account with its currency and current balance. Different currencies are fine — everything rolls up into your base currency (set in <TLink href="/settings" className="text-accent hover:underline">Settings</TLink>).</>,
   },
   {
     icon: Mail,
@@ -56,8 +58,15 @@ export default function GuidePage() {
       <div className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Getting started</CardTitle>
-            <CardDescription>Five minutes of setup and the app largely runs itself.</CardDescription>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <CardTitle className="text-base">Getting started</CardTitle>
+                <CardDescription>Five minutes of setup and the app largely runs itself.</CardDescription>
+              </div>
+              <Button size="sm" onClick={startTour}>
+                <Compass className="mr-2 h-3.5 w-3.5" /> Take the tour
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2">

@@ -17,6 +17,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.1',
+    date: '2026-07-13',
+    title: 'Accounts tab, guided tour & smarter tithing',
+    items: [
+      { title: 'Accounts page', desc: 'Bank, cash, credit and wallet accounts now have their own tab with combined totals, credit owed, and per-account drill-downs.', href: '/accounts' },
+      { title: 'Guided tour', desc: 'A screen-by-screen walkthrough for new users — it pops up on first visit, or replay it anytime from the Guide.', href: '/guide' },
+      { title: 'Tithing from salary', desc: 'The tithing pool now counts only Salary income by default; switch it to all income (and any rate) on the Income page.', href: '/income' },
+    ],
+  },
+  {
     version: '2026.07',
     date: '2026-07-13',
     title: 'Money update: income, payments, people & more',

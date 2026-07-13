@@ -512,6 +512,13 @@ create policy "Users manage own ious"
 alter table user_settings add column if not exists tithe_enabled boolean not null default false;
 alter table user_settings add column if not exists tithe_rate    numeric(6, 3) not null default 10;
 alter table user_settings add column if not exists tithe_start   date;
+-- Which income accrues: 'salary' (Salary category only, default) or 'all'.
+alter table user_settings add column if not exists tithe_base    text not null default 'salary';
+do $$ begin
+  alter table user_settings
+    add constraint user_settings_tithe_base_check check (tithe_base in ('salary', 'all'));
+exception when duplicate_object then null;
+         when others then null; end $$;
 
 create table if not exists tithe_clearances (
   id         uuid primary key default gen_random_uuid(),

@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { HandHeart, Plus, Trash2 } from 'lucide-react'
 import type { Currency, TitheClearance } from '@/types'
 
@@ -28,6 +29,7 @@ export function TitheCard() {
   const enabled = settings?.tithe_enabled ?? false
   const rate = Number(settings?.tithe_rate ?? 10)
   const start = settings?.tithe_start ?? null
+  const titheBase = settings?.tithe_base ?? 'salary'
 
   const [clearances, setClearances] = useState<TitheClearance[]>([])
   const [tableMissing, setTableMissing] = useState(false)
@@ -49,6 +51,8 @@ export function TitheCard() {
   const result = useMemo(() => {
     const transferIds = new Set(categories.filter((c) => c.kind === 'transfer').map((c) => c.id))
     const givingIds = new Set(categories.filter((c) => c.name === 'Giving').map((c) => c.id))
+    // 'salary' base: only Salary-category income accrues; 'all': every income row.
+    const salaryIds = new Set(categories.filter((c) => c.name === 'Salary').map((c) => c.id))
     const txns = bankTransactions.map((t) => ({
       date: t.date,
       amount: fxRates ? convertToBase(Number(t.amount) || 0, t.currency, fxRates) : Number(t.amount) || 0,
@@ -61,13 +65,15 @@ export function TitheCard() {
       ratePct: rate,
       startDate: start,
       clearances: clearances.map((c) => ({ date: c.date, amount: Number(c.amount) })),
+      incomeCategoryIds: titheBase === 'salary' ? salaryIds : null,
     })
-  }, [bankTransactions, categories, fxRates, rate, start, clearances])
+  }, [bankTransactions, categories, fxRates, rate, start, clearances, titheBase])
 
   // ── Settings edit ─────────────────────────────────────────────────────
   const [rateInput, setRateInput] = useState(String(rate))
   const [startInput, setStartInput] = useState(start ?? '')
-  useEffect(() => { setRateInput(String(rate)); setStartInput(start ?? '') }, [rate, start])
+  const [baseInput, setBaseInput] = useState<'salary' | 'all'>(titheBase)
+  useEffect(() => { setRateInput(String(rate)); setStartInput(start ?? ''); setBaseInput(titheBase) }, [rate, start, titheBase])
 
   const saveSettings = async (on: boolean) => {
     const r = parseFloat(rateInput)
@@ -76,12 +82,23 @@ export function TitheCard() {
         tithe_enabled: on,
         tithe_rate: isNaN(r) || r <= 0 ? 10 : r,
         tithe_start: startInput || null,
+        tithe_base: baseInput,
       })
       if (on) toast.success('Tithing pool enabled')
     } catch (e) {
       toast.error(`Save failed: ${String(e)}`)
     }
   }
+
+  const BaseSelect = (
+    <Select value={baseInput} onValueChange={(v) => setBaseInput(v as 'salary' | 'all')}>
+      <SelectTrigger className="h-9 w-[150px] text-sm"><SelectValue /></SelectTrigger>
+      <SelectContent>
+        <SelectItem value="salary">Salary only</SelectItem>
+        <SelectItem value="all">All income</SelectItem>
+      </SelectContent>
+    </Select>
+  )
 
   // ── Record a clearance ────────────────────────────────────────────────
   const [open, setOpen] = useState(false)
@@ -135,17 +152,21 @@ export function TitheCard() {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2"><HandHeart className="h-4 w-4" /> Tithing</CardTitle>
           <CardDescription>
-            Automatically set aside a share of all income into a pool, and clear it as you give.
-            Giving-category transactions count automatically.
+            Automatically set aside a share of your salary (or all income — your choice) into a pool,
+            and clear it as you give. Giving-category transactions count automatically.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap items-end gap-3">
           <div className="space-y-2">
-            <Label>Rate (% of income)</Label>
-            <Input type="number" step="any" min="0" className="w-28" value={rateInput} onChange={(e) => setRateInput(e.target.value)} />
+            <Label>Rate (%)</Label>
+            <Input type="number" step="any" min="0" className="w-24" value={rateInput} onChange={(e) => setRateInput(e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label>Count income from</Label>
+            <Label>Calculate from</Label>
+            {BaseSelect}
+          </div>
+          <div className="space-y-2">
+            <Label>Starting</Label>
             <Input type="date" className="w-40" value={startInput} onChange={(e) => setStartInput(e.target.value)} />
           </div>
           <Button onClick={() => saveSettings(true)}>Enable tithing pool</Button>
@@ -165,7 +186,7 @@ export function TitheCard() {
           <div>
             <CardTitle className="text-base flex items-center gap-2"><HandHeart className="h-4 w-4" /> Tithing pool</CardTitle>
             <CardDescription>
-              {rate}% of income{start ? ` since ${start}` : ''} · Giving transactions clear it automatically
+              {rate}% of {titheBase === 'salary' ? 'salary' : 'all income'}{start ? ` since ${start}` : ''} · Giving transactions clear it automatically
             </CardDescription>
           </div>
           <div className="flex gap-2">
@@ -248,7 +269,11 @@ export function TitheCard() {
             <Input type="number" step="any" min="0" className="h-8 w-24 text-sm" value={rateInput} onChange={(e) => setRateInput(e.target.value)} />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">Count income from</Label>
+            <Label className="text-xs">Calculate from</Label>
+            {BaseSelect}
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Starting</Label>
             <Input type="date" className="h-8 w-40 text-sm" value={startInput} onChange={(e) => setStartInput(e.target.value)} />
           </div>
           <Button size="sm" variant="outline" onClick={() => saveSettings(true)}>Update</Button>
