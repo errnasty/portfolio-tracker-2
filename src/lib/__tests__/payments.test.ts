@@ -65,6 +65,22 @@ describe('buildUpcoming', () => {
     expect(items[0].source).toBe('subscription')
   })
 
+  it('surfaces maturing assets within the horizon', () => {
+    const items = buildUpcoming({
+      planned: [],
+      subscriptions: [],
+      baseCurrency: 'SGD',
+      today: '2026-07-13',
+      maturingAssets: [
+        { id: 'fd1', name: '6m FD', balance: 10000, currency: 'SGD', maturity_date: '2026-08-01', is_active: true },
+        { id: 'fd2', name: 'Next year FD', balance: 5000, currency: 'SGD', maturity_date: '2027-07-01', is_active: true },
+        { id: 'fd3', name: 'Inactive', balance: 1, currency: 'SGD', maturity_date: '2026-08-01', is_active: false },
+      ],
+    })
+    expect(items).toHaveLength(1)
+    expect(items[0]).toMatchObject({ id: 'mat-fd1', source: 'maturity', name: '6m FD matures', amount: 10000 })
+  })
+
   it('keeps overdue items with negative daysUntil', () => {
     const items = buildUpcoming({
       planned: [pp({ due_date: '2026-07-01' })],

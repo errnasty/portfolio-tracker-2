@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton'
 import { Plus, Pencil, Trash2, Search, Loader2 } from 'lucide-react'
 import { PageShell } from '@/components/ui/page-shell'
+import { TLink } from '@/components/motion/TLink'
 import { SubNav } from '@/components/ui/sub-nav'
 import { SUB_NAVS } from '@/lib/nav-registry'
 import { HeroBand, HeroMetric } from '@/components/ui/hero-band'
@@ -291,8 +292,10 @@ export default function HoldingsPage() {
                 {[...enriched].sort((a, b) => b.currentValueBase - a.currentValueBase).map((h) => (
                   <TableRow key={h.id}>
                     <TableCell>
-                      <div className="font-semibold">{h.ticker}</div>
-                      <div className="text-xs text-muted-foreground">{h.name ?? '—'}</div>
+                      <TLink href={`/holdings/${encodeURIComponent(h.ticker)}`} className="group/link block" title="View price history & details">
+                        <div className="font-semibold group-hover/link:text-accent group-hover/link:underline">{h.ticker}</div>
+                        <div className="text-xs text-muted-foreground">{h.name ?? '—'}</div>
+                      </TLink>
                     </TableCell>
                     <TableCell className="text-right">
                       <InlineNumberCell

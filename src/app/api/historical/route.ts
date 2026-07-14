@@ -16,14 +16,27 @@ function getPeriodStart(period: string): Date {
   }
 }
 
+// Ranges served by Yahoo's `range=` shortcut instead of explicit timestamps.
+// Intraday ranges need finer intervals; 'all' uses weekly bars to stay light.
+const RANGE_PERIODS: Record<string, { range: string; interval: string; intraday: boolean }> = {
+  '1d': { range: '1d', interval: '5m', intraday: true },
+  '5d': { range: '5d', interval: '30m', intraday: true },
+  all: { range: 'max', interval: '1wk', intraday: false },
+}
+
 async function fetchYahooHistory(
   ticker: string,
+  period: string,
   period1: Date,
   period2: Date,
 ): Promise<{ date: string; close: number }[]> {
+  const rangeCfg = RANGE_PERIODS[period]
   const p1 = Math.floor(period1.getTime() / 1000)
   const p2 = Math.floor(period2.getTime() / 1000)
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&period1=${p1}&period2=${p2}`
+  const query = rangeCfg
+    ? `range=${rangeCfg.range}&interval=${rangeCfg.interval}`
+    : `interval=1d&period1=${p1}&period2=${p2}`
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?${query}`
 
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 12000)
@@ -50,11 +63,13 @@ async function fetchYahooHistory(
     const adjclose: (number | null)[] = result.indicators?.adjclose?.[0]?.adjclose ?? []
     const close: (number | null)[] = result.indicators?.quote?.[0]?.close ?? []
 
+    // Intraday points keep their time so 1D/5D charts have proper x labels.
+    const dateFmt = rangeCfg?.intraday ? 'yyyy-MM-dd HH:mm' : 'yyyy-MM-dd'
     return timestamps
       .map((ts, i) => {
         const price = adjclose[i] ?? close[i]
         if (!price) return null
-        return { date: format(new Date(ts * 1000), 'yyyy-MM-dd'), close: price }
+        return { date: format(new Date(ts * 1000), dateFmt), close: price }
       })
       .filter((d): d is { date: string; close: number } => d !== null)
   } finally {
@@ -78,7 +93,7 @@ export async function GET(req: NextRequest) {
     await Promise.allSettled(
       tickers.map(async (ticker) => {
         try {
-          history[ticker] = await fetchYahooHistory(ticker, period1, period2)
+          history[ticker] = await fetchYahooHistory(ticker, period, period1, period2)
         } catch (err) {
           console.error(`History fetch failed for ${ticker}:`, err)
           history[ticker] = []
