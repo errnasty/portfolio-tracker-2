@@ -12,6 +12,7 @@ import { WhatsNewDialog } from '@/components/layout/WhatsNewDialog'
 import { OnboardingTour } from '@/components/layout/OnboardingTour'
 import { QuickAddDialog } from '@/components/layout/QuickAddDialog'
 import { RecurringPoster } from '@/components/layout/RecurringPoster'
+import { CpfPoster } from '@/components/layout/CpfPoster'
 import { dispatchQuickAction } from '@/lib/quick-actions'
 import { Plus } from 'lucide-react'
 
@@ -56,6 +57,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <OnboardingTour />
               <QuickAddDialog />
               <RecurringPoster />
+              <CpfPoster />
               {/* Mobile quick-entry FAB — two taps to log an expense. */}
               <button
                 aria-label="Quick add transaction"

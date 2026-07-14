@@ -11,9 +11,13 @@ import { NAV_ROUTES } from '@/lib/nav-registry'
 import { fuzzyScore } from '@/lib/fuzzy'
 import { useViewTransitionRouter } from '@/components/motion/ViewTransitionProvider'
 import { usePortfolio } from '@/context/PortfolioContext'
+import { useSpending } from '@/context/SpendingContext'
 import { dispatchQuickAction, triggerQuickAction, type QuickActionKind } from '@/lib/quick-actions'
 import { startTour } from '@/components/layout/OnboardingTour'
-import { cn } from '@/lib/utils'
+import { formatCurrency, cn } from '@/lib/utils'
+import { ASSET_KIND_META } from '@/types'
+import { Landmark, Wallet } from 'lucide-react'
+import type { Currency } from '@/types'
 
 interface Item {
   key: string
@@ -31,7 +35,9 @@ export function CommandPalette({ open, onOpenChange }: {
   const [active, setActive] = useState(0)
   const navigate = useViewTransitionRouter()
   const { theme, setTheme } = useTheme()
-  const { refreshPrices } = usePortfolio()
+  const { refreshPrices, enriched, assets, settings } = usePortfolio()
+  const { bankTransactions, resolveDescription } = useSpending()
+  const base = (settings?.base_currency ?? 'USD') as Currency
 
   const items: Item[] = useMemo(() => {
     const routes: Item[] = NAV_ROUTES.map((r) => ({
@@ -63,13 +69,54 @@ export function CommandPalette({ open, onOpenChange }: {
     return [...routes, ...actions]
   }, [navigate, theme, setTheme, refreshPrices])
 
+  // Data search: holdings, assets, and recent transactions/payees. Only when
+  // there's a query, so the default palette stays fast and short.
+  const dataItems: Item[] = useMemo(() => {
+    const term = q.trim().toLowerCase()
+    if (term.length < 2) return []
+    const out: Item[] = []
+
+    for (const h of enriched) {
+      if (`${h.ticker} ${h.name ?? ''}`.toLowerCase().includes(term)) {
+        out.push({
+          key: `h-${h.id}`, label: `${h.ticker} · ${formatCurrency(h.currentValueBase, base)}`,
+          hint: 'Holding', icon: Briefcase, run: () => navigate(`/holdings/${encodeURIComponent(h.ticker)}`),
+        })
+      }
+    }
+    for (const a of assets) {
+      if (a.name.toLowerCase().includes(term)) {
+        const href = a.kind.startsWith('cpf_') ? '/cpf' : '/assets'
+        out.push({
+          key: `a-${a.id}`, label: `${a.name} · ${formatCurrency(Number(a.balance), a.currency)}`,
+          hint: ASSET_KIND_META[a.kind]?.label ?? 'Asset', icon: Landmark, run: () => navigate(href),
+        })
+      }
+    }
+    // Distinct payees/descriptions from recent transactions.
+    const seen = new Set<string>()
+    for (const t of bankTransactions) {
+      const label = resolveDescription(t)
+      const norm = label.toLowerCase()
+      if (!norm.includes(term) || seen.has(norm)) continue
+      seen.add(norm)
+      out.push({
+        key: `t-${t.id}`, label: `${label} · ${formatCurrency(Number(t.amount), t.currency)}`,
+        hint: 'Transaction', icon: Wallet, run: () => navigate('/spending'),
+      })
+      if (seen.size >= 8) break
+    }
+    return out.slice(0, 16)
+  }, [q, enriched, assets, bankTransactions, resolveDescription, navigate, base])
+
   const results = useMemo(() => {
-    return items
+    const staticHits = items
       .map((it) => ({ it, s: fuzzyScore(it.label, q) }))
       .filter((x) => x.s !== null)
       .sort((a, b) => b.s! - a.s!)
       .map((x) => x.it)
-  }, [items, q])
+    return [...staticHits, ...dataItems]
+  }, [items, q, dataItems])
 
   useEffect(() => { if (open) { setQ(''); setActive(0) } }, [open])
   useEffect(() => { setActive(0) }, [q])
@@ -86,7 +133,7 @@ export function CommandPalette({ open, onOpenChange }: {
             autoFocus
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search pages and actions…"
+            placeholder="Search pages, actions, holdings, transactions…"
             className="flex-1 border-none bg-transparent text-[15px] outline-none placeholder:text-faint"
             onKeyDown={(e) => {
               if (e.key === 'ArrowDown') { e.preventDefault(); setActive((v) => Math.min(results.length - 1, v + 1)) }

@@ -23,7 +23,8 @@ import { ASSET_KINDS, ASSET_KIND_META, CURRENCY_CODES } from '@/types'
 
 function today() { return new Date().toISOString().slice(0, 10) }
 
-const GROUP_ORDER = ['CPF', 'Deposits & bonds', 'Property & other', 'Loans'] as const
+// CPF has its own tab (/cpf); this page covers everything else.
+const GROUP_ORDER = ['Deposits & bonds', 'Property & other', 'Loans'] as const
 
 interface AssetForm {
   name: string
@@ -37,7 +38,7 @@ interface AssetForm {
 }
 
 const EMPTY_FORM: AssetForm = {
-  name: '', kind: 'cpf_oa', balance: '', currency: 'SGD',
+  name: '', kind: 'fixed_deposit', balance: '', currency: 'SGD',
   interest_rate_pct: '', maturity_date: '', monthly_payment: '', notes: '',
 }
 
@@ -48,7 +49,8 @@ export default function AssetsPage() {
   } = usePortfolio()
   const base = (settings?.base_currency ?? 'USD') as Currency
 
-  const active = useMemo(() => assets.filter((a) => a.is_active), [assets])
+  // CPF (cpf_*) is managed on the dedicated CPF tab, not here.
+  const active = useMemo(() => assets.filter((a) => a.is_active && !a.kind.startsWith('cpf_')), [assets])
   const grouped = useMemo(() => {
     const g = new Map<string, Asset[]>()
     for (const a of active) {
@@ -257,7 +259,7 @@ export default function AssetsPage() {
                 <Select value={form.kind} onValueChange={(v) => setForm((f) => ({ ...f, kind: v as AssetKind }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {ASSET_KINDS.map((k) => (
+                    {ASSET_KINDS.filter((k) => k.group !== 'CPF').map((k) => (
                       <SelectItem key={k.kind} value={k.kind}>{k.label}{k.liability ? ' (debt)' : ''}</SelectItem>
                     ))}
                   </SelectContent>
