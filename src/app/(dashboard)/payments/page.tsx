@@ -33,7 +33,7 @@ const REPEAT_LABEL: Record<PaymentRepeat, string> = {
 function today() { return new Date().toISOString().slice(0, 10) }
 
 export default function PaymentsPage() {
-  const { settings, fxRates, accounts } = usePortfolio()
+  const { settings, fxRates, accounts, assets } = usePortfolio()
   const { subscriptions, loading: spendingLoading } = useSpending()
   const base = (settings?.base_currency ?? 'USD') as Currency
 
@@ -59,7 +59,8 @@ export default function PaymentsPage() {
 
   const upcoming = useMemo(() => buildUpcoming({
     planned, subscriptions, baseCurrency: base, today: today(), horizonDays: 60,
-  }), [planned, subscriptions, base])
+    maturingAssets: assets,
+  }), [planned, subscriptions, base, assets])
 
   const toBase = useCallback(
     (amt: number, cur: string) => (fxRates ? convertToBase(amt, cur, fxRates) : amt),
@@ -247,7 +248,9 @@ export default function PaymentsPage() {
                           )}
                         </div>
                         <div className="text-[10px] text-muted-foreground">
-                          {i.source === 'subscription' ? 'detected subscription' : i.planned?.notes ?? 'planned'}
+                          {i.source === 'subscription' ? 'detected subscription'
+                            : i.source === 'maturity' ? 'deposit maturing — decide reinvestment'
+                            : i.planned?.notes ?? 'planned'}
                         </div>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">{REPEAT_LABEL[i.repeat]}</TableCell>

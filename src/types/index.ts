@@ -86,6 +86,11 @@ export interface NetWorthSnapshot {
   date: string         // YYYY-MM-DD
   net_worth: number    // base currency at snapshot time
   currency: string
+  // Composition (columns added 2026-07; null on older rows)
+  holdings_value?: number | null
+  accounts_value?: number | null
+  assets_value?: number | null
+  liabilities_value?: number | null
 }
 
 export interface CashBalance {
@@ -359,6 +364,54 @@ export const DEFAULT_BENCHMARKS: BenchmarkConfig[] = [
   { ticker: 'VEA', name: 'Developed Markets ex-US' },
   { ticker: 'EWS', name: 'Singapore (STI proxy)' },
 ]
+
+// ── Assets & liabilities (everything that isn't a bank account or holding) ──
+
+export type AssetKind =
+  | 'cpf_oa' | 'cpf_sa' | 'cpf_ma'
+  | 'fixed_deposit' | 'tbill' | 'ssb'
+  | 'property' | 'vehicle' | 'other'
+  | 'loan' | 'mortgage'
+
+export interface AssetKindMeta {
+  kind: AssetKind
+  label: string
+  group: 'CPF' | 'Deposits & bonds' | 'Property & other' | 'Loans'
+  liability: boolean
+}
+
+export const ASSET_KINDS: AssetKindMeta[] = [
+  { kind: 'cpf_oa', label: 'CPF Ordinary Account', group: 'CPF', liability: false },
+  { kind: 'cpf_sa', label: 'CPF Special Account', group: 'CPF', liability: false },
+  { kind: 'cpf_ma', label: 'CPF MediSave', group: 'CPF', liability: false },
+  { kind: 'fixed_deposit', label: 'Fixed deposit', group: 'Deposits & bonds', liability: false },
+  { kind: 'tbill', label: 'T-bill', group: 'Deposits & bonds', liability: false },
+  { kind: 'ssb', label: 'Savings Bond (SSB)', group: 'Deposits & bonds', liability: false },
+  { kind: 'property', label: 'Property', group: 'Property & other', liability: false },
+  { kind: 'vehicle', label: 'Vehicle', group: 'Property & other', liability: false },
+  { kind: 'other', label: 'Other asset', group: 'Property & other', liability: false },
+  { kind: 'loan', label: 'Loan', group: 'Loans', liability: true },
+  { kind: 'mortgage', label: 'Mortgage', group: 'Loans', liability: true },
+]
+
+export const ASSET_KIND_META: Record<AssetKind, AssetKindMeta> =
+  Object.fromEntries(ASSET_KINDS.map((k) => [k.kind, k])) as Record<AssetKind, AssetKindMeta>
+
+export interface Asset {
+  id: string
+  user_id: string
+  name: string
+  kind: AssetKind
+  balance: number              // always positive; loans = amount owed
+  currency: Currency | string
+  interest_rate_pct: number | null
+  maturity_date: string | null
+  monthly_payment: number | null
+  notes: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
 
 // ── Planned payments (upcoming deadlines) ──────────────────────────────────
 

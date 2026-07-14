@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Wallet, Repeat, Briefcase, TrendingUp, Sliders, Settings,
   PieChart, Activity, Beaker, ListChecks, Coins, Target, FileText, Bell, PiggyBank,
-  Upload, Banknote, CalendarClock, Users, BookOpen, Landmark,
+  Upload, Banknote, CalendarClock, Users, BookOpen, Landmark, Vault,
 } from 'lucide-react'
 
 export interface NavRoute {
@@ -26,6 +26,9 @@ export const NAV_ROUTES: NavRoute[] = [
 
   { href: '/spending', label: 'Spending', icon: Wallet, group: 'Money', seq: 'g s' },
   { href: '/accounts', label: 'Accounts', icon: Landmark, group: 'Money', seq: 'g a' },
+  // Tabs under Accounts:
+  { href: '/assets', label: 'Assets & debts', icon: Vault, group: 'Money', hidden: true },
+  { href: '/networth', label: 'Net worth', icon: TrendingUp, group: 'Money', hidden: true },
   { href: '/income', label: 'Income', icon: Banknote, group: 'Money', seq: 'g i' },
   { href: '/budgets', label: 'Budgets', icon: PiggyBank, group: 'Money', seq: 'g b' },
   { href: '/payments', label: 'Payments', icon: CalendarClock, group: 'Money', seq: 'g y' },
@@ -54,6 +57,11 @@ export const NAV_ROUTES: NavRoute[] = [
 
 // Link-tab rows for pages that share one sidebar entry (see SubNav).
 export const SUB_NAVS = {
+  accounts: [
+    { href: '/accounts', label: 'Accounts' },
+    { href: '/assets', label: 'Assets & debts' },
+    { href: '/networth', label: 'Net worth' },
+  ],
   holdings: [
     { href: '/holdings', label: 'Holdings' },
     { href: '/transactions', label: 'Transactions' },

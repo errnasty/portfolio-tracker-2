@@ -26,9 +26,9 @@ function reportSupabaseError(operation: string, error: { message: string; code?:
 import type {
   Holding, PriceQuote, FxRates, EnrichedHolding, PortfolioStats,
   Currency, TargetAllocation, UserSettings, Transaction, DerivedPosition, Goal,
-  Account, NetWorthSnapshot,
+  Account, Asset, NetWorthSnapshot,
 } from '@/types'
-import { CURRENCY_CODES } from '@/types'
+import { CURRENCY_CODES, ASSET_KIND_META } from '@/types'
 
 interface PortfolioContextValue {
   holdings: Holding[]
@@ -44,7 +44,11 @@ interface PortfolioContextValue {
   accounts: Account[]
   totalCashBase: number        // cash-type accounts, in base (investable buying power)
   accountsNetBase: number      // all accounts net (credit subtracted), in base
-  netWorthBase: number         // holdings + accountsNetBase, in base
+  assets: Asset[]              // CPF / deposits / property / loans ledger
+  assetsError: string | null
+  assetsBase: number           // non-liability assets, in base
+  liabilitiesBase: number      // loans + mortgages, in base (positive magnitude)
+  netWorthBase: number         // holdings + accounts + assets − liabilities, in base
   netWorthHistory: NetWorthSnapshot[]   // daily snapshots, ascending by date
   accountsError: string | null
   loading: boolean
@@ -69,6 +73,10 @@ interface PortfolioContextValue {
   addAccount: (data: Omit<Account, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => Promise<void>
   updateAccount: (id: string, data: Partial<Account>) => Promise<void>
   deleteAccount: (id: string) => Promise<void>
+  refreshAssets: () => Promise<void>
+  addAsset: (data: Omit<Asset, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => Promise<void>
+  updateAsset: (id: string, data: Partial<Asset>) => Promise<void>
+  deleteAsset: (id: string) => Promise<void>
   // Apply a buy/sell to the holdings table directly (weighted-avg cost basis).
   // Optionally also write a row to the transaction log.
   applyTrade: (trade: TradeInput, alsoLog?: boolean) => Promise<void>
@@ -98,6 +106,8 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   const [goals, setGoals] = useState<Goal[]>([])
   const [accounts, setAccounts] = useState<Account[]>([])
   const [accountsError, setAccountsError] = useState<string | null>(null)
+  const [assets, setAssets] = useState<Asset[]>([])
+  const [assetsError, setAssetsError] = useState<string | null>(null)
   const [netWorthHistory, setNetWorthHistory] = useState<NetWorthSnapshot[]>([])
   const snapshotSaved = useRef(false)
   const [loading, setLoading] = useState(true)
@@ -129,8 +139,20 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
       }, 0)
     : 0
 
+  // Assets & liabilities ledger (CPF, deposits, property vs loans/mortgages).
+  const assetsBase = fxRates
+    ? assets
+        .filter((a) => a.is_active && !ASSET_KIND_META[a.kind]?.liability)
+        .reduce((s, a) => s + convertToBase(Number(a.balance) || 0, a.currency, fxRates), 0)
+    : 0
+  const liabilitiesBase = fxRates
+    ? assets
+        .filter((a) => a.is_active && ASSET_KIND_META[a.kind]?.liability)
+        .reduce((s, a) => s + convertToBase(Number(a.balance) || 0, a.currency, fxRates), 0)
+    : 0
+
   const holdingsValueBase = enriched.reduce((s, h) => s + h.currentValueBase, 0)
-  const netWorthBase = holdingsValueBase + accountsNetBase
+  const netWorthBase = holdingsValueBase + accountsNetBase + assetsBase - liabilitiesBase
 
   const refreshNetWorthHistory = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -221,6 +243,26 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     setAccounts(data ?? [])
   }, [])
 
+  const refreshAssets = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data, error } = await supabase
+      .from('assets').select('*').eq('user_id', user.id).order('created_at')
+    if (error) {
+      // Most common cause: migration 006 not applied yet. Treat as empty and
+      // surface a banner on the Assets page rather than breaking net worth.
+      setAssets([])
+      const missing = error.code === '42P01' ||
+        /relation .* does not exist|schema cache/i.test(error.message)
+      setAssetsError(missing
+        ? 'The assets table is missing. Run supabase/migrations/006_assets_networth.sql in your Supabase SQL editor.'
+        : `Couldn't load assets: ${error.message}`)
+      return
+    }
+    setAssetsError(null)
+    setAssets(data ?? [])
+  }, [])
+
   const refreshTransactions = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
@@ -262,13 +304,16 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
       await refreshTransactions()
       await refreshGoals()
       await refreshAccounts()
+      await refreshAssets()
       await refreshNetWorthHistory()
       setLoading(false)
     }
     init()
-  }, [fetchSettings, refreshHoldings, refreshTransactions, refreshGoals, refreshAccounts, refreshNetWorthHistory])
+  }, [fetchSettings, refreshHoldings, refreshTransactions, refreshGoals, refreshAccounts, refreshAssets, refreshNetWorthHistory])
 
   // Save today's net-worth snapshot once per session, after data has loaded.
+  // Includes the composition breakdown; falls back to the bare shape when the
+  // composition columns (migration 006) don't exist yet.
   useEffect(() => {
     if (loading || !fxRates || netWorthBase <= 0 || snapshotSaved.current) return
     snapshotSaved.current = true
@@ -276,13 +321,24 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       const today = new Date().toISOString().slice(0, 10)
-      await supabase.from('networth_snapshots').upsert(
-        { user_id: user.id, date: today, net_worth: Math.round(netWorthBase * 100) / 100, currency: baseCurrency },
+      const r2 = (n: number) => Math.round(n * 100) / 100
+      const bare = { user_id: user.id, date: today, net_worth: r2(netWorthBase), currency: baseCurrency }
+      const { error } = await supabase.from('networth_snapshots').upsert(
+        {
+          ...bare,
+          holdings_value: r2(holdingsValueBase),
+          accounts_value: r2(accountsNetBase),
+          assets_value: r2(assetsBase),
+          liabilities_value: r2(liabilitiesBase),
+        },
         { onConflict: 'user_id,date' },
       )
+      if (error) {
+        await supabase.from('networth_snapshots').upsert(bare, { onConflict: 'user_id,date' })
+      }
       await refreshNetWorthHistory()
     })()
-  }, [loading, fxRates, netWorthBase, baseCurrency, refreshNetWorthHistory])
+  }, [loading, fxRates, netWorthBase, holdingsValueBase, accountsNetBase, assetsBase, liabilitiesBase, baseCurrency, refreshNetWorthHistory])
 
   useEffect(() => {
     fetchFxRates(baseCurrency)
@@ -449,6 +505,36 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     await refreshAccounts()
   }
 
+  // ── Asset CRUD ─────────────────────────────────────────────────────────
+  // CPF / deposits / property / loans. Liability kinds subtract from net worth.
+  const addAsset = async (data: Omit<Asset, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { toast.error('Not signed in'); throw new Error('Not signed in') }
+    const { error } = await supabase.from('assets').insert({
+      ...data,
+      currency: (String(data.currency) || 'SGD').toUpperCase(),
+      user_id: user.id,
+    })
+    if (error) { reportSupabaseError('Add asset', error); throw error }
+    await refreshAssets()
+  }
+
+  const updateAsset = async (id: string, data: Partial<Asset>) => {
+    const { error } = await supabase.from('assets').update({
+      ...data,
+      ...(data.currency ? { currency: String(data.currency).toUpperCase() } : {}),
+      updated_at: new Date().toISOString(),
+    }).eq('id', id)
+    if (error) { reportSupabaseError('Update asset', error); throw error }
+    await refreshAssets()
+  }
+
+  const deleteAsset = async (id: string) => {
+    const { error } = await supabase.from('assets').delete().eq('id', id)
+    if (error) { reportSupabaseError('Delete asset', error); throw error }
+    await refreshAssets()
+  }
+
   // ── applyTrade ─────────────────────────────────────────────────────────
   // Update the holdings table with a buy or sell. Uses weighted-average
   // cost basis. If the holding doesn't exist yet, creates one in the
@@ -554,12 +640,14 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
       holdings, enriched, stats, prices, fxRates, targets, settings,
       transactions, positions, goals,
       accounts, totalCashBase, accountsNetBase, netWorthBase, netWorthHistory, accountsError,
+      assets, assetsError, assetsBase, liabilitiesBase,
       loading, refreshHoldings, refreshPrices, refreshTransactions,
       addHolding, updateHolding, deleteHolding,
       upsertTarget, deleteTarget, updateSettings,
       addTransaction, addTransactionsBulk, updateTransaction, deleteTransaction,
       refreshGoals, addGoal, updateGoal, deleteGoal,
       refreshAccounts, addAccount, updateAccount, deleteAccount,
+      refreshAssets, addAsset, updateAsset, deleteAsset,
       applyTrade,
     }}>
       {children}

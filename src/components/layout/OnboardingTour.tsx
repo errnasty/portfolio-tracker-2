@@ -12,7 +12,7 @@ import {
   Sparkles, Landmark, Mail, Wallet, Banknote, CalendarClock, Briefcase,
   PartyPopper, Copy, ChevronDown, ChevronUp, ArrowRight, Command, Moon,
   Keyboard, Bot, ListChecks, Upload, PiggyBank, HandHeart, Users, PieChart,
-  Sliders, ArrowLeftRight, BookOpen, Smartphone,
+  Sliders, ArrowLeftRight, BookOpen, Smartphone, Vault,
 } from 'lucide-react'
 
 // Event other components fire to launch the tour (welcome dialog, Guide page).
@@ -58,6 +58,7 @@ const STEPS: TourStep[] = [
     points: [
       { icon: Landmark, title: 'Any currency', desc: 'SGD, USD, AUD… every balance converts to your base currency for the totals.' },
       { icon: ArrowLeftRight, title: 'Transfers', desc: 'Move money between accounts without it counting as spending or income.' },
+      { icon: Vault, title: 'Assets & debts too', desc: 'CPF, fixed deposits, property, and loans live in the tabs up top — net worth covers everything.' },
     ],
   },
   {

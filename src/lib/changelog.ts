@@ -17,6 +17,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.4',
+    date: '2026-07-14',
+    title: 'The complete picture: assets, debts & net worth',
+    items: [
+      { title: 'Assets & debts', desc: 'Track CPF (OA/SA/MA), fixed deposits, T-bills, SSBs, property, vehicles — and loans/mortgages — under Accounts → Assets & debts. All of it rolls into net worth.', href: '/assets' },
+      { title: 'Loan payoff projections', desc: 'Give a loan its rate and monthly installment and the payoff date plus remaining interest are computed automatically.', href: '/assets' },
+      { title: 'Maturity alerts', desc: 'Fixed deposits and T-bills nearing maturity appear on the Payments page so you can decide reinvestment in time.', href: '/payments' },
+      { title: 'Net worth page', desc: 'A full-size trend chart with 3M/6M/1Y/All ranges and a breakdown of what your net worth is made of.', href: '/networth' },
+      { title: 'Stock detail view', desc: 'Click any holding for its price chart (1D · 5D · 1M · 6M · YTD · 1Y · 5Y · ALL), range change, valuation stats, your position, and your trades.', href: '/holdings' },
+    ],
+  },
+  {
     version: '2026.07.3',
     date: '2026-07-13',
     title: 'Capture everything, type almost nothing',

@@ -5,6 +5,8 @@ import { usePortfolio } from '@/context/PortfolioContext'
 import { convertToBase } from '@/lib/calculations'
 import { formatCurrency } from '@/lib/utils'
 import { PageShell } from '@/components/ui/page-shell'
+import { SubNav } from '@/components/ui/sub-nav'
+import { SUB_NAVS } from '@/lib/nav-registry'
 import { HeroBand, HeroMetric } from '@/components/ui/hero-band'
 import { AccountsCard } from '@/components/spending/AccountsCard'
 import type { Currency } from '@/types'
@@ -32,6 +34,7 @@ export default function AccountsPage() {
       footerHints={<span><span className="text-accent">▸</span> <span className="text-foreground">g s</span> spending · <span className="text-foreground">g h</span> home</span>}
     >
     <div className="space-y-4">
+      <SubNav links={[...SUB_NAVS.accounts]} />
       <div className="overflow-hidden rounded-lg border border-border bg-card">
         <HeroBand>
           <HeroMetric

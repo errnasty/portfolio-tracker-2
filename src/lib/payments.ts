@@ -1,4 +1,4 @@
-import type { PaymentRepeat, PlannedPayment, Subscription } from '@/types'
+import type { Asset, PaymentRepeat, PlannedPayment, Subscription } from '@/types'
 
 // Upcoming-payment helpers: recurrence date math (UTC, timezone-safe),
 // subscription next-charge prediction, and calendar exports (Google
@@ -52,8 +52,8 @@ export function nextOnOrAfter(date: string, today: string, repeat: PaymentRepeat
 }
 
 export interface UpcomingItem {
-  id: string                   // 'pp-<uuid>' or 'sub-<merchant key>'
-  source: 'planned' | 'subscription'
+  id: string                   // 'pp-<uuid>' / 'sub-<merchant key>' / 'mat-<asset uuid>'
+  source: 'planned' | 'subscription' | 'maturity'
   name: string
   amount: number               // native currency for planned; base for subs
   currency: string
@@ -77,8 +77,10 @@ export function buildUpcoming(opts: {
   baseCurrency: string
   today: string                // YYYY-MM-DD
   horizonDays?: number         // include items due within N days (default 60)
+  // Maturing assets (FDs / T-bills / SSBs) surface as "decide reinvestment".
+  maturingAssets?: Pick<Asset, 'id' | 'name' | 'balance' | 'currency' | 'maturity_date' | 'is_active'>[]
 }): UpcomingItem[] {
-  const { planned, subscriptions, baseCurrency, today, horizonDays = 60 } = opts
+  const { planned, subscriptions, baseCurrency, today, horizonDays = 60, maturingAssets = [] } = opts
   const items: UpcomingItem[] = []
 
   for (const p of planned) {
@@ -112,6 +114,21 @@ export function buildUpcoming(opts: {
       repeat: 'monthly',
       autopay: true,           // subscriptions charge themselves
       daysUntil: daysBetween(today, due),
+    })
+  }
+
+  for (const a of maturingAssets) {
+    if (!a.is_active || !a.maturity_date) continue
+    items.push({
+      id: `mat-${a.id}`,
+      source: 'maturity',
+      name: `${a.name} matures`,
+      amount: Number(a.balance) || 0,
+      currency: String(a.currency),
+      dueDate: a.maturity_date,
+      repeat: 'none',
+      autopay: false,
+      daysUntil: daysBetween(today, a.maturity_date),
     })
   }
 
