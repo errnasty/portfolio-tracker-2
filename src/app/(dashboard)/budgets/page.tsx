@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import { ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Sankey, Rectangle, Layer } from 'recharts'
 import { usePortfolio } from '@/context/PortfolioContext'
 import { useSpending } from '@/context/SpendingContext'
 import { formatCurrency, cn } from '@/lib/utils'
@@ -170,6 +170,54 @@ function HistoryCard({ base, totalBudget }: { base: Currency; totalBudget: numbe
     return { income, expense, net: income - expense, avgIncome: income / n, avgExpense: expense / n, avgNet: (income - expense) / n }
   }, [rows])
 
+  // Money flow over the range: income sources → spending categories + savings.
+  const flow = useMemo(() => {
+    const agg = (pick: 'incomeByCategory' | 'byCategory') => {
+      const m = new Map<string, number>()
+      for (const ym of months) {
+        for (const c of statsForMonth(ym)[pick]) m.set(c.name, (m.get(c.name) ?? 0) + c.amount)
+      }
+      return m
+    }
+    const topN = (m: Map<string, number>, n: number) => {
+      const sorted = [...m.entries()].sort((a, b) => b[1] - a[1])
+      const top = sorted.slice(0, n)
+      const rest = sorted.slice(n).reduce((s, [, v]) => s + v, 0)
+      if (rest > 0.5) top.push(['Other', rest])
+      return top.filter(([, v]) => v > 0.5)
+    }
+    const income = topN(agg('incomeByCategory'), 4)
+    const expense = topN(agg('byCategory'), 6)
+    const incomeTotal = income.reduce((s, [, v]) => s + v, 0)
+    const expenseTotal = expense.reduce((s, [, v]) => s + v, 0)
+    if (incomeTotal + expenseTotal < 1) return null
+
+    const nodes: { name: string; color: string }[] = []
+    const links: { source: number; target: number; value: number }[] = []
+    const add = (name: string, color: string) => nodes.push({ name, color }) - 1
+
+    for (const [name, v] of income) {
+      const i = add(name, INCOME_COLOR)
+      links.push({ source: i, target: -1, value: Math.round(v * 100) / 100 })
+    }
+    const deficit = expenseTotal - incomeTotal
+    if (deficit > 0.5) {
+      const i = add('From savings', EXPENSE_COLOR)
+      links.push({ source: i, target: -1, value: Math.round(deficit * 100) / 100 })
+    }
+    const center = add('Money', '#7a6f9a')
+    for (const l of links) l.target = center
+    for (const [name, v] of expense) {
+      const i = add(name, EXPENSE_COLOR)
+      links.push({ source: center, target: i, value: Math.round(v * 100) / 100 })
+    }
+    if (incomeTotal - expenseTotal > 0.5) {
+      const i = add('Saved', INCOME_COLOR)
+      links.push({ source: center, target: i, value: Math.round((incomeTotal - expenseTotal) * 100) / 100 })
+    }
+    return { nodes, links }
+  }, [months, statsForMonth])
+
   return (
     <Card>
       <CardHeader>
@@ -276,10 +324,65 @@ function HistoryCard({ base, totalBudget }: { base: Currency; totalBudget: numbe
                 </TableRow>
               </TableBody>
             </Table>
+
+            {/* Money flow: income sources → categories + savings */}
+            {flow && (
+              <div>
+                <div className="mb-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+                  Money flow · {rows.length} month{rows.length === 1 ? '' : 's'}
+                </div>
+                <ResponsiveContainer width="100%" height={Math.max(220, flow.nodes.length * 26)}>
+                  <Sankey
+                    data={flow}
+                    nodePadding={22}
+                    nodeWidth={8}
+                    margin={{ top: 8, right: 110, bottom: 8, left: 8 }}
+                    link={{ stroke: 'hsl(var(--muted-foreground))', strokeOpacity: 0.25 }}
+                    node={<FlowNode base={base} />}
+                  >
+                    <Tooltip
+                      formatter={(v) => [formatCurrency(Number(v), base), 'Flow']}
+                      contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
+                    />
+                  </Sankey>
+                </ResponsiveContainer>
+              </div>
+            )}
           </>
         )}
       </CardContent>
     </Card>
+  )
+}
+
+// Sankey node: thin colored bar + name/value label on the outward side.
+function FlowNode(props: any) {
+  const { x, y, width, height, payload, containerWidth, base } = props
+  const isRightSide = x > (containerWidth ?? 0) / 2
+  return (
+    <Layer>
+      <Rectangle x={x} y={y} width={width} height={height} fill={payload.color ?? '#7a6f9a'} fillOpacity={0.9} radius={2} />
+      <text
+        x={isRightSide ? x - 6 : x + width + 6}
+        y={y + height / 2}
+        textAnchor={isRightSide ? 'end' : 'start'}
+        dominantBaseline="middle"
+        fontSize={11}
+        fill="hsl(var(--foreground))"
+      >
+        {payload.name}
+      </text>
+      <text
+        x={isRightSide ? x - 6 : x + width + 6}
+        y={y + height / 2 + 13}
+        textAnchor={isRightSide ? 'end' : 'start'}
+        dominantBaseline="middle"
+        fontSize={9}
+        fill="hsl(var(--muted-foreground))"
+      >
+        {formatCurrency(payload.value ?? 0, base, true)}
+      </text>
+    </Layer>
   )
 }
 

@@ -17,6 +17,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.5',
+    date: '2026-07-14',
+    title: 'The app starts telling you things',
+    items: [
+      { title: 'Smarter attention inbox', desc: 'Home now flags overdue and due-soon bills, negative balances, maturing deposits, stale IOUs, and spending running ahead of budget pace — prioritized, with one-click fixes.', href: '/dashboard' },
+      { title: 'Anomaly alerts', desc: 'Possible double charges, transactions far above a payee\'s usual amount, and subscription price increases get flagged automatically.', href: '/dashboard' },
+      { title: 'Cashflow forecast', desc: 'A new Home card projects your bank balance to month end from your spending pace, scheduled salary/bills, and predicted subscription charges.', href: '/dashboard' },
+      { title: 'Month-in-review digest', desc: 'For the first days of each month, Home summarizes the month that just ended: savings rate, budget verdict, biggest movers, and net-worth change.', href: '/dashboard' },
+      { title: 'Money flow diagram', desc: 'The Budgets history now draws where money came from and where it went — income sources through to categories and savings.', href: '/budgets' },
+    ],
+  },
+  {
     version: '2026.07.4',
     date: '2026-07-14',
     title: 'The complete picture: assets, debts & net worth',

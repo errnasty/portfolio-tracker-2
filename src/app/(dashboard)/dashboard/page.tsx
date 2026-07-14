@@ -1,29 +1,53 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AreaChart, Area, Line, ComposedChart, XAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { supabase } from '@/lib/supabase'
 import { usePortfolio } from '@/context/PortfolioContext'
 import { useSpending } from '@/context/SpendingContext'
 import { formatCurrency, formatPercent, gainLossColor } from '@/lib/utils'
+import { convertToBase } from '@/lib/calculations'
+import { buildUpcoming } from '@/lib/payments'
+import { buildAttention } from '@/lib/attention'
+import { detectAnomalies } from '@/lib/anomalies'
 import { SectionLabel } from '@/components/ui/section-label'
 import { PageShell } from '@/components/ui/page-shell'
 import { HeroBand, HeroMetric } from '@/components/ui/hero-band'
 import { ActivityRow } from '@/components/ui/stat-row'
+import { CashflowCard } from '@/components/dashboard/CashflowCard'
+import { DigestCard } from '@/components/dashboard/DigestCard'
 import { RefreshCw, Upload } from 'lucide-react'
-import type { Currency } from '@/types'
+import type { Currency, Iou, PlannedPayment } from '@/types'
 
 const PCT = (n: number) => `${n.toFixed(1)}%`
 
 export default function DashboardPage() {
   const {
     stats, enriched, loading, refreshPrices, settings, targets,
-    accounts, totalCashBase, accountsNetBase, netWorthBase, netWorthHistory, fxRates,
+    accounts, assets, totalCashBase, accountsNetBase, netWorthBase, netWorthHistory, fxRates,
   } = usePortfolio()
   const {
-    spendingStats, bankTransactions, categoryById, budgets, subscriptionSummary,
+    spendingStats, bankTransactions, categoryById, budgets, subscriptions, subscriptionSummary,
   } = useSpending()
   const base = (settings?.base_currency ?? 'USD') as Currency
+
+  // Bills + IOUs feed the attention inbox and cashflow forecast. Light reads;
+  // missing tables (pending migrations) simply leave these empty.
+  const [planned, setPlanned] = useState<PlannedPayment[]>([])
+  const [ious, setIous] = useState<Iou[]>([])
+  useEffect(() => {
+    ;(async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const [{ data: pp }, { data: io }] = await Promise.all([
+        supabase.from('planned_payments').select('*').eq('user_id', user.id).is('paid_at', null),
+        supabase.from('ious').select('*').eq('user_id', user.id).eq('settled', false),
+      ])
+      if (pp) setPlanned(pp)
+      if (io) setIous(io)
+    })()
+  }, [])
 
   const holdingsValue = stats?.holdingsValue ?? 0
   const invested = stats?.totalValue ?? 0
@@ -73,7 +97,28 @@ export default function DashboardPage() {
     actions.push({ sev: 'med', tag: 'BUDGET', href: '/budgets', cta: 'ADJUST',
       title: `${overBudget.length} over budget`, sub: overBudget.map((o) => o.name).slice(0, 3).join(' · ') })
   }
-  const topActions = actions.slice(0, 3)
+
+  // Whole-life signals: bills, maturities, negative balances, stale IOUs,
+  // budget pace — plus anomaly flags over the ledger.
+  const today = new Date().toISOString().slice(0, 10)
+  const toBase = (amt: number, cur: string) => (fxRates ? convertToBase(amt, cur, fxRates) : amt)
+  const now = new Date()
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+  actions.push(...buildAttention({
+    today,
+    upcoming: buildUpcoming({ planned, subscriptions, baseCurrency: base, today, maturingAssets: assets }),
+    ious,
+    accounts,
+    budgetPace: { spentMTD: expense, totalBudget: budgets.reduce((s, b) => s + Number(b.amount), 0), dayOfMonth: now.getDate(), daysInMonth },
+    toBase,
+    formatBase: (n) => formatCurrency(n, base),
+  }))
+  for (const a of detectAnomalies(bankTransactions, subscriptions, today).slice(0, 2)) {
+    actions.push({ sev: 'med', tag: 'ANOMALY', href: '/spending', cta: 'INSPECT', title: a.title, sub: a.sub })
+  }
+
+  actions.sort((a, b) => (a.sev === b.sev ? 0 : a.sev === 'high' ? -1 : 1))
+  const topActions = actions.slice(0, 4)
 
   // net-worth trend (snapshots + live today point)
   const sparkData = useMemo(() => {
@@ -184,6 +229,9 @@ export default function DashboardPage() {
     <PageShell screen="Overview" title={greeting} statusRight={statusRight} footerHints={footerHints}>
       <div className="space-y-4">
 
+        {/* Month-in-review — first days of a new month, dismissable */}
+        <DigestCard />
+
         {/* ── Console card: hero + attention + activity ──────────────────── */}
         <div className="overflow-hidden rounded-lg border border-border bg-card">
           <HeroBand>
@@ -272,6 +320,8 @@ export default function DashboardPage() {
 
         {/* ── DETAILS (below the fold) ──────────────────────────────────── */}
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+
+          <CashflowCard planned={planned} />
 
           {topCats.length > 0 && (
             <Panel label="SPEND_BY_CATEGORY" tone="cool" right="this month" href="/spending">

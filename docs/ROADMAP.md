@@ -50,11 +50,11 @@ update `src/lib/changelog.ts`, the onboarding tour, the guide page, and the nav 
 
 | # | Item | Why / How | Effort |
 |---|------|-----------|--------|
-| 3.1 | **Expand "Needs your attention"** | The dashboard already derives 3 action types. Add: bills due/overdue (from `buildUpcoming`), budget pace breach (spend-curve data already computed on dashboard), balance gone negative, FD maturing, IOU stale > 60 days. One prioritized inbox for the whole financial life. | S–M |
-| 3.2 | **Month-end digest** | Auto-generated monthly summary (narrative + numbers): income vs spend vs budget, top category movers (logic exists in `spending/page.tsx` `movers`), savings rate, net-worth delta, tithe status. Rendered as a page/card; reuse `portfolio-narrative.ts` style. | M |
-| 3.3 | **Anomaly flags** | Unusually large transaction vs payee history, duplicate-charge suspicion (extend `findFuzzyDuplicate`), subscription price increase (`detectSubscriptions` already keeps per-merchant history). Surface via review queue + attention list. | M |
-| 3.4 | **Cashflow forecast** | Project end-of-month balance: current balances + scheduled income/bills (1.3, payments) − average daily spend pace. Small chart on dashboard hero. | M |
-| 3.5 | **Money flow (Sankey)** | Income sources → categories → savings for a month range; makes the whole system legible at a glance. | M |
+| 3.1 | **Expand "Needs your attention"** ✅ | The dashboard already derives 3 action types. Add: bills due/overdue (from `buildUpcoming`), budget pace breach (spend-curve data already computed on dashboard), balance gone negative, FD maturing, IOU stale > 60 days. One prioritized inbox for the whole financial life. | S–M |
+| 3.2 | **Month-end digest** ✅ | Auto-generated monthly summary (narrative + numbers): income vs spend vs budget, top category movers (logic exists in `spending/page.tsx` `movers`), savings rate, net-worth delta, tithe status. Rendered as a page/card; reuse `portfolio-narrative.ts` style. | M |
+| 3.3 | **Anomaly flags** ✅ | Unusually large transaction vs payee history, duplicate-charge suspicion (extend `findFuzzyDuplicate`), subscription price increase (`detectSubscriptions` already keeps per-merchant history). Surface via review queue + attention list. | M |
+| 3.4 | **Cashflow forecast** ✅ | Project end-of-month balance: current balances + scheduled income/bills (1.3, payments) − average daily spend pace. Small chart on dashboard hero. | M |
+| 3.5 | **Money flow (Sankey)** ✅ | Income sources → categories → savings for a month range; makes the whole system legible at a glance. | M |
 
 ## Tier 4 — Front-end & mobile polish
 
