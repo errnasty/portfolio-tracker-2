@@ -27,6 +27,7 @@ export const NAV_ROUTES: NavRoute[] = [
   { href: '/spending', label: 'Spending', icon: Wallet, group: 'Money', seq: 'g s' },
   { href: '/accounts', label: 'Accounts', icon: Landmark, group: 'Money', seq: 'g a' },
   // Tabs under Accounts:
+  { href: '/cpf', label: 'CPF', icon: PiggyBank, group: 'Money', hidden: true },
   { href: '/assets', label: 'Assets & debts', icon: Vault, group: 'Money', hidden: true },
   { href: '/networth', label: 'Net worth', icon: TrendingUp, group: 'Money', hidden: true },
   { href: '/income', label: 'Income', icon: Banknote, group: 'Money', seq: 'g i' },
@@ -59,6 +60,7 @@ export const NAV_ROUTES: NavRoute[] = [
 export const SUB_NAVS = {
   accounts: [
     { href: '/accounts', label: 'Accounts' },
+    { href: '/cpf', label: 'CPF' },
     { href: '/assets', label: 'Assets & debts' },
     { href: '/networth', label: 'Net worth' },
   ],

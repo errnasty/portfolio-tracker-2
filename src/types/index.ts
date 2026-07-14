@@ -190,6 +190,26 @@ export interface UserSettings {
   tithe_rate?: number          // percent of income, default 10
   tithe_start?: string | null  // YYYY-MM-DD; null = all history
   tithe_base?: 'salary' | 'all' // which income accrues (default 'salary')
+  // CPF auto-contribution (columns added 2026-07).
+  cpf_enabled?: boolean
+  cpf_birth_year?: number | null
+  cpf_salary_basis?: 'take_home' | 'gross'  // recorded salary is 80% take-home or gross
+  cpf_start?: string | null                 // YYYY-MM-DD; auto-contribute from here
+}
+
+export interface CpfContribution {
+  id: string
+  user_id: string
+  source_txn_id: string | null
+  date: string
+  gross: number
+  employee: number
+  employer: number
+  oa: number
+  sa: number
+  ma: number
+  notes: string | null
+  created_at: string
 }
 
 export interface TitheClearance {

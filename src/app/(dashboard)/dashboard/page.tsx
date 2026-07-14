@@ -17,20 +17,34 @@ import { HeroBand, HeroMetric } from '@/components/ui/hero-band'
 import { ActivityRow } from '@/components/ui/stat-row'
 import { CashflowCard } from '@/components/dashboard/CashflowCard'
 import { DigestCard } from '@/components/dashboard/DigestCard'
-import { RefreshCw, Upload } from 'lucide-react'
+import { RefreshCw, Upload, Landmark, Mail, Briefcase, PiggyBank } from 'lucide-react'
 import type { Currency, Iou, PlannedPayment } from '@/types'
 
 const PCT = (n: number) => `${n.toFixed(1)}%`
 
 export default function DashboardPage() {
   const {
-    stats, enriched, loading, refreshPrices, settings, targets,
+    stats, enriched, loading, refreshPrices, settings, targets, holdings, prices,
     accounts, assets, totalCashBase, accountsNetBase, netWorthBase, netWorthHistory, fxRates,
   } = usePortfolio()
   const {
     spendingStats, bankTransactions, categoryById, budgets, subscriptions, subscriptionSummary,
   } = useSpending()
   const base = (settings?.base_currency ?? 'USD') as Currency
+
+  // Data-health: holdings priced from Yahoo can silently return nothing. Flag
+  // when we have positions but no quotes, or FX failed entirely.
+  const missingPrices = holdings.filter((h) => !prices[h.ticker]).length
+  const dataHealth = !loading && (
+    (holdings.length > 0 && Object.keys(prices).length === 0) ? 'Prices unavailable — market data source may be down. Values shown use cost basis.'
+    : (holdings.length > 0 && !fxRates) ? 'Exchange rates unavailable — showing native amounts.'
+    : missingPrices > 0 ? `${missingPrices} holding${missingPrices === 1 ? '' : 's'} missing a live price — check the ticker symbol.`
+    : null
+  )
+
+  // Brand-new account: nothing set up yet. Show a guided start instead of a
+  // wall of empty panels.
+  const isNewUser = !loading && accounts.length === 0 && holdings.length === 0 && bankTransactions.length === 0
 
   // Bills + IOUs feed the attention inbox and cashflow forecast. Light reads;
   // missing tables (pending migrations) simply leave these empty.
@@ -228,6 +242,14 @@ export default function DashboardPage() {
   return (
     <PageShell screen="Overview" title={greeting} statusRight={statusRight} footerHints={footerHints}>
       <div className="space-y-4">
+
+        {dataHealth && (
+          <div className="flex items-center gap-2 rounded-md border border-warn/40 bg-warn/10 px-3 py-2 text-xs text-warn">
+            <span className="text-warn">●</span> {dataHealth}
+          </div>
+        )}
+
+        {isNewUser && <StartHere />}
 
         {/* Month-in-review — first days of a new month, dismissable */}
         <DigestCard />
@@ -456,6 +478,38 @@ function Panel({
     <div className={`lift overflow-hidden rounded-lg border border-border bg-card ${className ?? ''}`}>
       <SectionLabel tone={tone} right={right} href={href}>{label}</SectionLabel>
       {children}
+    </div>
+  )
+}
+
+// Guided first-run: the panels below the fold all hide until there's data, so
+// a fresh account gets these concrete next steps instead of a sparse page.
+function StartHere() {
+  const steps = [
+    { href: '/accounts', icon: Landmark, title: 'Add your accounts', sub: 'Bank, cash, credit and wallet balances — the foundation for everything.' },
+    { href: '/settings', icon: Mail, title: 'Forward bank emails', sub: 'Get a private address so transactions log themselves — no typing.' },
+    { href: '/holdings', icon: Briefcase, title: 'Add your holdings', sub: 'Track stocks, ETFs and crypto with live prices.' },
+    { href: '/budgets', icon: PiggyBank, title: 'Set budgets', sub: 'Give each category a monthly limit and watch the trend.' },
+  ]
+  return (
+    <div className="overflow-hidden rounded-lg border border-accent/40 bg-card">
+      <SectionLabel right="2-min setup">START HERE</SectionLabel>
+      <div className="grid gap-3 p-4 sm:grid-cols-2">
+        {steps.map((s) => (
+          <Link key={s.href} href={s.href} className="lift flex items-start gap-3 rounded-md border border-border p-3.5 transition-colors hover:border-faint">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--accent-soft)]">
+              <s.icon className="h-4 w-4 text-accent" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm font-medium">{s.title}</div>
+              <div className="text-xs text-muted-foreground">{s.sub}</div>
+            </div>
+          </Link>
+        ))}
+      </div>
+      <div className="border-t border-border px-4 py-2 text-[11px]">
+        <Link href="/guide" className="text-muted-foreground underline hover:text-foreground">open the full guide →</Link>
+      </div>
     </div>
   )
 }

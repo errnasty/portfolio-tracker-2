@@ -17,6 +17,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.6',
+    date: '2026-07-14',
+    title: 'CPF on autopilot, and finding anything fast',
+    items: [
+      { title: 'CPF tab', desc: 'CPF now has its own tab (Accounts → CPF) with your OA, Special and MediSave balances, contribution history, and an age-based allocation breakdown.', href: '/cpf' },
+      { title: 'Automatic CPF from salary', desc: 'Enable it once with your birth year: every Salary you record adds the full 37% (20% employee + 17% employer of your gross wage) into CPF, split by age band and capped at the wage ceiling. Your take-home is treated as 80% of gross.', href: '/cpf' },
+      { title: 'Search everything in ⌘K', desc: 'The command palette now finds your holdings, assets, and recent transactions — not just pages and actions.', href: '/dashboard' },
+      { title: 'Data-health warnings', desc: 'Home now tells you when live prices or exchange rates are unavailable, instead of quietly showing blanks.', href: '/dashboard' },
+      { title: 'Guided first run', desc: 'A brand-new account gets a “start here” checklist on Home instead of empty panels.', href: '/dashboard' },
+    ],
+  },
+  {
     version: '2026.07.5',
     date: '2026-07-14',
     title: 'The app starts telling you things',
