@@ -17,6 +17,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.9',
+    date: '2026-07-15',
+    title: 'Bank email capture, live — even without a domain',
+    items: [
+      { title: 'Free relay address', desc: 'You no longer need your own domain to auto-capture bank emails. Sign up for a free inbound-email relay (CloudMailin or Postmark), paste the address it gives you into Settings, and forwarded bank alerts flow straight into your ledger.', href: '/settings' },
+      { title: 'Works with more providers', desc: 'The email webhook now understands CloudMailin, Postmark, and raw-forwarded formats, and reliably identifies you even when Gmail keeps the original recipient on an auto-forward.', href: '/settings' },
+    ],
+  },
+  {
     version: '2026.07.8',
     date: '2026-07-15',
     title: 'Track gold, silver, platinum & palladium — and any commodity',

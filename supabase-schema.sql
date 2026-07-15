@@ -236,7 +236,7 @@ create table if not exists bank_transactions (
   currency     text not null default 'SGD',
   category_id  uuid references categories(id) on delete set null,
   source       text not null default 'manual'
-               check (source in ('csv', 'email', 'manual')),
+               check (source in ('csv', 'email', 'manual', 'paste', 'receipt')),
   external_id  text,
   notes        text,
   created_at   timestamptz default now(),
@@ -275,6 +275,19 @@ create index if not exists idx_bank_txns_user_review
   on bank_transactions(user_id, needs_review) where needs_review;
 create index if not exists idx_bank_txns_user_payeekey
   on bank_transactions(user_id, payee_key);
+
+-- Capture sources 'paste' (pasted bank SMS/email) and 'receipt' (photo/AI)
+-- added 2026-07. Widen the source check on existing tables (the inline
+-- CREATE above already lists them for fresh databases).
+do $$ begin
+  alter table bank_transactions drop constraint if exists bank_transactions_source_check;
+exception when others then null; end $$;
+do $$ begin
+  alter table bank_transactions
+    add constraint bank_transactions_source_check
+    check (source in ('csv', 'email', 'manual', 'paste', 'receipt'));
+exception when duplicate_object then null;
+         when others then null; end $$;
 
 -- Friendly names for masked payees, keyed by payee_key. Resolved at render time
 -- so a rename propagates to all past + future rows.
@@ -452,6 +465,14 @@ alter table inbound_addresses add column if not exists verify_code        text;
 alter table inbound_addresses add column if not exists verify_link        text;
 alter table inbound_addresses add column if not exists verify_from        text;
 alter table inbound_addresses add column if not exists verify_received_at timestamptz;
+
+-- Provider-assigned relay address (e.g. a CloudMailin/Postmark free-tier
+-- address) usable before the user owns a domain. The webhook resolves a
+-- forwarded email to a user by this OR the deterministic address_local.
+alter table inbound_addresses add column if not exists provider_address text;
+create unique index if not exists inbound_provider_address_uidx
+  on inbound_addresses (lower(provider_address))
+  where provider_address is not null;
 
 -- Planned payments: manual upcoming payment deadlines (bills, fees, rent).
 -- Recurring rows advance due_date when marked paid; one-off rows are deleted

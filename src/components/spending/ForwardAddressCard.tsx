@@ -4,9 +4,10 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { useSpending } from '@/context/SpendingContext'
-import { getInboundAddress, provisionInboundAddress, INBOUND_DOMAIN } from '@/lib/inbound'
+import { getInboundAddress, provisionInboundAddress, saveProviderAddress } from '@/lib/inbound'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Mail, Copy, RefreshCw, CheckCircle2, Loader2, ChevronDown, ChevronUp, AlertCircle, ShieldCheck, ExternalLink } from 'lucide-react'
 import type { InboundAddress } from '@/types'
 
@@ -19,6 +20,9 @@ export function ForwardAddressCard() {
   const [showInstructions, setShowInstructions] = useState(false)
   const [missingTable, setMissingTable] = useState(false)
   const [verify, setVerify] = useState<Pick<InboundAddress, 'verify_code' | 'verify_link' | 'verify_received_at'> | null>(null)
+  const [providerAddress, setProviderAddress] = useState('')
+  const [savedProviderAddress, setSavedProviderAddress] = useState<string | null>(null)
+  const [savingProvider, setSavingProvider] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -70,6 +74,10 @@ export function ForwardAddressCard() {
         setAddress(addr.address)
         setLastSynced(addr.last_synced)
         if (addr.verify_code || addr.verify_link) setVerify(addr)
+        if (addr.provider_address) {
+          setSavedProviderAddress(addr.provider_address)
+          setProviderAddress(addr.provider_address)
+        }
       }
     })().finally(() => {
       if (active) setLoading(false)
@@ -123,6 +131,22 @@ export function ForwardAddressCard() {
       toast.success('Code copied')
     } catch {
       toast.error('Could not copy — select and copy manually')
+    }
+  }
+
+  const saveProvider = async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    setSavingProvider(true)
+    try {
+      const value = providerAddress.trim() || null
+      await saveProviderAddress(session.user.id, value)
+      setSavedProviderAddress(value)
+      toast.success(value ? 'Relay address saved' : 'Relay address cleared')
+    } catch (e) {
+      toast.error(String(e))
+    } finally {
+      setSavingProvider(false)
     }
   }
 
@@ -186,6 +210,33 @@ export function ForwardAddressCard() {
           </Button>
         </div>
 
+        {/* No domain yet? Use a free relay address (CloudMailin / Postmark). */}
+        <div className="space-y-2 rounded-md border border-dashed border-border p-3">
+          <div className="text-sm font-medium">No domain yet? Use a free relay address</div>
+          <p className="text-xs text-muted-foreground">
+            The address above only receives mail once you own its domain. Until then, sign up for a
+            free inbound-email relay (<a href="https://www.cloudmailin.com" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">CloudMailin</a> or
+            {' '}<a href="https://postmarkapp.com/inbound-email" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">Postmark</a>),
+            point it at your webhook, and paste the address it gives you here.
+          </p>
+          <div className="flex items-center gap-2">
+            <Input
+              value={providerAddress}
+              onChange={(e) => setProviderAddress(e.target.value)}
+              placeholder="e.g. abc123@cloudmailin.net"
+              className="flex-1 font-mono text-sm"
+            />
+            <Button size="sm" onClick={saveProvider} disabled={savingProvider || providerAddress.trim() === (savedProviderAddress ?? '')}>
+              {savingProvider ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
+            </Button>
+          </div>
+          {savedProviderAddress && (
+            <div className="flex items-center gap-1.5 text-xs text-up">
+              <CheckCircle2 className="h-3.5 w-3.5" /> Forwarding to <code className="font-mono">{savedProviderAddress}</code> is active
+            </div>
+          )}
+        </div>
+
         {/* Forwarding verification (Gmail sends its confirmation email HERE,
             not to the user's inbox — surface the captured code + link). */}
         {verify && (
@@ -238,7 +289,16 @@ export function ForwardAddressCard() {
         {showInstructions && (
           <div className="space-y-3 text-xs text-muted-foreground">
             <div>
-              <div className="mb-1 font-medium text-foreground">Option A — Gmail auto-forwarding (recommended)</div>
+              <div className="mb-1 font-medium text-foreground">Option A — Free relay + Gmail auto-forward (no domain needed)</div>
+              <ol className="list-decimal space-y-1.5 pl-4">
+                <li>Create a free <a href="https://www.cloudmailin.com" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">CloudMailin</a> account — it gives you a receiving address like <code className="font-mono">abc123@cloudmailin.net</code></li>
+                <li>Set its target/webhook URL to <code className="font-mono text-foreground break-all">{typeof window !== 'undefined' ? `${window.location.origin}/api/inbound/email?secret=YOUR_SECRET` : '/api/inbound/email?secret=YOUR_SECRET'}</code> (POST, &quot;Normalized JSON&quot; format), where <code className="font-mono">YOUR_SECRET</code> is your <code className="font-mono">INBOUND_EMAIL_SECRET</code></li>
+                <li>Paste the CloudMailin address into the box above and hit Save</li>
+                <li>In Gmail, add that address under Forwarding &amp; POP/IMAP, then create a filter from your bank (e.g. <code className="font-mono">ibanking.alert@dbs.com</code>) → Forward to it. The Gmail confirmation code appears in the banner on this card.</li>
+              </ol>
+            </div>
+            <div>
+              <div className="mb-1 font-medium text-foreground">Option B — Gmail auto-forwarding to your own domain</div>
               <ol className="list-decimal space-y-1.5 pl-4">
                 <li>Gmail → Settings → See all settings → <strong>Forwarding and POP/IMAP</strong> → <strong>Add a forwarding address</strong> → paste <code className="font-mono text-foreground">{address}</code></li>
                 <li>Gmail emails a confirmation to that address — it lands <em>here</em>, and the code appears in a banner on this card (hit Refresh after ~a minute)</li>

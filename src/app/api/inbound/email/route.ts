@@ -4,24 +4,40 @@ import { createHash } from 'node:crypto'
 import { parseDbsAlert } from '@/lib/dbs-email-parser'
 import { categorizeWithAI } from '@/lib/ai-categorize'
 import { findFuzzyDuplicate } from '@/lib/txn-dedupe'
+import { normalizeInboundEmail } from '@/lib/inbound-payload'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 // Receives forwarded bank emails from an email-to-webhook service
 // (CloudMailin, Postmark Inbound, SendGrid Inbound Parse, etc.).
-// The email's "To" address identifies the user via inbound_addresses.
-// Authentication: a shared secret in the x-inbound-secret header.
+// The email's delivery recipient identifies the user via inbound_addresses
+// (see normalizeInboundEmail for how recipients are ranked).
 //
-// Body formats supported:
-// 1. multipart/form-data with fields: to, subject, text, html (CloudMailin style)
-// 2. application/json with fields: to, subject, text, html
-// 3. Raw RFC 822 email in text/plain body (parsed via regex headers)
+// Authentication (any one): the x-inbound-secret header, a ?secret= query
+// param, or HTTP Basic auth password — some free provider tiers can't set
+// custom headers, so we accept all three.
+//
+// Body formats supported (see src/lib/inbound-payload.ts):
+//   multipart/form-data (CloudMailin), application/json (CloudMailin/Postmark/
+//   generic), or raw RFC 822 text.
 
-function extractHeader(raw: string, name: string): string {
-  const re = new RegExp(`^${name}:\\s*(.+)$`, 'im')
-  const m = raw.match(re)
-  return m ? m[1].trim() : ''
+function secretFromRequest(req: Request): string | null {
+  const header = req.headers.get('x-inbound-secret')
+  if (header) return header
+  const url = new URL(req.url)
+  const q = url.searchParams.get('secret')
+  if (q) return q
+  const auth = req.headers.get('authorization') ?? ''
+  const basic = auth.match(/^Basic\s+(.+)$/i)
+  if (basic) {
+    try {
+      const decoded = Buffer.from(basic[1], 'base64').toString('utf8')
+      const pwd = decoded.slice(decoded.indexOf(':') + 1)
+      if (pwd) return pwd
+    } catch { /* ignore */ }
+  }
+  return null
 }
 
 function stripHtml(s: string): string {
@@ -36,8 +52,8 @@ function stripHtml(s: string): string {
 }
 
 export async function POST(req: Request) {
-  // Validate shared secret
-  const secret = req.headers.get('x-inbound-secret')
+  // Validate shared secret (header, query param, or Basic-auth password).
+  const secret = secretFromRequest(req)
   const expected = process.env.INBOUND_EMAIL_SECRET
   if (!expected || secret !== expected) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -56,58 +72,52 @@ export async function POST(req: Request) {
     ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey)
     : supabase
 
-  let toAddress = ''
-  let fromAddress = ''
-  let subject = ''
-  let textBody = ''
-  let htmlBody = ''
-
+  // Normalize the many provider payload shapes into one record with an
+  // ordered list of candidate recipients (see src/lib/inbound-payload.ts).
   const contentType = req.headers.get('content-type') ?? ''
-
+  let normalized
   if (contentType.includes('multipart/form-data')) {
-    const formData = await req.formData()
-    toAddress = (formData.get('to') as string) ?? ''
-    fromAddress = (formData.get('from') as string) ?? ''
-    subject = (formData.get('subject') as string) ?? ''
-    textBody = (formData.get('text') as string) ?? ''
-    htmlBody = (formData.get('html') as string) ?? ''
+    normalized = normalizeInboundEmail(contentType, await req.formData())
   } else if (contentType.includes('application/json')) {
-    const json = await req.json()
-    toAddress = json.to ?? ''
-    fromAddress = json.from ?? ''
-    subject = json.subject ?? ''
-    textBody = json.text ?? ''
-    htmlBody = json.html ?? ''
+    normalized = normalizeInboundEmail(contentType, await req.json())
   } else {
-    // Raw RFC 822 email
-    const raw = await req.text()
-    toAddress = extractHeader(raw, 'To')
-    fromAddress = extractHeader(raw, 'From')
-    subject = extractHeader(raw, 'Subject')
-    // Split headers from body
-    const sep = raw.indexOf('\r\n\r\n') >= 0 ? '\r\n\r\n' : '\n\n'
-    const bodyStart = raw.indexOf(sep) + sep.length
-    textBody = bodyStart > 4 ? raw.slice(bodyStart) : ''
+    normalized = normalizeInboundEmail(contentType, await req.text())
   }
+  const { recipients, from: fromAddress, subject, text: textBody, html: htmlBody } = normalized
 
-  // Extract the local part of the To address (before the @)
-  const toLocal = toAddress.split('@')[0]?.trim().toLowerCase()
-  if (!toLocal) {
-    return NextResponse.json({ error: 'No To address' }, { status: 400 })
+  // Resolve the user from the candidate recipients. Try, per candidate:
+  // exact `address` → `provider_address` → local-part `address_local`. Then,
+  // as a last resort for this personal app, if exactly one row exists use it
+  // (covers Gmail auto-forwards that only preserve the original To: header).
+  let userId: string | null = null
+  let matchedBy = 'none'
+  for (const rcpt of recipients) {
+    const local = rcpt.split('@')[0]?.trim().toLowerCase()
+    // recipients are already lowercased by the normalizer; stored addresses
+    // are lowercase, so exact eq is safe (no ilike wildcard concerns).
+    const { data: hit } = await dbClient
+      .from('inbound_addresses')
+      .select('user_id')
+      .or([
+        `address.eq.${rcpt}`,
+        `provider_address.eq.${rcpt}`,
+        local ? `address_local.eq.${local}` : '',
+      ].filter(Boolean).join(','))
+      .maybeSingle()
+    if (hit?.user_id) { userId = hit.user_id; matchedBy = 'recipient'; break }
   }
-
-  // Look up the user by inbound address
-  const { data: addr } = await dbClient
-    .from('inbound_addresses')
-    .select('user_id')
-    .eq('address_local', toLocal)
-    .maybeSingle()
-
-  if (!addr?.user_id) {
-    return NextResponse.json({ error: `Unknown address: ${toAddress}` }, { status: 404 })
+  if (!userId) {
+    const { data: all } = await dbClient.from('inbound_addresses').select('user_id')
+    if ((all ?? []).length === 1) { userId = all![0].user_id; matchedBy = 'single-row-fallback' }
   }
-
-  const userId = addr.user_id
+  if (!userId) {
+    return NextResponse.json(
+      { error: `No matching inbound address for recipients: ${recipients.join(', ') || '(none)'}` },
+      { status: 404 },
+    )
+  }
+  // Deterministic local part used only for the external_id hash below.
+  const toLocal = (recipients[0]?.split('@')[0] ?? 'inbound').toLowerCase()
 
   // ── Forwarding-address verification emails ──────────────────────────────
   // Gmail (and Outlook) require the destination of an auto-forward rule to
@@ -289,5 +299,5 @@ export async function POST(req: Request) {
     // Transaction is already saved; stats are best-effort.
   }
 
-  return NextResponse.json({ inserted: 1, transaction_id: data.id })
+  return NextResponse.json({ inserted: 1, transaction_id: data.id, resolved: matchedBy })
 }

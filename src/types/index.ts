@@ -528,4 +528,7 @@ export interface InboundAddress {
   verify_link?: string | null
   verify_from?: string | null
   verify_received_at?: string | null
+  // Provider-assigned relay address (CloudMailin/Postmark free tier) used
+  // until the user owns a domain — pasted in on the Settings card.
+  provider_address?: string | null
 }
