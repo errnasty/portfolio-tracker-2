@@ -103,7 +103,7 @@ export function CommandPalette({ open, onOpenChange }: {
       seen.add(norm)
       out.push({
         key: `t-${t.id}`, label: `${label} · ${formatCurrency(Number(t.amount), t.currency)}`,
-        hint: 'Transaction', icon: Wallet, run: () => navigate('/spending'),
+        hint: 'Transaction', icon: Wallet, run: () => navigate(`/spending?txn=${t.id}`),
       })
       if (seen.size >= 8) break
     }

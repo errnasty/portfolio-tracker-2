@@ -17,6 +17,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.12',
+    date: '2026-07-15',
+    title: 'Easier to get around, especially on your phone',
+    items: [
+      { title: 'Bottom tab bar on mobile', desc: 'Phones now have a thumb-reachable bottom bar — Home, Spending, a center + to add, Accounts, and Invest — so you\'re not digging through the hamburger menu for the essentials.', href: '/dashboard' },
+      { title: 'Jump to a transaction', desc: 'Search a transaction in ⌘K, or tap INSPECT on an anomaly flag, and you land right on that row with it highlighted — no more scrolling to find it.', href: '/spending' },
+      { title: 'People moved under Payments', desc: 'People (IOUs) is now a tab alongside Upcoming and Subscriptions, tidying the sidebar.', href: '/people' },
+    ],
+  },
+  {
     version: '2026.07.11',
     date: '2026-07-15',
     title: 'Paste a bank SMS, get a transaction',

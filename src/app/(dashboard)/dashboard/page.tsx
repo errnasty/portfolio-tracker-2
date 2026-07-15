@@ -128,7 +128,9 @@ export default function DashboardPage() {
     formatBase: (n) => formatCurrency(n, base),
   }))
   for (const a of detectAnomalies(bankTransactions, subscriptions, today).slice(0, 2)) {
-    actions.push({ sev: 'med', tag: 'ANOMALY', href: '/spending', cta: 'INSPECT', title: a.title, sub: a.sub })
+    // Deep-link straight to the flagged transaction so INSPECT lands on it.
+    const href = a.txnIds[0] ? `/spending?txn=${a.txnIds[0]}` : '/spending'
+    actions.push({ sev: 'med', tag: 'ANOMALY', href, cta: 'INSPECT', title: a.title, sub: a.sub })
   }
 
   actions.sort((a, b) => (a.sev === b.sev ? 0 : a.sev === 'high' ? -1 : 1))

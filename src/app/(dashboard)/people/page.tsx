@@ -9,6 +9,8 @@ import { convertToBase } from '@/lib/calculations'
 import { formatCurrency, cn } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { PageShell } from '@/components/ui/page-shell'
+import { SubNav } from '@/components/ui/sub-nav'
+import { SUB_NAVS } from '@/lib/nav-registry'
 import { HeroBand, HeroMetric } from '@/components/ui/hero-band'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -131,6 +133,7 @@ export default function PeoplePage() {
       footerHints={<span><span className="text-accent">▸</span> <span className="text-foreground">g s</span> spending · <span className="text-foreground">g h</span> home</span>}
     >
     <div className="space-y-4">
+      <SubNav links={[...SUB_NAVS.payments]} />
       {tableMissing && (
         <div className="rounded-md border border-warn/40 bg-warn/10 p-3 text-sm text-warn">
           The <code className="font-mono text-xs">ious</code> table is missing — run{' '}
