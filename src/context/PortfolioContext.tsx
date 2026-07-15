@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { enrichHoldings, calcPortfolioStats, convertToBase, convertBetween } from '@/lib/calculations'
 import { deriveAllPositions } from '@/lib/transactions'
+import { FUND_PROVIDER_LIST } from '@/lib/fund-providers'
 
 // Translate Supabase errors into user-actionable toasts. The most common one
 // new users hit is the "relation does not exist" error when a migration
@@ -305,10 +306,17 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
 
     for (const h of holdings) {
       if (h.price_source === 'custom' && h.custom_price != null) {
+        // Most custom providers publish a price in the holding's own cost
+        // basis currency (e.g. a fund's SGD share class). A few quote a
+        // fixed currency regardless (e.g. gold spot is always USD) — that's
+        // FUND_PROVIDER_LIST[...].nativeCurrency.
+        const providerCurrency = h.price_provider
+          ? FUND_PROVIDER_LIST.find((p) => p.id === h.price_provider)?.nativeCurrency
+          : undefined
         quotes[h.ticker] = {
           ticker: h.ticker,
           price: h.custom_price,
-          currency: h.cost_basis_currency,
+          currency: providerCurrency ?? h.cost_basis_currency,
           change: 0,
           changePercent: 0,
           longName: h.name ?? h.ticker,

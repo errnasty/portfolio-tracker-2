@@ -34,7 +34,10 @@ export async function GET(req: NextRequest) {
 
       const data = await res.json()
       const quotes: SearchResult[] = (data?.quotes ?? [])
-        .filter((q: any) => q.symbol && ['EQUITY', 'ETF', 'MUTUALFUND', 'INDEX', 'CRYPTOCURRENCY'].includes(q.quoteType))
+        // FUTURE covers commodity contracts (oil, gold, agriculture, …) —
+        // paper commodity exposure this way, physical metals via the
+        // dedicated weight-based providers in src/lib/fund-providers.ts.
+        .filter((q: any) => q.symbol && ['EQUITY', 'ETF', 'MUTUALFUND', 'INDEX', 'CRYPTOCURRENCY', 'FUTURE'].includes(q.quoteType))
         .map((q: any) => ({
           symbol: q.symbol,
           shortname: q.shortname ?? q.symbol,

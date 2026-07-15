@@ -71,6 +71,14 @@ export interface FundProviderMeta {
   id: string
   label: string
   helpText: string
+  // Fixed quote currency for this provider (e.g. gold spot is always USD,
+  // regardless of what currency the holding's cost basis is in). Omitted
+  // when the provider's currency varies (e.g. a fund's own share class) —
+  // those holdings fall back to pricing in cost_basis_currency.
+  nativeCurrency?: Currency
+  // When set, the "ref" field is a picker (e.g. weight unit) instead of
+  // free text (e.g. a fund code).
+  refOptions?: { value: string; label: string }[]
 }
 
 export interface PriceQuote {

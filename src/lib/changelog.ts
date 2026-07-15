@@ -17,6 +17,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.8',
+    date: '2026-07-15',
+    title: 'Track gold, silver, platinum & palladium — and any commodity',
+    items: [
+      { title: 'Physical precious metals', desc: 'Holdings now supports gold, silver, platinum, and palladium as their own price sources — pick a weight unit (gram, troy ounce, tael, or kilogram) and the live global spot price refreshes automatically, converted to that unit. Priced in USD regardless of what currency you actually paid in.', href: '/holdings' },
+      { title: 'Commodity tickers in search', desc: 'Futures and commodity contracts (oil, agriculture, and more) now show up when searching for a holding — previously only stocks, ETFs, funds, and crypto did.', href: '/holdings' },
+    ],
+  },
+  {
     version: '2026.07.7',
     date: '2026-07-15',
     title: 'Track funds Yahoo Finance doesn\'t know about',

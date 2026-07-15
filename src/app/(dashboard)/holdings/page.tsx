@@ -35,12 +35,24 @@ const EMPTY_FORM: HoldingFormData = {
   price_source: 'auto', custom_price: '', price_provider: '', price_provider_ref: '',
 }
 
-// Uppercase slug for a user-typed fund identifier — becomes the holding's
-// `ticker` when there's no real market symbol (e.g. "LIONGLOBAL:SST6", or
-// "MY-PRIVATE-FUND" for a pure-manual entry with no provider).
+// Uppercase slug of the fund/item name — becomes the holding's `ticker` when
+// there's no real market symbol (e.g. "MY GOLD BAR" -> "MY-GOLD-BAR"). Not
+// derived from provider+ref: two custom holdings can share the same
+// provider and unit (e.g. two separate gold bars, both tracked in grams),
+// so the name is what has to be unique, not the price source.
 function slugTicker(name: string): string {
   const s = name.toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40)
   return s || 'FUND'
+}
+
+// Appends -2, -3, … if the slug collides with an existing ticker, so two
+// identically (or similarly) named custom holdings don't merge into one row.
+function uniqueTicker(base: string, existing: Set<string>): string {
+  if (!existing.has(base)) return base
+  for (let n = 2; ; n++) {
+    const candidate = `${base}-${n}`
+    if (!existing.has(candidate)) return candidate
+  }
 }
 
 async function fetchFundPrice(provider: string, ref: string): Promise<{ price: number; asOf: string | null; name?: string | null }> {
@@ -176,6 +188,14 @@ export default function HoldingsPage() {
   const [refreshingId, setRefreshingId] = useState<string | null>(null)
 
   const isCustom = form.price_source === 'custom'
+  const selectedProvider = form.price_provider
+    ? FUND_PROVIDER_LIST.find((p) => p.id === form.price_provider)
+    : undefined
+  // A "weight-based" provider (gold/silver/platinum/palladium) picks its
+  // ref from a fixed list of units rather than typing a free-text fund code
+  // — used to relabel Name/Shares/Price for physical-item bookkeeping.
+  const isWeightBased = !!selectedProvider?.refOptions
+  const refLabel = selectedProvider?.refOptions?.find((o) => o.value === form.price_provider_ref)?.label
 
   const openAdd = () => { setForm(EMPTY_FORM); setEditId(null); setTestFetchError(null); setOpen(true) }
   useQuickAction('add-holding', openAdd)
@@ -241,13 +261,13 @@ export default function HoldingsPage() {
     setSaving(true)
     // Editing keeps the original ticker (openEdit populates form.ticker even
     // in custom mode) so renaming a fund doesn't orphan its target allocation
-    // or historical links — only a fresh Add mints a new one.
+    // or historical links — only a fresh Add mints a new one, from the name
+    // (not provider+ref — two custom holdings can share a provider/unit,
+    // e.g. two separate gold bars both tracked in grams).
     const ticker = editId && form.ticker
       ? form.ticker.toUpperCase().trim()
       : isCustom
-        ? (form.price_provider && form.price_provider_ref.trim()
-            ? `${form.price_provider}:${form.price_provider_ref.trim()}`.toUpperCase()
-            : slugTicker(form.name))
+        ? uniqueTicker(slugTicker(form.name), new Set(enriched.map((h) => h.ticker)))
         : form.ticker.toUpperCase().trim()
     const payload = {
       ticker,
@@ -552,23 +572,23 @@ export default function HoldingsPage() {
             ) : (
               <div className="space-y-4 rounded-md border border-border p-3">
                 <div className="space-y-2">
-                  <Label>Fund Name *</Label>
+                  <Label>{isWeightBased ? 'Item Name *' : 'Fund Name *'}</Label>
                   <Input
-                    placeholder="e.g. LionGlobal Singapore Trust Fund Class O SGD"
+                    placeholder={isWeightBased ? 'e.g. UOB 100g gold bar' : 'e.g. LionGlobal Singapore Trust Fund Class O SGD'}
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Auto-update NAV from</Label>
+                  <Label>Auto-update price from</Label>
                   <Select
                     value={form.price_provider || 'none'}
                     onValueChange={(v) => setForm({ ...form, price_provider: v === 'none' ? '' : v, price_provider_ref: '' })}
                   >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">None — I&rsquo;ll update the NAV myself</SelectItem>
+                      <SelectItem value="none">None — I&rsquo;ll update the price myself</SelectItem>
                       {FUND_PROVIDER_LIST.map((p) => (
                         <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>
                       ))}
@@ -576,38 +596,53 @@ export default function HoldingsPage() {
                   </Select>
                   {form.price_provider && (
                     <>
-                      <Input
-                        className="mt-2"
-                        placeholder="Fund code, e.g. SST6"
-                        value={form.price_provider_ref}
-                        onChange={(e) => setForm({ ...form, price_provider_ref: e.target.value })}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        {FUND_PROVIDER_LIST.find((p) => p.id === form.price_provider)?.helpText}
-                      </p>
+                      {selectedProvider?.refOptions ? (
+                        <Select
+                          value={form.price_provider_ref}
+                          onValueChange={(v) => setForm({ ...form, price_provider_ref: v })}
+                        >
+                          <SelectTrigger className="mt-2"><SelectValue placeholder="Choose a weight unit…" /></SelectTrigger>
+                          <SelectContent>
+                            {selectedProvider.refOptions.map((o) => (
+                              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          className="mt-2"
+                          placeholder="Fund code, e.g. SST6"
+                          value={form.price_provider_ref}
+                          onChange={(e) => setForm({ ...form, price_provider_ref: e.target.value })}
+                        />
+                      )}
+                      <p className="text-xs text-muted-foreground">{selectedProvider?.helpText}</p>
                       <Button
                         type="button" variant="outline" size="sm"
                         onClick={handleTestFetch}
                         disabled={!form.price_provider_ref.trim() || testFetching}
                       >
-                        {testFetching ? <><Loader2 className="mr-2 h-3 w-3 animate-spin" />Fetching…</> : 'Test fetch NAV'}
+                        {testFetching ? <><Loader2 className="mr-2 h-3 w-3 animate-spin" />Fetching…</> : 'Test fetch price'}
                       </Button>
                       {testFetchError && (
-                        <p className="text-xs text-down">{testFetchError} — you can still enter the NAV manually below, and a daily job will keep retrying.</p>
+                        <p className="text-xs text-down">{testFetchError} — you can still enter the price manually below, and a daily job will keep retrying.</p>
                       )}
                     </>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Current NAV / Price *</Label>
+                  <Label>{isWeightBased ? `Current price per ${refLabel ?? 'unit'} *` : 'Current NAV / Price *'}</Label>
                   <Input
                     type="number" min="0" step="any" placeholder="e.g. 1.842"
                     value={form.custom_price}
                     onChange={(e) => setForm({ ...form, custom_price: e.target.value })}
                   />
                   <p className="text-xs text-muted-foreground">
-                    In the same currency as Cost Currency below. {form.price_provider ? 'Refreshed automatically once a day, or click Test fetch above.' : 'Update this by hand whenever the fund publishes a new NAV.'}
+                    {selectedProvider?.nativeCurrency
+                      ? `Always priced in ${selectedProvider.nativeCurrency}, regardless of what currency you paid in below.`
+                      : 'In the same currency as Cost Currency below.'}{' '}
+                    {form.price_provider ? 'Refreshed automatically once a day, or click Test fetch above.' : 'Update this by hand whenever the price changes.'}
                   </p>
                 </div>
               </div>
@@ -615,9 +650,9 @@ export default function HoldingsPage() {
 
             {/* Shares */}
             <div className="space-y-2">
-              <Label>Number of Shares *</Label>
+              <Label>{isWeightBased ? `Weight / quantity (in ${refLabel ?? 'the unit above'}) *` : 'Number of Shares *'}</Label>
               <Input
-                type="number" min="0" step="any" placeholder="e.g. 8.7144"
+                type="number" min="0" step="any" placeholder={isWeightBased ? 'e.g. 100' : 'e.g. 8.7144'}
                 value={form.shares}
                 onChange={(e) => setForm({ ...form, shares: e.target.value })}
               />
@@ -626,7 +661,7 @@ export default function HoldingsPage() {
             {/* Cost basis */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Average Cost per Share *</Label>
+                <Label>{isWeightBased ? `Average cost per ${refLabel ?? 'unit'} *` : 'Average Cost per Share *'}</Label>
                 <Input
                   type="number" min="0" step="any" placeholder="e.g. 601.75"
                   value={form.cost_basis_per_share}

@@ -20,6 +20,12 @@ function isFund(quoteType?: string): boolean {
   return quoteType === 'ETF' || quoteType === 'MUTUALFUND'
 }
 
+// Provider ids from src/lib/fund-providers.ts that represent physical
+// precious metals (not a real fund) — kept as a local literal rather than
+// importing the provider list, since these ids are stable and this avoids
+// pulling that module into every analytics consumer.
+const METAL_PROVIDERS = new Set(['gold', 'silver', 'platinum', 'palladium'])
+
 // ── Geographic breakdown (LOOK-THROUGH) ───────────────────────────────────
 // Uses the API-derived `countries` map (1.0-summing dict). For ETFs this is
 // derived from each fund's top holdings + their countries. For stocks it's
@@ -138,10 +144,12 @@ export function assetTypeBreakdown(
           : t === 'MUTUALFUND' ? 'Mutual Fund'
             : t === 'INDEX' ? 'Index'
               : t === 'CRYPTOCURRENCY' ? 'Crypto'
-                // Custom-priced holdings (e.g. Singapore unit trusts) aren't
-                // on Yahoo, so there's no quoteType to classify them by.
-                : h.price_source === 'custom' ? 'Fund'
-                  : 'Other'
+                // Custom-priced holdings (e.g. Singapore unit trusts, or
+                // physical metals) aren't on Yahoo, so there's no quoteType
+                // to classify them by — fall back to price_provider.
+                : h.price_source === 'custom' && METAL_PROVIDERS.has(h.price_provider ?? '') ? 'Precious metals'
+                  : h.price_source === 'custom' ? 'Fund'
+                    : 'Other'
     map.set(label, (map.get(label) ?? 0) + h.currentValueBase)
   }
   return aggregate(map)
