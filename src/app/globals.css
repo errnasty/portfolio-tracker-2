@@ -22,8 +22,8 @@
     --primary-foreground: 0 0% 100%;
     --secondary: 40 12% 96%;          /* #FBFAF6 sidebar */
     --secondary-foreground: 40 10% 9%;
-    --muted: 36 8% 41%;               /* #726C60 */
-    --muted-foreground: 36 8% 41%;
+    --muted: 36 15% 91%;              /* #EDE8DE light warm neutral */
+    --muted-foreground: 36 8% 41%;    /* #726C60 */
     --accent: 155 36% 27%;            /* same as primary in light */
     --accent-foreground: 0 0% 100%;
     --destructive: 18 57% 42%;        /* #B4552F */

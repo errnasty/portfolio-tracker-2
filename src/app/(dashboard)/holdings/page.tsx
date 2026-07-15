@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Plus, Pencil, Trash2, Search, Loader2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, Loader2, RefreshCw } from 'lucide-react'
 import { PageShell } from '@/components/ui/page-shell'
 import { TLink } from '@/components/motion/TLink'
 import { SubNav } from '@/components/ui/sub-nav'
@@ -22,12 +22,41 @@ import { InlineNumberCell } from '@/components/holdings/InlineNumberCell'
 import { CashHoldingsCard } from '@/components/holdings/CashHoldingsCard'
 import { deleteWithUndo } from '@/lib/toast-undo'
 import { useQuickAction } from '@/lib/quick-actions'
+import { supabase } from '@/lib/supabase'
+import { toast } from 'sonner'
 import type { Currency, Holding, HoldingFormData } from '@/types'
 import { CURRENCY_CODES } from '@/types'
 import type { SearchResult } from '@/app/api/search/route'
+import { FUND_PROVIDER_LIST } from '@/lib/fund-providers'
 
 const CURRENCIES: Currency[] = CURRENCY_CODES
-const EMPTY_FORM: HoldingFormData = { ticker: '', name: '', shares: '', cost_basis_per_share: '', cost_basis_currency: 'USD' }
+const EMPTY_FORM: HoldingFormData = {
+  ticker: '', name: '', shares: '', cost_basis_per_share: '', cost_basis_currency: 'USD',
+  price_source: 'auto', custom_price: '', price_provider: '', price_provider_ref: '',
+}
+
+// Uppercase slug for a user-typed fund identifier — becomes the holding's
+// `ticker` when there's no real market symbol (e.g. "LIONGLOBAL:SST6", or
+// "MY-PRIVATE-FUND" for a pure-manual entry with no provider).
+function slugTicker(name: string): string {
+  const s = name.toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40)
+  return s || 'FUND'
+}
+
+async function fetchFundPrice(provider: string, ref: string): Promise<{ price: number; asOf: string | null; name?: string | null }> {
+  const { data: { session } } = await supabase.auth.getSession()
+  const res = await fetch('/api/fund-price', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+    },
+    body: JSON.stringify({ provider, ref }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data?.error ?? 'Fetch failed')
+  return data
+}
 
 // ── Ticker search component ────────────────────────────────────────────────
 function TickerSearch({
@@ -134,7 +163,7 @@ function TickerSearch({
 
 // ── Main page ──────────────────────────────────────────────────────────────
 export default function HoldingsPage() {
-  const { enriched, loading, addHolding, updateHolding, deleteHolding, settings } = usePortfolio()
+  const { enriched, loading, addHolding, updateHolding, deleteHolding, refreshHoldings, settings } = usePortfolio()
   const base = (settings?.base_currency ?? 'USD') as Currency
 
   const [open, setOpen] = useState(false)
@@ -142,8 +171,13 @@ export default function HoldingsPage() {
   const [editId, setEditId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [testFetching, setTestFetching] = useState(false)
+  const [testFetchError, setTestFetchError] = useState<string | null>(null)
+  const [refreshingId, setRefreshingId] = useState<string | null>(null)
 
-  const openAdd = () => { setForm(EMPTY_FORM); setEditId(null); setOpen(true) }
+  const isCustom = form.price_source === 'custom'
+
+  const openAdd = () => { setForm(EMPTY_FORM); setEditId(null); setTestFetchError(null); setOpen(true) }
   useQuickAction('add-holding', openAdd)
   const openEdit = (h: Holding) => {
     setForm({
@@ -152,8 +186,13 @@ export default function HoldingsPage() {
       shares: String(h.shares),
       cost_basis_per_share: String(h.cost_basis_per_share),
       cost_basis_currency: h.cost_basis_currency,
+      price_source: h.price_source,
+      custom_price: h.custom_price != null ? String(h.custom_price) : '',
+      price_provider: h.price_provider ?? '',
+      price_provider_ref: h.price_provider_ref ?? '',
     })
     setEditId(h.id)
+    setTestFetchError(null)
     setOpen(true)
   }
 
@@ -163,15 +202,64 @@ export default function HoldingsPage() {
     setForm((prev) => ({ ...prev, ticker, name, cost_basis_currency: mappedCurrency }))
   }
 
+  const setMode = (mode: 'auto' | 'custom') => {
+    setTestFetchError(null)
+    setForm((prev) => ({
+      ...prev,
+      price_source: mode,
+      ...(mode === 'auto'
+        ? { price_provider: '', price_provider_ref: '', custom_price: '' }
+        : { ticker: '' }),
+    }))
+  }
+
+  const handleTestFetch = async () => {
+    if (!form.price_provider || !form.price_provider_ref.trim()) return
+    setTestFetching(true)
+    setTestFetchError(null)
+    try {
+      const quote = await fetchFundPrice(form.price_provider, form.price_provider_ref.trim())
+      setForm((prev) => ({
+        ...prev,
+        custom_price: String(quote.price),
+        name: prev.name.trim() || quote.name || prev.name,
+      }))
+      toast.success(`Fetched NAV ${quote.price}${quote.asOf ? ` as at ${quote.asOf}` : ''}`)
+    } catch (err) {
+      setTestFetchError(String((err as Error).message ?? err))
+    } finally {
+      setTestFetching(false)
+    }
+  }
+
   const handleSave = async () => {
-    if (!form.ticker || !form.shares || !form.cost_basis_per_share) return
+    if (isCustom) {
+      if (!form.name.trim() || !form.shares || !form.cost_basis_per_share || !form.custom_price) return
+    } else if (!form.ticker || !form.shares || !form.cost_basis_per_share) {
+      return
+    }
     setSaving(true)
+    // Editing keeps the original ticker (openEdit populates form.ticker even
+    // in custom mode) so renaming a fund doesn't orphan its target allocation
+    // or historical links — only a fresh Add mints a new one.
+    const ticker = editId && form.ticker
+      ? form.ticker.toUpperCase().trim()
+      : isCustom
+        ? (form.price_provider && form.price_provider_ref.trim()
+            ? `${form.price_provider}:${form.price_provider_ref.trim()}`.toUpperCase()
+            : slugTicker(form.name))
+        : form.ticker.toUpperCase().trim()
     const payload = {
-      ticker: form.ticker.toUpperCase().trim(),
+      ticker,
       name: form.name.trim() || null,
       shares: parseFloat(form.shares),
       cost_basis_per_share: parseFloat(form.cost_basis_per_share),
       cost_basis_currency: form.cost_basis_currency,
+      price_source: form.price_source,
+      custom_price: isCustom && form.custom_price ? parseFloat(form.custom_price) : null,
+      custom_price_asof: isCustom && form.custom_price ? new Date().toISOString().slice(0, 10) : null,
+      price_provider: isCustom && form.price_provider ? form.price_provider : null,
+      price_provider_ref: isCustom && form.price_provider ? form.price_provider_ref.trim() : null,
     }
     if (editId) {
       await updateHolding(editId, payload)
@@ -180,6 +268,30 @@ export default function HoldingsPage() {
     }
     setSaving(false)
     setOpen(false)
+  }
+
+  const handleRefresh = async (h: Holding) => {
+    if (!h.price_provider || !h.price_provider_ref) return
+    setRefreshingId(h.id)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/fund-price', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ provider: h.price_provider, ref: h.price_provider_ref, holding_id: h.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error ?? 'Refresh failed')
+      toast.success(`${h.ticker}: NAV ${data.price}${data.asOf ? ` as at ${data.asOf}` : ''}`)
+      await refreshHoldings()
+    } catch (err) {
+      toast.error(`Refresh failed: ${String((err as Error).message ?? err)}`)
+    } finally {
+      setRefreshingId(null)
+    }
   }
 
   const handleDelete = async () => {
@@ -196,11 +308,18 @@ export default function HoldingsPage() {
         shares: row.shares,
         cost_basis_per_share: row.cost_basis_per_share,
         cost_basis_currency: row.cost_basis_currency,
+        price_source: row.price_source,
+        custom_price: row.custom_price,
+        custom_price_asof: row.custom_price_asof,
+        price_provider: row.price_provider,
+        price_provider_ref: row.price_provider_ref,
       }),
     })
   }
 
-  const canSave = form.ticker.trim() && form.shares && form.cost_basis_per_share && !saving
+  const canSave = !saving && (isCustom
+    ? form.name.trim() && form.shares && form.cost_basis_per_share && form.custom_price
+    : form.ticker.trim() && form.shares && form.cost_basis_per_share)
 
   // Portfolio aggregates for the hero band.
   const priced = enriched.filter((h) => h.currentPrice > 0)
@@ -319,8 +438,26 @@ export default function HoldingsPage() {
                     <TableCell className="text-right text-sm">
                       {h.currentPrice > 0 ? (
                         <>
-                          <div className="font-mono">{formatCurrency(h.currentPrice, h.priceCurrency)}</div>
-                          <div className="text-xs text-muted-foreground">{h.priceCurrency}</div>
+                          <div className="flex items-center justify-end gap-1">
+                            <span className="font-mono">{formatCurrency(h.currentPrice, h.priceCurrency)}</span>
+                            {h.price_source === 'custom' && h.price_provider && (
+                              <button
+                                type="button"
+                                title={`Refresh NAV from ${FUND_PROVIDER_LIST.find((p) => p.id === h.price_provider)?.label ?? h.price_provider}`}
+                                onClick={() => handleRefresh(h)}
+                                disabled={refreshingId === h.id}
+                                className="press text-muted-foreground hover:text-foreground"
+                              >
+                                <RefreshCw className={`h-3 w-3 ${refreshingId === h.id ? 'animate-spin' : ''}`} />
+                              </button>
+                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {h.priceCurrency}
+                            {h.price_source === 'custom' && (
+                              <> · {h.price_provider ? 'auto' : 'manual'}{h.custom_price_asof ? ` as at ${h.custom_price_asof}` : ''}</>
+                            )}
+                          </div>
                         </>
                       ) : (
                         <span className="text-xs text-warn">Price unavailable</span>
@@ -375,21 +512,106 @@ export default function HoldingsPage() {
             <DialogTitle>{editId ? 'Edit Holding' : 'Add Holding'}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-2">
-            {/* Ticker search */}
-            <div className="space-y-2">
-              <Label>Search Ticker or Company *</Label>
-              <TickerSearch
-                value={form.ticker}
-                name={form.name}
-                onSelect={handleTickerSelect}
-              />
-              {form.ticker && (
-                <p className="text-xs text-muted-foreground">
-                  Selected: <strong className="text-foreground">{form.ticker}</strong>
-                  {form.name && ` — ${form.name}`}
-                </p>
-              )}
+            {/* Mode toggle */}
+            <div className="flex gap-1 rounded-md border border-border bg-muted p-1 text-sm">
+              <button
+                type="button"
+                onClick={() => setMode('auto')}
+                className={`flex-1 rounded px-2 py-1.5 transition-colors ${!isCustom ? 'bg-card font-medium text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                From Yahoo Finance
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('custom')}
+                className={`flex-1 rounded px-2 py-1.5 transition-colors ${isCustom ? 'bg-card font-medium text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                Manual / unlisted fund
+              </button>
             </div>
+
+            {!isCustom ? (
+              /* Ticker search */
+              <div className="space-y-2">
+                <Label>Search Ticker or Company *</Label>
+                <TickerSearch
+                  value={form.ticker}
+                  name={form.name}
+                  onSelect={handleTickerSelect}
+                />
+                {form.ticker && (
+                  <p className="text-xs text-muted-foreground">
+                    Selected: <strong className="text-foreground">{form.ticker}</strong>
+                    {form.name && ` — ${form.name}`}
+                  </p>
+                )}
+                <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+                  <strong>Tip:</strong> Search by company name (e.g. &ldquo;Vanguard All World&rdquo;) and pick the right exchange from the dropdown — London (LSE), Amsterdam (AMS), Singapore (SES), etc. Can&rsquo;t find your fund (e.g. a Singapore unit trust)? Switch to <strong className="text-foreground">Manual / unlisted fund</strong> above.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4 rounded-md border border-border p-3">
+                <div className="space-y-2">
+                  <Label>Fund Name *</Label>
+                  <Input
+                    placeholder="e.g. LionGlobal Singapore Trust Fund Class O SGD"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Auto-update NAV from</Label>
+                  <Select
+                    value={form.price_provider || 'none'}
+                    onValueChange={(v) => setForm({ ...form, price_provider: v === 'none' ? '' : v, price_provider_ref: '' })}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None — I&rsquo;ll update the NAV myself</SelectItem>
+                      {FUND_PROVIDER_LIST.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {form.price_provider && (
+                    <>
+                      <Input
+                        className="mt-2"
+                        placeholder="Fund code, e.g. SST6"
+                        value={form.price_provider_ref}
+                        onChange={(e) => setForm({ ...form, price_provider_ref: e.target.value })}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {FUND_PROVIDER_LIST.find((p) => p.id === form.price_provider)?.helpText}
+                      </p>
+                      <Button
+                        type="button" variant="outline" size="sm"
+                        onClick={handleTestFetch}
+                        disabled={!form.price_provider_ref.trim() || testFetching}
+                      >
+                        {testFetching ? <><Loader2 className="mr-2 h-3 w-3 animate-spin" />Fetching…</> : 'Test fetch NAV'}
+                      </Button>
+                      {testFetchError && (
+                        <p className="text-xs text-down">{testFetchError} — you can still enter the NAV manually below, and a daily job will keep retrying.</p>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Current NAV / Price *</Label>
+                  <Input
+                    type="number" min="0" step="any" placeholder="e.g. 1.842"
+                    value={form.custom_price}
+                    onChange={(e) => setForm({ ...form, custom_price: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    In the same currency as Cost Currency below. {form.price_provider ? 'Refreshed automatically once a day, or click Test fetch above.' : 'Update this by hand whenever the fund publishes a new NAV.'}
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Shares */}
             <div className="space-y-2">
@@ -424,10 +646,6 @@ export default function HoldingsPage() {
                 </Select>
               </div>
             </div>
-
-            <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
-              <strong>Tip:</strong> Search by company name (e.g. &ldquo;Vanguard All World&rdquo;) and pick the right exchange from the dropdown — London (LSE), Amsterdam (AMS), Singapore (SES), etc.
-            </p>
           </div>
 
           <DialogFooter>

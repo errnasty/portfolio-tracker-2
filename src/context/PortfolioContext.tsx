@@ -275,24 +275,47 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const refreshPrices = useCallback(async () => {
+    // Custom-priced holdings (funds not on Yahoo, e.g. Singapore unit trusts)
+    // skip the Yahoo fetch entirely — their price comes from custom_price,
+    // which either the user or the daily fund-price cron keeps up to date.
+    const customTickers = new Set(
+      holdings.filter((h) => h.price_source === 'custom').map((h) => h.ticker),
+    )
     const tickers = Array.from(new Set([
       ...holdings.map((h) => h.ticker),
       ...transactions.map((t) => t.ticker),
-    ]))
-    if (tickers.length === 0) return
-    try {
-      const res = await fetch('/api/prices', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tickers }),
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setPrices(data.quotes)
+    ])).filter((t) => !customTickers.has(t))
+
+    const quotes: Record<string, PriceQuote> = {}
+    if (tickers.length > 0) {
+      try {
+        const res = await fetch('/api/prices', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tickers }),
+        })
+        if (res.ok) {
+          const data = await res.json()
+          Object.assign(quotes, data.quotes)
+        }
+      } catch (err) {
+        console.error('Prices fetch failed:', err)
       }
-    } catch (err) {
-      console.error('Prices fetch failed:', err)
     }
+
+    for (const h of holdings) {
+      if (h.price_source === 'custom' && h.custom_price != null) {
+        quotes[h.ticker] = {
+          ticker: h.ticker,
+          price: h.custom_price,
+          currency: h.cost_basis_currency,
+          change: 0,
+          changePercent: 0,
+          longName: h.name ?? h.ticker,
+        }
+      }
+    }
+    setPrices(quotes)
   }, [holdings, transactions])
 
   // Initial load

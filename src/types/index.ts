@@ -24,6 +24,12 @@ export type Currency = (typeof SUPPORTED_CURRENCIES)[number]['code']
 
 export const CURRENCY_CODES: Currency[] = SUPPORTED_CURRENCIES.map((c) => c.code)
 
+// 'auto' = priced from Yahoo Finance (the default). 'custom' = priced from
+// custom_price, either entered by hand or kept fresh by price_provider (a
+// registry entry in src/lib/server/fund-scrapers) — for funds that aren't
+// on Yahoo, e.g. Singapore unit trusts.
+export type PriceSource = 'auto' | 'custom'
+
 export interface Holding {
   id: string
   user_id: string
@@ -32,6 +38,11 @@ export interface Holding {
   shares: number
   cost_basis_per_share: number
   cost_basis_currency: Currency
+  price_source: PriceSource
+  custom_price: number | null
+  custom_price_asof: string | null   // YYYY-MM-DD
+  price_provider: string | null      // e.g. 'lionglobal'
+  price_provider_ref: string | null  // provider-specific fund identifier
   created_at: string
   updated_at: string
 }
@@ -42,6 +53,24 @@ export interface HoldingFormData {
   shares: string
   cost_basis_per_share: string
   cost_basis_currency: Currency
+  price_source: PriceSource
+  custom_price: string
+  price_provider: string   // '' = none (pure manual)
+  price_provider_ref: string
+}
+
+// A fund-price provider's answer for one fund. asOf is the NAV date the
+// provider reports, not the fetch time.
+export interface FundQuote {
+  price: number
+  asOf: string | null
+  name?: string | null
+}
+
+export interface FundProviderMeta {
+  id: string
+  label: string
+  helpText: string
 }
 
 export interface PriceQuote {
