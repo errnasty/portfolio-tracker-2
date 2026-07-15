@@ -1,6 +1,7 @@
 import type { FundProviderMeta, FundQuote } from '@/types'
 import { FUND_PROVIDER_LIST } from '@/lib/fund-providers'
 import { fetchLionGlobalQuote } from './lionglobal'
+import { fetchGoldQuote, fetchSilverQuote, fetchPlatinumQuote, fetchPalladiumQuote } from './precious-metals'
 
 export interface FundProvider extends FundProviderMeta {
   fetchQuote(ref: string): Promise<FundQuote>
@@ -8,6 +9,10 @@ export interface FundProvider extends FundProviderMeta {
 
 const IMPLS: Record<string, FundProvider['fetchQuote']> = {
   lionglobal: fetchLionGlobalQuote,
+  gold: fetchGoldQuote,
+  silver: fetchSilverQuote,
+  platinum: fetchPlatinumQuote,
+  palladium: fetchPalladiumQuote,
 }
 
 // Registry of fund houses we can auto-refresh a NAV for. Each holding with
