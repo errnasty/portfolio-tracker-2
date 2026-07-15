@@ -17,6 +17,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.7',
+    date: '2026-07-15',
+    title: 'Track funds Yahoo Finance doesn\'t know about',
+    items: [
+      { title: 'Add unlisted funds', desc: 'Holdings now has a "Manual / unlisted fund" mode for positions with no Yahoo ticker — Singapore unit trusts like LionGlobal, for example. Enter shares and cost basis as usual; the price comes from a NAV you set (or a provider) instead of Yahoo.', href: '/holdings' },
+      { title: 'Auto-updating NAVs', desc: 'Point a fund at Lion Global Investors\' fund code and its price refreshes automatically once a day, or on demand with the refresh button next to the price. A failed refresh keeps the last known price rather than losing it.', href: '/holdings' },
+      { title: 'Fixed unreadable tips', desc: 'Tip boxes and other muted callouts (like the holdings search tip) were the same color as their own background in light mode, making the text invisible. Fixed.', href: '/holdings' },
+    ],
+  },
+  {
     version: '2026.07.6',
     date: '2026-07-14',
     title: 'CPF on autopilot, and finding anything fast',

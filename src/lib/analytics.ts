@@ -138,7 +138,10 @@ export function assetTypeBreakdown(
           : t === 'MUTUALFUND' ? 'Mutual Fund'
             : t === 'INDEX' ? 'Index'
               : t === 'CRYPTOCURRENCY' ? 'Crypto'
-                : 'Other'
+                // Custom-priced holdings (e.g. Singapore unit trusts) aren't
+                // on Yahoo, so there's no quoteType to classify them by.
+                : h.price_source === 'custom' ? 'Fund'
+                  : 'Other'
     map.set(label, (map.get(label) ?? 0) + h.currentValueBase)
   }
   return aggregate(map)
