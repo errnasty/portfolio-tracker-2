@@ -25,9 +25,9 @@ function metalProvider(id: string, label: string): FundProviderMeta {
 // provider picker without bundling scraper/fetch code into the client.
 export const FUND_PROVIDER_LIST: FundProviderMeta[] = [
   {
-    id: 'lionglobal',
-    label: 'Lion Global Investors',
-    helpText: 'Paste the fund code from the end of its lionglobalinvestors.com URL, e.g. "SST6" for LionGlobal Singapore Trust Fund Class O SGD (?officialNav=SST6).',
+    id: 'sgfund',
+    label: 'Unit trust / mutual fund (auto, via Yahoo Finance)',
+    helpText: 'Many unit trusts are on Yahoo Finance under a Morningstar code like "0P00006G00.SI" — search your fund at finance.yahoo.com and copy the code from the URL. IMPORTANT: each share class has its own code and price (an Accumulation class and a monthly-distribution "MDist" class of the same fund differ — e.g. 0P00006G00.SI is ~6.86 while LionGlobal Singapore Trust Class O SGD MDist is ~1.05). Test-fetch and confirm the price matches your statement before saving. If your exact class isn\'t on Yahoo (common for MDist classes), use "Manual price" instead.',
   },
   metalProvider('gold', 'Gold'),
   metalProvider('silver', 'Silver'),

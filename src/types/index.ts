@@ -41,7 +41,7 @@ export interface Holding {
   price_source: PriceSource
   custom_price: number | null
   custom_price_asof: string | null   // YYYY-MM-DD
-  price_provider: string | null      // e.g. 'lionglobal'
+  price_provider: string | null      // e.g. 'sgfund', 'gold'
   price_provider_ref: string | null  // provider-specific fund identifier
   created_at: string
   updated_at: string
@@ -322,7 +322,7 @@ export interface CategoryRule {
   created_at: string
 }
 
-export type BankTxnSource = 'csv' | 'email' | 'manual'
+export type BankTxnSource = 'csv' | 'email' | 'manual' | 'paste' | 'receipt'
 
 export interface BankTransaction {
   id: string

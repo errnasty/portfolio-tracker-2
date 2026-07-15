@@ -17,6 +17,23 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.11',
+    date: '2026-07-15',
+    title: 'Paste a bank SMS, get a transaction',
+    items: [
+      { title: 'Paste to capture', desc: 'The quick-add box (press a, or the mobile + button) has a new "Paste bank alert" tab — drop in a bank SMS or notification email and it extracts the amount, date, and merchant for you (with AI as a fallback for unfamiliar formats). Also on ⌘K as "Paste bank SMS / email".', href: '/spending' },
+    ],
+  },
+  {
+    version: '2026.07.10',
+    date: '2026-07-15',
+    title: 'Unlisted funds: correct, reliable pricing',
+    items: [
+      { title: 'Funds priced from Yahoo', desc: 'Unit trusts on Yahoo Finance (many LionGlobal/Fullerton/Nikko classes) now auto-update from their Morningstar code (e.g. 0P00006G00.SI). Each share class has its own code and price — test-fetch and confirm it matches your statement before saving.', href: '/holdings' },
+      { title: 'One-click manual NAV', desc: 'For fund classes not on Yahoo — like monthly-distribution (MDist) classes — enter the NAV yourself and update it right from the holdings row in one click. (The previous auto-scrape of fund-house websites was unreliable and has been removed.)', href: '/holdings' },
+    ],
+  },
+  {
     version: '2026.07.9',
     date: '2026-07-15',
     title: 'Bank email capture, live — even without a domain',
@@ -39,8 +56,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: '2026-07-15',
     title: 'Track funds Yahoo Finance doesn\'t know about',
     items: [
-      { title: 'Add unlisted funds', desc: 'Holdings now has a "Manual / unlisted fund" mode for positions with no Yahoo ticker — Singapore unit trusts like LionGlobal, for example. Enter shares and cost basis as usual; the price comes from a NAV you set (or a provider) instead of Yahoo.', href: '/holdings' },
-      { title: 'Auto-updating NAVs', desc: 'Point a fund at Lion Global Investors\' fund code and its price refreshes automatically once a day, or on demand with the refresh button next to the price. A failed refresh keeps the last known price rather than losing it.', href: '/holdings' },
+      { title: 'Add unlisted funds', desc: 'Holdings has a "Manual or unlisted fund" mode for positions without a standard Yahoo ticker — enter shares and cost basis as usual, and set the price from a data source or by hand. (See the latest entry above for how fund pricing works now.)', href: '/holdings' },
       { title: 'Fixed unreadable tips', desc: 'Tip boxes and other muted callouts (like the holdings search tip) were the same color as their own background in light mode, making the text invisible. Fixed.', href: '/holdings' },
     ],
   },

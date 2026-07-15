@@ -456,14 +456,30 @@ export default function HoldingsPage() {
                       />
                     </TableCell>
                     <TableCell className="text-right text-sm">
-                      {h.currentPrice > 0 ? (
+                      {h.price_source === 'custom' && !h.price_provider ? (
+                        // Pure-manual fund: edit the NAV inline (updates the
+                        // as-of date too) so keeping it current is a 5s task.
+                        <>
+                          <InlineNumberCell
+                            value={h.custom_price ?? 0}
+                            inputStep="any"
+                            format={(n) => formatCurrency(n, h.priceCurrency)}
+                            align="right"
+                            ariaLabel={`NAV of ${h.name ?? h.ticker}`}
+                            onSave={(v) => updateHolding(h.id, { custom_price: v, custom_price_asof: new Date().toISOString().slice(0, 10) })}
+                          />
+                          <div className="text-xs text-muted-foreground">
+                            {h.priceCurrency} · manual{h.custom_price_asof ? ` as at ${h.custom_price_asof}` : ''}
+                          </div>
+                        </>
+                      ) : h.currentPrice > 0 ? (
                         <>
                           <div className="flex items-center justify-end gap-1">
                             <span className="font-mono">{formatCurrency(h.currentPrice, h.priceCurrency)}</span>
                             {h.price_source === 'custom' && h.price_provider && (
                               <button
                                 type="button"
-                                title={`Refresh NAV from ${FUND_PROVIDER_LIST.find((p) => p.id === h.price_provider)?.label ?? h.price_provider}`}
+                                title={`Refresh price from ${FUND_PROVIDER_LIST.find((p) => p.id === h.price_provider)?.label ?? h.price_provider}`}
                                 onClick={() => handleRefresh(h)}
                                 disabled={refreshingId === h.id}
                                 className="press text-muted-foreground hover:text-foreground"
@@ -475,7 +491,7 @@ export default function HoldingsPage() {
                           <div className="text-xs text-muted-foreground">
                             {h.priceCurrency}
                             {h.price_source === 'custom' && (
-                              <> · {h.price_provider ? 'auto' : 'manual'}{h.custom_price_asof ? ` as at ${h.custom_price_asof}` : ''}</>
+                              <> · auto{h.custom_price_asof ? ` as at ${h.custom_price_asof}` : ''}</>
                             )}
                           </div>
                         </>
@@ -588,13 +604,17 @@ export default function HoldingsPage() {
                   >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">None — I&rsquo;ll update the price myself</SelectItem>
+                      <SelectItem value="none">Manual price — I&rsquo;ll update it myself</SelectItem>
                       {FUND_PROVIDER_LIST.map((p) => (
                         <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  {form.price_provider && (
+                  {!form.price_provider ? (
+                    <p className="text-xs text-muted-foreground">
+                      Best for funds not on Yahoo Finance — such as monthly-distribution (MDist) unit-trust classes like LionGlobal Singapore Trust Class O SGD. Enter the current NAV below; you can update it in one click straight from the holdings row whenever it changes.
+                    </p>
+                  ) : (
                     <>
                       {selectedProvider?.refOptions ? (
                         <Select
@@ -611,7 +631,7 @@ export default function HoldingsPage() {
                       ) : (
                         <Input
                           className="mt-2"
-                          placeholder="Fund code, e.g. SST6"
+                          placeholder="Yahoo ticker, e.g. 0P00006G00.SI"
                           value={form.price_provider_ref}
                           onChange={(e) => setForm({ ...form, price_provider_ref: e.target.value })}
                         />
