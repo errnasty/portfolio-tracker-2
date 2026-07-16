@@ -70,7 +70,7 @@ export default function AnalyticsPage() {
 
   return (
     <PageShell
-      screen="ANALYTICS"
+      screen="Invest"
       statusRight={stats ? <span>value <span className="text-foreground">{formatCurrency(stats.totalValue, baseCurrency)}</span> · {enriched.length} positions</span> : undefined}
       footerHints={<span><span className="text-accent">▸</span> <span className="text-foreground">g o</span> holdings · <span className="text-foreground">g h</span> home</span>}
     >

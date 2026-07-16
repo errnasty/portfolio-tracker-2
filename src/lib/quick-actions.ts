@@ -9,6 +9,7 @@ import { useEffect } from 'react'
 
 export type QuickActionKind =
   | 'add-expense'
+  | 'paste-transaction'
   | 'add-income'
   | 'transfer'
   | 'add-iou'

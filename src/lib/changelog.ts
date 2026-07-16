@@ -17,6 +17,60 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.14',
+    date: '2026-07-15',
+    title: 'Liquid vs locked, and investment-linked plans',
+    items: [
+      { title: 'Locked-money timeline', desc: 'Mark holdings, assets (SRS, locked deposits) and policies with a "locked until" date. The Net worth page now splits your wealth into what you can access now vs what\'s locked, with a timeline of when each unlocks. CPF is always treated as locked.', href: '/networth' },
+      { title: 'Investment-linked plans (ILP)', desc: 'The Insurance ILP type now tracks current investment value, surrender value, and the date you can exit penalty-free — the invested value counts toward net worth (and shows as locked until the exit date).', href: '/insurance' },
+    ],
+  },
+  {
+    version: '2026.07.13',
+    date: '2026-07-15',
+    title: 'Insurance and individual bonds',
+    items: [
+      { title: 'Insurance policies', desc: 'A new Insurance tab (Accounts → Insurance) tracks life, health, and general policies: sum assured, premiums (which show up on Payments), and any cash/surrender value — which counts toward your net worth.', href: '/insurance' },
+      { title: 'Individual bonds', desc: 'Add corporate/SGS/retail bonds under Assets & debts with their coupon rate, coupon frequency, par value, and maturity — and the maturity lands on your Payments timeline. (Bond funds/ETFs go under Holdings; investment-linked plans under Insurance.)', href: '/assets' },
+    ],
+  },
+  {
+    version: '2026.07.12',
+    date: '2026-07-15',
+    title: 'Easier to get around, especially on your phone',
+    items: [
+      { title: 'Bottom tab bar on mobile', desc: 'Phones now have a thumb-reachable bottom bar — Home, Spending, a center + to add, Accounts, and Invest — so you\'re not digging through the hamburger menu for the essentials.', href: '/dashboard' },
+      { title: 'Jump to a transaction', desc: 'Search a transaction in ⌘K, or tap INSPECT on an anomaly flag, and you land right on that row with it highlighted — no more scrolling to find it.', href: '/spending' },
+      { title: 'People moved under Payments', desc: 'People (IOUs) is now a tab alongside Upcoming and Subscriptions, tidying the sidebar.', href: '/people' },
+    ],
+  },
+  {
+    version: '2026.07.11',
+    date: '2026-07-15',
+    title: 'Paste a bank SMS, get a transaction',
+    items: [
+      { title: 'Paste to capture', desc: 'The quick-add box (press a, or the mobile + button) has a new "Paste bank alert" tab — drop in a bank SMS or notification email and it extracts the amount, date, and merchant for you (with AI as a fallback for unfamiliar formats). Also on ⌘K as "Paste bank SMS / email".', href: '/spending' },
+    ],
+  },
+  {
+    version: '2026.07.10',
+    date: '2026-07-15',
+    title: 'Unlisted funds: correct, reliable pricing',
+    items: [
+      { title: 'Funds priced from Yahoo', desc: 'Unit trusts on Yahoo Finance (many LionGlobal/Fullerton/Nikko classes) now auto-update from their Morningstar code (e.g. 0P00006G00.SI). Each share class has its own code and price — test-fetch and confirm it matches your statement before saving.', href: '/holdings' },
+      { title: 'One-click manual NAV', desc: 'For fund classes not on Yahoo — like monthly-distribution (MDist) classes — enter the NAV yourself and update it right from the holdings row in one click. (The previous auto-scrape of fund-house websites was unreliable and has been removed.)', href: '/holdings' },
+    ],
+  },
+  {
+    version: '2026.07.9',
+    date: '2026-07-15',
+    title: 'Bank email capture, live — even without a domain',
+    items: [
+      { title: 'Free relay address', desc: 'You no longer need your own domain to auto-capture bank emails. Sign up for a free inbound-email relay (CloudMailin or Postmark), paste the address it gives you into Settings, and forwarded bank alerts flow straight into your ledger.', href: '/settings' },
+      { title: 'Works with more providers', desc: 'The email webhook now understands CloudMailin, Postmark, and raw-forwarded formats, and reliably identifies you even when Gmail keeps the original recipient on an auto-forward.', href: '/settings' },
+    ],
+  },
+  {
     version: '2026.07.8',
     date: '2026-07-15',
     title: 'Track gold, silver, platinum & palladium — and any commodity',
@@ -30,8 +84,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: '2026-07-15',
     title: 'Track funds Yahoo Finance doesn\'t know about',
     items: [
-      { title: 'Add unlisted funds', desc: 'Holdings now has a "Manual / unlisted fund" mode for positions with no Yahoo ticker — Singapore unit trusts like LionGlobal, for example. Enter shares and cost basis as usual; the price comes from a NAV you set (or a provider) instead of Yahoo.', href: '/holdings' },
-      { title: 'Auto-updating NAVs', desc: 'Point a fund at Lion Global Investors\' fund code and its price refreshes automatically once a day, or on demand with the refresh button next to the price. A failed refresh keeps the last known price rather than losing it.', href: '/holdings' },
+      { title: 'Add unlisted funds', desc: 'Holdings has a "Manual or unlisted fund" mode for positions without a standard Yahoo ticker — enter shares and cost basis as usual, and set the price from a data source or by hand. (See the latest entry above for how fund pricing works now.)', href: '/holdings' },
       { title: 'Fixed unreadable tips', desc: 'Tip boxes and other muted callouts (like the holdings search tip) were the same color as their own background in light mode, making the text invisible. Fixed.', href: '/holdings' },
     ],
   },

@@ -23,6 +23,19 @@ export async function getInboundAddress(userId: string): Promise<InboundAddress 
   return data as InboundAddress | null
 }
 
+// Save (or clear) the provider-assigned relay address (e.g. a CloudMailin
+// free-tier address) the user pastes in before they own a domain. Stored
+// lowercased so the webhook's case-insensitive match works. RLS scopes the
+// update to the caller's own row.
+export async function saveProviderAddress(userId: string, address: string | null): Promise<void> {
+  const value = address?.trim().toLowerCase() || null
+  const { error } = await supabase
+    .from('inbound_addresses')
+    .update({ provider_address: value })
+    .eq('user_id', userId)
+  if (error) throw new Error(`Failed to save relay address: ${error.message}`)
+}
+
 // Provision a new inbound address for the user. Returns the full record.
 // If one already exists, returns the existing one. Uses upsert with
 // onConflict so two concurrent provisioning attempts can't fail the second.

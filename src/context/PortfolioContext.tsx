@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { enrichHoldings, calcPortfolioStats, convertToBase, convertBetween } from '@/lib/calculations'
 import { deriveAllPositions } from '@/lib/transactions'
 import { FUND_PROVIDER_LIST } from '@/lib/fund-providers'
+import { computeLiquidity, type LockedItem } from '@/lib/liquidity'
 
 // Translate Supabase errors into user-actionable toasts. The most common one
 // new users hit is the "relation does not exist" error when a migration
@@ -27,7 +28,7 @@ function reportSupabaseError(operation: string, error: { message: string; code?:
 import type {
   Holding, PriceQuote, FxRates, EnrichedHolding, PortfolioStats,
   Currency, TargetAllocation, UserSettings, Transaction, DerivedPosition, Goal,
-  Account, Asset, NetWorthSnapshot,
+  Account, Asset, NetWorthSnapshot, InsurancePolicy,
 } from '@/types'
 import { CURRENCY_CODES, ASSET_KIND_META } from '@/types'
 
@@ -78,6 +79,16 @@ interface PortfolioContextValue {
   addAsset: (data: Omit<Asset, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => Promise<void>
   updateAsset: (id: string, data: Partial<Asset>) => Promise<void>
   deleteAsset: (id: string) => Promise<void>
+  policies: InsurancePolicy[]
+  policiesError: string | null
+  policiesCashBase: number     // sum of policy cash/surrender values, in base
+  liquidBase: number           // net worth you can access now, in base
+  lockedBase: number           // net worth locked until a date/retirement, in base
+  lockedItems: LockedItem[]    // locked positions, soonest unlock first
+  refreshPolicies: () => Promise<void>
+  addPolicy: (data: Omit<InsurancePolicy, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => Promise<InsurancePolicy | null>
+  updatePolicy: (id: string, data: Partial<InsurancePolicy>) => Promise<void>
+  deletePolicy: (id: string) => Promise<void>
   // Apply a buy/sell to the holdings table directly (weighted-avg cost basis).
   // Optionally also write a row to the transaction log.
   applyTrade: (trade: TradeInput, alsoLog?: boolean) => Promise<void>
@@ -109,6 +120,8 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   const [accountsError, setAccountsError] = useState<string | null>(null)
   const [assets, setAssets] = useState<Asset[]>([])
   const [assetsError, setAssetsError] = useState<string | null>(null)
+  const [policies, setPolicies] = useState<InsurancePolicy[]>([])
+  const [policiesError, setPoliciesError] = useState<string | null>(null)
   const [netWorthHistory, setNetWorthHistory] = useState<NetWorthSnapshot[]>([])
   const snapshotSaved = useRef(false)
   const [loading, setLoading] = useState(true)
@@ -152,8 +165,42 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
         .reduce((s, a) => s + convertToBase(Number(a.balance) || 0, a.currency, fxRates), 0)
     : 0
 
+  // Insurance value in net worth: surrender/cash value, or an ILP's current
+  // invested value when no surrender value is recorded.
+  const policyNetValue = (p: InsurancePolicy) => Number(p.cash_value ?? p.invested_value ?? 0) || 0
+  const policiesCashBase = fxRates
+    ? policies
+        .filter((p) => p.is_active)
+        .reduce((s, p) => s + convertToBase(policyNetValue(p), p.currency, fxRates), 0)
+    : 0
+
   const holdingsValueBase = enriched.reduce((s, h) => s + h.currentValueBase, 0)
-  const netWorthBase = holdingsValueBase + accountsNetBase + assetsBase - liabilitiesBase
+  const netWorthBase = holdingsValueBase + accountsNetBase + assetsBase + policiesCashBase - liabilitiesBase
+
+  // Liquid vs locked split + unlock timeline (money you can't withdraw yet:
+  // locked funds, endowment/ILP lock-in, CPF/SRS retirement).
+  const liquidityToday = new Date().toISOString().slice(0, 10)
+  const liquidity = fxRates
+    ? computeLiquidity(netWorthBase, liquidityToday, [
+        ...enriched.map((h) => ({
+          name: h.name ?? h.ticker, valueBase: h.currentValueBase,
+          lockedUntil: h.locked_until ?? null, source: 'holding' as const,
+        })),
+        ...assets
+          .filter((a) => a.is_active && !ASSET_KIND_META[a.kind]?.liability)
+          .map((a) => ({
+            name: a.name, valueBase: convertToBase(Number(a.balance) || 0, a.currency, fxRates),
+            lockedUntil: a.locked_until ?? null, alwaysLocked: a.kind.startsWith('cpf_'),
+            source: 'asset' as const,
+          })),
+        ...policies
+          .filter((p) => p.is_active)
+          .map((p) => ({
+            name: p.name, valueBase: convertToBase(policyNetValue(p), p.currency, fxRates),
+            lockedUntil: p.locked_until ?? null, source: 'policy' as const,
+          })),
+      ])
+    : { lockedBase: 0, liquidBase: netWorthBase, items: [] }
 
   const refreshNetWorthHistory = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -264,6 +311,47 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     setAssets(data ?? [])
   }, [])
 
+  const refreshPolicies = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data, error } = await supabase
+      .from('insurance_policies').select('*').eq('user_id', user.id).order('created_at')
+    if (error) {
+      setPolicies([])
+      const missing = error.code === '42P01' ||
+        /relation .* does not exist|schema cache/i.test(error.message)
+      setPoliciesError(missing
+        ? 'The insurance_policies table is missing. Run supabase/migrations/010_insurance.sql in your Supabase SQL editor.'
+        : `Couldn't load insurance: ${error.message}`)
+      return
+    }
+    setPoliciesError(null)
+    setPolicies(data ?? [])
+  }, [])
+
+  const addPolicy = async (data: Omit<InsurancePolicy, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return null
+    const { data: row, error } = await supabase
+      .from('insurance_policies').insert({ ...data, user_id: user.id }).select('*').single()
+    if (error) { reportSupabaseError('Add policy', error); throw error }
+    await refreshPolicies()
+    return (row as InsurancePolicy) ?? null
+  }
+
+  const updatePolicy = async (id: string, data: Partial<InsurancePolicy>) => {
+    const { error } = await supabase.from('insurance_policies')
+      .update({ ...data, updated_at: new Date().toISOString() }).eq('id', id)
+    if (error) { reportSupabaseError('Update policy', error); throw error }
+    await refreshPolicies()
+  }
+
+  const deletePolicy = async (id: string) => {
+    const { error } = await supabase.from('insurance_policies').delete().eq('id', id)
+    if (error) { reportSupabaseError('Delete policy', error); throw error }
+    await refreshPolicies()
+  }
+
   const refreshTransactions = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
@@ -336,11 +424,12 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
       await refreshGoals()
       await refreshAccounts()
       await refreshAssets()
+      await refreshPolicies()
       await refreshNetWorthHistory()
       setLoading(false)
     }
     init()
-  }, [fetchSettings, refreshHoldings, refreshTransactions, refreshGoals, refreshAccounts, refreshAssets, refreshNetWorthHistory])
+  }, [fetchSettings, refreshHoldings, refreshTransactions, refreshGoals, refreshAccounts, refreshAssets, refreshPolicies, refreshNetWorthHistory])
 
   // Save today's net-worth snapshot once per session, after data has loaded.
   // Includes the composition breakdown; falls back to the bare shape when the
@@ -359,7 +448,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
           ...bare,
           holdings_value: r2(holdingsValueBase),
           accounts_value: r2(accountsNetBase),
-          assets_value: r2(assetsBase),
+          assets_value: r2(assetsBase + policiesCashBase),
           liabilities_value: r2(liabilitiesBase),
         },
         { onConflict: 'user_id,date' },
@@ -369,7 +458,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
       }
       await refreshNetWorthHistory()
     })()
-  }, [loading, fxRates, netWorthBase, holdingsValueBase, accountsNetBase, assetsBase, liabilitiesBase, baseCurrency, refreshNetWorthHistory])
+  }, [loading, fxRates, netWorthBase, holdingsValueBase, accountsNetBase, assetsBase, policiesCashBase, liabilitiesBase, baseCurrency, refreshNetWorthHistory])
 
   useEffect(() => {
     fetchFxRates(baseCurrency)
@@ -672,6 +761,8 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
       transactions, positions, goals,
       accounts, totalCashBase, accountsNetBase, netWorthBase, netWorthHistory, accountsError,
       assets, assetsError, assetsBase, liabilitiesBase,
+      policies, policiesError, policiesCashBase, refreshPolicies, addPolicy, updatePolicy, deletePolicy,
+      liquidBase: liquidity.liquidBase, lockedBase: liquidity.lockedBase, lockedItems: liquidity.items,
       loading, refreshHoldings, refreshPrices, refreshTransactions,
       addHolding, updateHolding, deleteHolding,
       upsertTarget, deleteTarget, updateSettings,

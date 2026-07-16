@@ -113,7 +113,7 @@ export default function SignalsPage() {
 
   return (
     <PageShell
-      screen="SIGNALS"
+      screen="Invest"
       statusRight={(
         <span className="flex items-center gap-3">
           {refreshedAt && <span>updated {refreshedAt.toLocaleTimeString()}</span>}

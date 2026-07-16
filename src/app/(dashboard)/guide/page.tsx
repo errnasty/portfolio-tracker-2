@@ -8,7 +8,7 @@ import { CHANGELOG } from '@/lib/changelog'
 import { startTour } from '@/components/layout/OnboardingTour'
 import {
   Landmark, Mail, Tags, PiggyBank, Briefcase, CalendarClock, Users, HandHeart,
-  Sparkles, Keyboard, Wallet, TrendingUp, Compass, Smartphone, Vault,
+  Sparkles, Keyboard, Wallet, TrendingUp, Compass, Smartphone, Vault, ShieldCheck,
 } from 'lucide-react'
 
 const STEPS: { icon: React.ElementType; title: string; body: React.ReactNode }[] = [
@@ -20,7 +20,7 @@ const STEPS: { icon: React.ElementType; title: string; body: React.ReactNode }[]
   {
     icon: Mail,
     title: '2 · Automate transaction capture',
-    body: <>In <TLink href="/settings" className="text-accent hover:underline">Settings</TLink>, copy your private forwarding address and set your bank alerts (or a Gmail auto-forward filter) to send transaction emails there — they&apos;re parsed and logged in seconds. If Gmail asks to verify the address, the confirmation code appears right on that card. Prefer files? Use <TLink href="/import" className="text-accent hover:underline">Import</TLink> for CSV statements, or add entries manually.</>,
+    body: <>In <TLink href="/settings" className="text-accent hover:underline">Settings</TLink>, set up bank-email forwarding — no domain required. Sign up for a free relay (CloudMailin/Postmark), paste its address into the card, and auto-forward your bank alerts there via a Gmail filter; they&apos;re parsed and logged in seconds. If Gmail asks to verify the address, the confirmation code appears right on that card. Prefer files? Use <TLink href="/import" className="text-accent hover:underline">Import</TLink> for CSV statements, or add entries manually.</>,
   },
   {
     icon: Tags,
@@ -49,10 +49,11 @@ const EXTRAS: { icon: React.ElementType; title: string; body: React.ReactNode }[
   { icon: HandHeart, title: 'Tithing', body: <>Enable the tithing pool on <TLink href="/income" className="text-accent hover:underline">Income</TLink> to set aside a share of everything you earn; Giving-category spending clears it automatically.</> },
   { icon: PiggyBank, title: 'CPF (Singapore)', body: <>On the <TLink href="/cpf" className="text-accent hover:underline">CPF</TLink> tab, enable auto-contribution with your birth year — every salary you record adds the 37% employee+employer CPF into OA/SA/MediSave for you.</> },
   { icon: Wallet, title: 'Transfers', body: <>Moving money between your own accounts isn&apos;t spending. Use the transfer button on Spending, or the ⇄ icon on any transaction to reclassify it.</> },
+  { icon: ShieldCheck, title: 'Insurance & bonds', body: <>Track policies on the <TLink href="/insurance" className="text-accent hover:underline">Insurance</TLink> tab (premiums flow to Payments, cash value into net worth). Add individual bonds under <TLink href="/assets" className="text-accent hover:underline">Assets &amp; debts</TLink> with their coupon and maturity; bond funds/ETFs go under Holdings.</> },
   { icon: TrendingUp, title: 'Net worth', body: <>Accounts, investments, CPF, deposits, property and loans (add them under <TLink href="/assets" className="text-accent hover:underline">Assets &amp; debts</TLink>) roll into one number — see the full trend and breakdown on <TLink href="/networth" className="text-accent hover:underline">Net worth</TLink>.</> },
   { icon: Keyboard, title: 'Keyboard-first', body: <>Press <kbd className="rounded border border-border bg-muted px-1 font-mono text-[11px]">⌘K</kbd> for the command palette — it also adds expenses, transfers, IOUs, bills and holdings from anywhere. Press <kbd className="rounded border border-border bg-muted px-1 font-mono text-[11px]">a</kbd> to log an expense instantly, or use go-sequences like <span className="font-mono">g s</span> (spending).</> },
   { icon: Smartphone, title: 'Install it', body: <>Aureus is a PWA — on your phone choose “Add to Home Screen” from the browser menu (desktop: the install icon in the address bar) and it opens like a native app.</> },
-  { icon: Vault, title: 'Funds & physical assets not on Yahoo Finance', body: <>Adding a holding, switch to <strong className="text-foreground">Manual / unlisted fund</strong> for anything Yahoo doesn&apos;t quote — Singapore unit trusts (point it at Lion Global Investors&apos; fund code) or physical gold, silver, platinum and palladium (pick a weight unit — gram, troy ounce, tael, or kilogram). The price refreshes itself daily; otherwise update it by hand whenever it changes.</> },
+  { icon: Vault, title: 'Funds & physical assets not on Yahoo Finance', body: <>Adding a holding, switch to <strong className="text-foreground">Manual or unlisted fund</strong> for anything the normal search doesn&apos;t quote. Unit trusts on Yahoo (many LionGlobal/Fullerton classes, code like <span className="font-mono">0P00006G00.SI</span>) auto-update — mind that each share class has its own code and price. For classes not on Yahoo (e.g. monthly-distribution MDist classes) enter the NAV and update it in one click from the holdings row. Physical gold, silver, platinum and palladium track live spot by weight (gram, troy ounce, tael, kilogram).</> },
 ]
 
 export default function GuidePage() {

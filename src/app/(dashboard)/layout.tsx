@@ -13,8 +13,7 @@ import { OnboardingTour } from '@/components/layout/OnboardingTour'
 import { QuickAddDialog } from '@/components/layout/QuickAddDialog'
 import { RecurringPoster } from '@/components/layout/RecurringPoster'
 import { CpfPoster } from '@/components/layout/CpfPoster'
-import { dispatchQuickAction } from '@/lib/quick-actions'
-import { Plus } from 'lucide-react'
+import { MobileTabBar } from '@/components/layout/MobileTabBar'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -49,7 +48,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="flex min-h-screen bg-background">
               <Sidebar />
               <main className="flex-1 pt-12 md:pl-[250px] md:pt-0">
-                <div key={pathname} className="mx-auto max-w-[1180px] animate-section-in px-6 py-10 pb-[72px] md:px-12 md:py-10">
+                {/* Extra bottom padding on mobile clears the fixed tab bar. */}
+                <div key={pathname} className="mx-auto max-w-[1180px] animate-section-in px-6 py-10 pb-[96px] md:px-12 md:py-10 md:pb-10">
                   {children}
                 </div>
               </main>
@@ -58,14 +58,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <QuickAddDialog />
               <RecurringPoster />
               <CpfPoster />
-              {/* Mobile quick-entry FAB — two taps to log an expense. */}
-              <button
-                aria-label="Quick add transaction"
-                onClick={() => dispatchQuickAction('add-expense')}
-                className="fixed bottom-5 right-5 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform active:scale-95 md:hidden"
-              >
-                <Plus className="h-6 w-6" />
-              </button>
+              <MobileTabBar />
             </div>
           </KeyboardProvider>
         </ViewTransitionProvider>

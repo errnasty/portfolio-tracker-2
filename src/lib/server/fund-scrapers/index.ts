@@ -1,6 +1,6 @@
 import type { FundProviderMeta, FundQuote } from '@/types'
 import { FUND_PROVIDER_LIST } from '@/lib/fund-providers'
-import { fetchLionGlobalQuote } from './lionglobal'
+import { fetchYahooFundQuote } from './yahoo-fund'
 import { fetchGoldQuote, fetchSilverQuote, fetchPlatinumQuote, fetchPalladiumQuote } from './precious-metals'
 
 export interface FundProvider extends FundProviderMeta {
@@ -8,7 +8,11 @@ export interface FundProvider extends FundProviderMeta {
 }
 
 const IMPLS: Record<string, FundProvider['fetchQuote']> = {
-  lionglobal: fetchLionGlobalQuote,
+  sgfund: fetchYahooFundQuote,
+  // Back-compat: an early build shipped a 'lionglobal' provider that scraped
+  // the fund house's site (never worked — JS-rendered NAV). Map it to the
+  // Yahoo fetcher so any holding saved with that id still refreshes.
+  lionglobal: fetchYahooFundQuote,
   gold: fetchGoldQuote,
   silver: fetchSilverQuote,
   platinum: fetchPlatinumQuote,
@@ -24,3 +28,12 @@ const IMPLS: Record<string, FundProvider['fetchQuote']> = {
 export const FUND_PROVIDERS: Record<string, FundProvider> = Object.fromEntries(
   FUND_PROVIDER_LIST.map((meta) => [meta.id, { ...meta, fetchQuote: IMPLS[meta.id] }]),
 )
+
+// Back-compat: expose IMPLS-only provider ids (e.g. the deprecated
+// 'lionglobal') that aren't in the user-facing list, so stored holdings
+// referencing them can still be refreshed.
+for (const [id, fetchQuote] of Object.entries(IMPLS)) {
+  if (!FUND_PROVIDERS[id]) {
+    FUND_PROVIDERS[id] = { id, label: id, helpText: '', fetchQuote }
+  }
+}

@@ -32,7 +32,7 @@ import { FUND_PROVIDER_LIST } from '@/lib/fund-providers'
 const CURRENCIES: Currency[] = CURRENCY_CODES
 const EMPTY_FORM: HoldingFormData = {
   ticker: '', name: '', shares: '', cost_basis_per_share: '', cost_basis_currency: 'USD',
-  price_source: 'auto', custom_price: '', price_provider: '', price_provider_ref: '',
+  price_source: 'auto', custom_price: '', price_provider: '', price_provider_ref: '', locked_until: '',
 }
 
 // Uppercase slug of the fund/item name — becomes the holding's `ticker` when
@@ -210,6 +210,7 @@ export default function HoldingsPage() {
       custom_price: h.custom_price != null ? String(h.custom_price) : '',
       price_provider: h.price_provider ?? '',
       price_provider_ref: h.price_provider_ref ?? '',
+      locked_until: h.locked_until ?? '',
     })
     setEditId(h.id)
     setTestFetchError(null)
@@ -280,6 +281,7 @@ export default function HoldingsPage() {
       custom_price_asof: isCustom && form.custom_price ? new Date().toISOString().slice(0, 10) : null,
       price_provider: isCustom && form.price_provider ? form.price_provider : null,
       price_provider_ref: isCustom && form.price_provider ? form.price_provider_ref.trim() : null,
+      locked_until: form.locked_until || null,
     }
     if (editId) {
       await updateHolding(editId, payload)
@@ -333,6 +335,7 @@ export default function HoldingsPage() {
         custom_price_asof: row.custom_price_asof,
         price_provider: row.price_provider,
         price_provider_ref: row.price_provider_ref,
+        locked_until: row.locked_until,
       }),
     })
   }
@@ -456,14 +459,30 @@ export default function HoldingsPage() {
                       />
                     </TableCell>
                     <TableCell className="text-right text-sm">
-                      {h.currentPrice > 0 ? (
+                      {h.price_source === 'custom' && !h.price_provider ? (
+                        // Pure-manual fund: edit the NAV inline (updates the
+                        // as-of date too) so keeping it current is a 5s task.
+                        <>
+                          <InlineNumberCell
+                            value={h.custom_price ?? 0}
+                            inputStep="any"
+                            format={(n) => formatCurrency(n, h.priceCurrency)}
+                            align="right"
+                            ariaLabel={`NAV of ${h.name ?? h.ticker}`}
+                            onSave={(v) => updateHolding(h.id, { custom_price: v, custom_price_asof: new Date().toISOString().slice(0, 10) })}
+                          />
+                          <div className="text-xs text-muted-foreground">
+                            {h.priceCurrency} · manual{h.custom_price_asof ? ` as at ${h.custom_price_asof}` : ''}
+                          </div>
+                        </>
+                      ) : h.currentPrice > 0 ? (
                         <>
                           <div className="flex items-center justify-end gap-1">
                             <span className="font-mono">{formatCurrency(h.currentPrice, h.priceCurrency)}</span>
                             {h.price_source === 'custom' && h.price_provider && (
                               <button
                                 type="button"
-                                title={`Refresh NAV from ${FUND_PROVIDER_LIST.find((p) => p.id === h.price_provider)?.label ?? h.price_provider}`}
+                                title={`Refresh price from ${FUND_PROVIDER_LIST.find((p) => p.id === h.price_provider)?.label ?? h.price_provider}`}
                                 onClick={() => handleRefresh(h)}
                                 disabled={refreshingId === h.id}
                                 className="press text-muted-foreground hover:text-foreground"
@@ -475,7 +494,7 @@ export default function HoldingsPage() {
                           <div className="text-xs text-muted-foreground">
                             {h.priceCurrency}
                             {h.price_source === 'custom' && (
-                              <> · {h.price_provider ? 'auto' : 'manual'}{h.custom_price_asof ? ` as at ${h.custom_price_asof}` : ''}</>
+                              <> · auto{h.custom_price_asof ? ` as at ${h.custom_price_asof}` : ''}</>
                             )}
                           </div>
                         </>
@@ -588,13 +607,17 @@ export default function HoldingsPage() {
                   >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">None — I&rsquo;ll update the price myself</SelectItem>
+                      <SelectItem value="none">Manual price — I&rsquo;ll update it myself</SelectItem>
                       {FUND_PROVIDER_LIST.map((p) => (
                         <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  {form.price_provider && (
+                  {!form.price_provider ? (
+                    <p className="text-xs text-muted-foreground">
+                      Best for funds not on Yahoo Finance — such as monthly-distribution (MDist) unit-trust classes like LionGlobal Singapore Trust Class O SGD. Enter the current NAV below; you can update it in one click straight from the holdings row whenever it changes.
+                    </p>
+                  ) : (
                     <>
                       {selectedProvider?.refOptions ? (
                         <Select
@@ -611,7 +634,7 @@ export default function HoldingsPage() {
                       ) : (
                         <Input
                           className="mt-2"
-                          placeholder="Fund code, e.g. SST6"
+                          placeholder="Yahoo ticker, e.g. 0P00006G00.SI"
                           value={form.price_provider_ref}
                           onChange={(e) => setForm({ ...form, price_provider_ref: e.target.value })}
                         />
@@ -680,6 +703,14 @@ export default function HoldingsPage() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            {/* Lock-in: locked funds you can't redeem until a date. Counts as
+                "locked" on the Net worth page's liquid/locked split. */}
+            <div className="space-y-2">
+              <Label>Locked until <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              <Input type="date" value={form.locked_until} onChange={(e) => setForm({ ...form, locked_until: e.target.value })} />
+              <p className="text-[11px] text-muted-foreground">For funds with a lock-up/redemption restriction. Until this date the value shows as locked (not liquid) in net worth.</p>
             </div>
           </div>
 

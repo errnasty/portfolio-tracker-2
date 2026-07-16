@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Wallet, Repeat, Briefcase, TrendingUp, Sliders, Settings,
   PieChart, Activity, Beaker, ListChecks, Coins, Target, FileText, Bell, PiggyBank,
-  Upload, Banknote, CalendarClock, Users, BookOpen, Landmark, Vault,
+  Upload, Banknote, CalendarClock, Users, BookOpen, Landmark, Vault, ShieldCheck,
 } from 'lucide-react'
 
 export interface NavRoute {
@@ -29,13 +29,14 @@ export const NAV_ROUTES: NavRoute[] = [
   // Tabs under Accounts:
   { href: '/cpf', label: 'CPF', icon: PiggyBank, group: 'Money', hidden: true },
   { href: '/assets', label: 'Assets & debts', icon: Vault, group: 'Money', hidden: true },
+  { href: '/insurance', label: 'Insurance', icon: ShieldCheck, group: 'Money', hidden: true },
   { href: '/networth', label: 'Net worth', icon: TrendingUp, group: 'Money', hidden: true },
   { href: '/income', label: 'Income', icon: Banknote, group: 'Money', seq: 'g i' },
   { href: '/budgets', label: 'Budgets', icon: PiggyBank, group: 'Money', seq: 'g b' },
   { href: '/payments', label: 'Payments', icon: CalendarClock, group: 'Money', seq: 'g y' },
-  { href: '/people', label: 'People', icon: Users, group: 'Money' },
   // Tabs under Payments:
   { href: '/subscriptions', label: 'Subscriptions', icon: Repeat, group: 'Money', hidden: true },
+  { href: '/people', label: 'People', icon: Users, group: 'Money', hidden: true },
   // Linked from Spending's status bar:
   { href: '/import', label: 'Import', icon: Upload, group: 'Money', hidden: true },
 
@@ -62,6 +63,7 @@ export const SUB_NAVS = {
     { href: '/accounts', label: 'Accounts' },
     { href: '/cpf', label: 'CPF' },
     { href: '/assets', label: 'Assets & debts' },
+    { href: '/insurance', label: 'Insurance' },
     { href: '/networth', label: 'Net worth' },
   ],
   holdings: [
@@ -79,8 +81,27 @@ export const SUB_NAVS = {
   payments: [
     { href: '/payments', label: 'Upcoming' },
     { href: '/subscriptions', label: 'Subscriptions' },
+    { href: '/people', label: 'People' },
   ],
 } as const
+
+// Bottom tab bar for mobile (md:hidden). Five thumb-reachable destinations;
+// the middle "+" is handled specially (opens quick-add, not a route). Each
+// tab's `matches` lists the route prefixes that light it up, so a sub-page
+// (e.g. /cpf under Accounts, /dividends under Invest) keeps the right tab active.
+export interface MobileTab {
+  href: string
+  label: string
+  icon: React.ElementType
+  matches: string[]
+}
+
+export const MOBILE_TABS: MobileTab[] = [
+  { href: '/dashboard', label: 'Home', icon: LayoutDashboard, matches: ['/dashboard'] },
+  { href: '/spending', label: 'Spending', icon: Wallet, matches: ['/spending', '/import', '/budgets'] },
+  { href: '/accounts', label: 'Accounts', icon: Landmark, matches: ['/accounts', '/cpf', '/assets', '/networth', '/insurance', '/income', '/payments', '/subscriptions', '/people'] },
+  { href: '/holdings', label: 'Invest', icon: Briefcase, matches: ['/holdings', '/transactions', '/dividends', '/analytics', '/performance', '/risk', '/signals', '/report', '/rebalancer', '/planner'] },
+]
 
 // href -> nav route (for active-state + status-bar screen labels).
 export const NAV_BY_HREF: Record<string, NavRoute> =

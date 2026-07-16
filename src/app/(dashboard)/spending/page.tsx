@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis } from 'recharts'
 import { usePortfolio } from '@/context/PortfolioContext'
@@ -47,6 +47,30 @@ export default function SpendingPage() {
   const [accountFilter, setAccountFilter] = useState('all')
   const [catFilter, setCatFilter] = useState('all')
   const [sortBy, setSortBy] = useState<'date' | 'payee'>('date')
+  const [highlightId, setHighlightId] = useState<string | null>(null)
+  const deepLinkDone = useRef(false)
+
+  // Deep link: /spending?txn=<id> — jump to a specific transaction (from
+  // ⌘K search, the attention inbox, anomaly flags). Switch to its month,
+  // clear filters, scroll it into view, and flash a highlight. Reads from
+  // window (not useSearchParams) to avoid a Suspense boundary at build.
+  useEffect(() => {
+    if (deepLinkDone.current || bankTransactions.length === 0) return
+    const id = new URLSearchParams(window.location.search).get('txn')
+    if (!id) return
+    const txn = bankTransactions.find((t) => t.id === id)
+    if (!txn) return
+    deepLinkDone.current = true
+    setMonth(txn.date.slice(0, 7))
+    setAccountFilter('all')
+    setCatFilter('all')
+    setHighlightId(id)
+    window.history.replaceState(null, '', '/spending')
+    setTimeout(() => {
+      document.getElementById(`txn-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 120)
+    setTimeout(() => setHighlightId(null), 2400)
+  }, [bankTransactions])
 
   const accountName = useMemo(
     () => Object.fromEntries(accounts.map((a) => [a.id, a.name])) as Record<string, string>,
@@ -305,7 +329,11 @@ export default function SpendingPage() {
                   {sorted.map((t) => {
                     const isIncome = Number(t.amount) >= 0
                     return (
-                      <TableRow key={t.id}>
+                      <TableRow
+                        key={t.id}
+                        id={`txn-${t.id}`}
+                        className={highlightId === t.id ? 'bg-accent/20 ring-2 ring-accent transition-colors duration-500' : undefined}
+                      >
                         <TableCell className="py-2 text-xs whitespace-nowrap">{t.date}</TableCell>
                         <TableCell className="py-2">
                           <div className="text-sm truncate max-w-[220px]">{resolveDescription(t)}</div>

@@ -18,8 +18,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Landmark, Pencil, Plus, Trash2, Vault } from 'lucide-react'
-import type { Asset, AssetKind, Currency } from '@/types'
-import { ASSET_KINDS, ASSET_KIND_META, CURRENCY_CODES } from '@/types'
+import type { Asset, AssetKind, Currency, CouponFrequency } from '@/types'
+import { ASSET_KINDS, ASSET_KIND_META, CURRENCY_CODES, COUPON_FREQUENCIES } from '@/types'
 
 function today() { return new Date().toISOString().slice(0, 10) }
 
@@ -35,11 +35,15 @@ interface AssetForm {
   maturity_date: string
   monthly_payment: string
   notes: string
+  face_value: string
+  coupon_frequency: CouponFrequency | ''
+  locked_until: string
 }
 
 const EMPTY_FORM: AssetForm = {
   name: '', kind: 'fixed_deposit', balance: '', currency: 'SGD',
   interest_rate_pct: '', maturity_date: '', monthly_payment: '', notes: '',
+  face_value: '', coupon_frequency: '', locked_until: '',
 }
 
 export default function AssetsPage() {
@@ -77,6 +81,9 @@ export default function AssetsPage() {
       maturity_date: a.maturity_date ?? '',
       monthly_payment: a.monthly_payment != null ? String(a.monthly_payment) : '',
       notes: a.notes ?? '',
+      face_value: a.face_value != null ? String(a.face_value) : '',
+      coupon_frequency: a.coupon_frequency ?? '',
+      locked_until: a.locked_until ?? '',
     })
     setOpen(true)
   }
@@ -86,6 +93,7 @@ export default function AssetsPage() {
     if (!form.name.trim() || isNaN(bal) || bal < 0) return
     setSaving(true)
     try {
+      const isBond = form.kind === 'bond'
       const payload = {
         name: form.name.trim(),
         kind: form.kind,
@@ -96,6 +104,10 @@ export default function AssetsPage() {
         monthly_payment: form.monthly_payment ? parseFloat(form.monthly_payment) : null,
         notes: form.notes.trim() || null,
         is_active: true,
+        // Bond fields only meaningful for kind='bond'; cleared otherwise.
+        face_value: isBond && form.face_value ? parseFloat(form.face_value) : null,
+        coupon_frequency: isBond && form.coupon_frequency ? form.coupon_frequency : null,
+        locked_until: form.locked_until || null,
       }
       if (editId) await updateAsset(editId, payload)
       else await addAsset(payload)
@@ -108,6 +120,7 @@ export default function AssetsPage() {
   }
 
   const isLiabilityKind = ASSET_KIND_META[form.kind]?.liability ?? false
+  const isBond = form.kind === 'bond'
 
   return (
     <PageShell
@@ -201,7 +214,9 @@ export default function AssetsPage() {
                           )}
                         </div>
                         <div className="text-[11px] text-muted-foreground">
-                          {a.interest_rate_pct != null && `${a.interest_rate_pct}% p.a.`}
+                          {a.interest_rate_pct != null && `${a.interest_rate_pct}% ${a.kind === 'bond' ? 'coupon' : 'p.a.'}`}
+                          {a.kind === 'bond' && a.coupon_frequency && a.coupon_frequency !== 'zero' && ` (${COUPON_FREQUENCIES.find((c) => c.value === a.coupon_frequency)?.label.toLowerCase()})`}
+                          {a.kind === 'bond' && a.face_value ? ` · ${formatCurrency(Number(a.face_value), a.currency)} par` : ''}
                           {a.maturity_date && ` · matures ${a.maturity_date}`}
                           {meta?.liability && a.monthly_payment ? (
                             loan
@@ -268,7 +283,7 @@ export default function AssetsPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>{isLiabilityKind ? 'Amount owed' : 'Balance'} *</Label>
+                <Label>{isLiabilityKind ? 'Amount owed' : isBond ? 'Current value' : 'Balance'} *</Label>
                 <Input type="number" step="any" min="0" value={form.balance} onChange={(e) => setForm((f) => ({ ...f, balance: e.target.value }))} placeholder="25000" />
               </div>
               <div className="space-y-2">
@@ -283,21 +298,53 @@ export default function AssetsPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Interest rate % p.a.</Label>
-                <Input type="number" step="any" value={form.interest_rate_pct} onChange={(e) => setForm((f) => ({ ...f, interest_rate_pct: e.target.value }))} placeholder={isLiabilityKind ? '2.8' : '3.2'} />
+                <Label>{isBond ? 'Coupon rate % p.a.' : 'Interest rate % p.a.'}</Label>
+                <Input type="number" step="any" value={form.interest_rate_pct} onChange={(e) => setForm((f) => ({ ...f, interest_rate_pct: e.target.value }))} placeholder={isLiabilityKind ? '2.8' : isBond ? '3.5' : '3.2'} />
               </div>
               <div className="space-y-2">
                 <Label>Maturity date</Label>
                 <Input type="date" value={form.maturity_date} onChange={(e) => setForm((f) => ({ ...f, maturity_date: e.target.value }))} />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>{isLiabilityKind ? 'Monthly installment' : 'Monthly contribution'}</Label>
-              <Input type="number" step="any" min="0" value={form.monthly_payment} onChange={(e) => setForm((f) => ({ ...f, monthly_payment: e.target.value }))} placeholder="500" />
-              {isLiabilityKind && (
-                <p className="text-[10px] text-muted-foreground">With a rate + installment, the payoff date and remaining interest are projected automatically.</p>
-              )}
-            </div>
+
+            {/* Bond-specific: par value + coupon schedule. Maturity above
+                feeds the Payments "Upcoming" timeline. */}
+            {isBond && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Face / par value</Label>
+                  <Input type="number" step="any" min="0" value={form.face_value} onChange={(e) => setForm((f) => ({ ...f, face_value: e.target.value }))} placeholder="10000" />
+                  <p className="text-[10px] text-muted-foreground">Redeemed at maturity — may differ from current value.</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Coupon frequency</Label>
+                  <Select value={form.coupon_frequency || 'none'} onValueChange={(v) => setForm((f) => ({ ...f, coupon_frequency: v === 'none' ? '' : v as CouponFrequency }))}>
+                    <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Not set</SelectItem>
+                      {COUPON_FREQUENCIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+
+            {!isBond && (
+              <div className="space-y-2">
+                <Label>{isLiabilityKind ? 'Monthly installment' : 'Monthly contribution'}</Label>
+                <Input type="number" step="any" min="0" value={form.monthly_payment} onChange={(e) => setForm((f) => ({ ...f, monthly_payment: e.target.value }))} placeholder="500" />
+                {isLiabilityKind && (
+                  <p className="text-[10px] text-muted-foreground">With a rate + installment, the payoff date and remaining interest are projected automatically.</p>
+                )}
+              </div>
+            )}
+            {!isLiabilityKind && (
+              <div className="space-y-2">
+                <Label>Locked until <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                <Input type="date" value={form.locked_until} onChange={(e) => setForm((f) => ({ ...f, locked_until: e.target.value }))} />
+                <p className="text-[10px] text-muted-foreground">For money you can&apos;t withdraw yet (SRS, locked deposits). Shows as locked on the Net worth page until then. CPF is always treated as locked.</p>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Notes</Label>
               <Input value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} placeholder="DBS 6-month promo rate" />

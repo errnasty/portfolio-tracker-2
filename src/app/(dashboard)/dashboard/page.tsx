@@ -25,7 +25,7 @@ const PCT = (n: number) => `${n.toFixed(1)}%`
 export default function DashboardPage() {
   const {
     stats, enriched, loading, refreshPrices, settings, targets, holdings, prices,
-    accounts, assets, totalCashBase, accountsNetBase, netWorthBase, netWorthHistory, fxRates,
+    accounts, assets, policies, totalCashBase, accountsNetBase, netWorthBase, netWorthHistory, fxRates,
   } = usePortfolio()
   const {
     spendingStats, bankTransactions, categoryById, budgets, subscriptions, subscriptionSummary,
@@ -124,11 +124,14 @@ export default function DashboardPage() {
     ious,
     accounts,
     budgetPace: { spentMTD: expense, totalBudget: budgets.reduce((s, b) => s + Number(b.amount), 0), dayOfMonth: now.getDate(), daysInMonth },
+    policies,
     toBase,
     formatBase: (n) => formatCurrency(n, base),
   }))
   for (const a of detectAnomalies(bankTransactions, subscriptions, today).slice(0, 2)) {
-    actions.push({ sev: 'med', tag: 'ANOMALY', href: '/spending', cta: 'INSPECT', title: a.title, sub: a.sub })
+    // Deep-link straight to the flagged transaction so INSPECT lands on it.
+    const href = a.txnIds[0] ? `/spending?txn=${a.txnIds[0]}` : '/spending'
+    actions.push({ sev: 'med', tag: 'ANOMALY', href, cta: 'INSPECT', title: a.title, sub: a.sub })
   }
 
   actions.sort((a, b) => (a.sev === b.sev ? 0 : a.sev === 'high' ? -1 : 1))

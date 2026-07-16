@@ -4,7 +4,7 @@ import { useTheme } from 'next-themes'
 import { toast } from 'sonner'
 import {
   Moon, Sun, CornerDownLeft, Search, Plus, ArrowLeftRight, Users, CalendarClock,
-  Briefcase, Target, RefreshCw, Compass, Banknote,
+  Briefcase, Target, RefreshCw, Compass, Banknote, ClipboardType,
 } from 'lucide-react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { NAV_ROUTES } from '@/lib/nav-registry'
@@ -48,6 +48,7 @@ export function CommandPalette({ open, onOpenChange }: {
       triggerQuickAction(kind, href, navigate)
     const actions: Item[] = [
       { key: 'add-expense', label: 'Add expense (quick)', hint: 'Quick add', icon: Plus, run: () => dispatchQuickAction('add-expense') },
+      { key: 'paste-transaction', label: 'Paste bank SMS / email', hint: 'Quick add', icon: ClipboardType, run: () => dispatchQuickAction('paste-transaction') },
       { key: 'add-income', label: 'Add income', hint: 'Quick add', icon: Banknote, run: quick('add-income', '/income') },
       { key: 'transfer', label: 'Transfer between accounts', hint: 'Quick add', icon: ArrowLeftRight, run: quick('transfer', '/spending') },
       { key: 'add-iou', label: 'Add IOU', hint: 'Quick add', icon: Users, run: quick('add-iou', '/people') },
@@ -102,7 +103,7 @@ export function CommandPalette({ open, onOpenChange }: {
       seen.add(norm)
       out.push({
         key: `t-${t.id}`, label: `${label} · ${formatCurrency(Number(t.amount), t.currency)}`,
-        hint: 'Transaction', icon: Wallet, run: () => navigate('/spending'),
+        hint: 'Transaction', icon: Wallet, run: () => navigate(`/spending?txn=${t.id}`),
       })
       if (seen.size >= 8) break
     }
