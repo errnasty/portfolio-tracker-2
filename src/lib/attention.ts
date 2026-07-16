@@ -19,6 +19,7 @@ export interface AttentionInput {
   ious: { person: string; direction: 'owed_to_me' | 'i_owe'; amount: number; currency: string; date: string; settled: boolean }[]
   accounts: { name: string; type: string; current_balance: number; currency: string }[]
   budgetPace?: { spentMTD: number; totalBudget: number; dayOfMonth: number; daysInMonth: number }
+  policies?: { name: string; end_date: string | null; is_active: boolean }[]
   toBase: (amount: number, currency: string) => number
   formatBase: (amount: number) => string
 }
@@ -30,7 +31,7 @@ function daysBetween(a: string, b: string): number {
 }
 
 export function buildAttention(input: AttentionInput): AttentionItem[] {
-  const { today, upcoming, ious, accounts, budgetPace, toBase, formatBase } = input
+  const { today, upcoming, ious, accounts, budgetPace, policies = [], toBase, formatBase } = input
   const items: AttentionItem[] = []
 
   // Overdue bills (planned payments only — subscriptions charge themselves).
@@ -97,6 +98,19 @@ export function buildAttention(input: AttentionInput): AttentionItem[] {
         sev: 'med', tag: 'PACE', href: '/budgets', cta: 'REVIEW',
         title: `Spending ${aheadPct.toFixed(0)}% ahead of budget pace`,
         sub: `${formatBase(budgetPace.spentMTD)} by day ${budgetPace.dayOfMonth}; on pace for ${formatBase((budgetPace.spentMTD / budgetPace.dayOfMonth) * budgetPace.daysInMonth)} vs ${formatBase(budgetPace.totalBudget)} budget.`,
+      })
+    }
+  }
+
+  // Insurance policies expiring within 60 days (renew or replace coverage).
+  for (const p of policies) {
+    if (!p.is_active || !p.end_date) continue
+    const d = daysBetween(today, p.end_date)
+    if (d >= 0 && d <= 60) {
+      items.push({
+        sev: 'med', tag: 'POLICY', href: '/insurance', cta: 'REVIEW',
+        title: `${p.name} expires in ${d}d`,
+        sub: 'Renew or arrange replacement coverage before it lapses.',
       })
     }
   }

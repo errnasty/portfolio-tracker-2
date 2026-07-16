@@ -426,9 +426,20 @@ export const DEFAULT_BENCHMARKS: BenchmarkConfig[] = [
 
 export type AssetKind =
   | 'cpf_oa' | 'cpf_sa' | 'cpf_ma'
-  | 'fixed_deposit' | 'tbill' | 'ssb'
+  | 'fixed_deposit' | 'tbill' | 'ssb' | 'bond'
   | 'property' | 'vehicle' | 'other'
   | 'loan' | 'mortgage'
+
+// How often a bond pays its coupon.
+export type CouponFrequency = 'annual' | 'semi_annual' | 'quarterly' | 'monthly' | 'zero'
+
+export const COUPON_FREQUENCIES: { value: CouponFrequency; label: string; perYear: number }[] = [
+  { value: 'semi_annual', label: 'Semi-annual', perYear: 2 },
+  { value: 'annual', label: 'Annual', perYear: 1 },
+  { value: 'quarterly', label: 'Quarterly', perYear: 4 },
+  { value: 'monthly', label: 'Monthly', perYear: 12 },
+  { value: 'zero', label: 'Zero-coupon', perYear: 0 },
+]
 
 export interface AssetKindMeta {
   kind: AssetKind
@@ -444,6 +455,7 @@ export const ASSET_KINDS: AssetKindMeta[] = [
   { kind: 'fixed_deposit', label: 'Fixed deposit', group: 'Deposits & bonds', liability: false },
   { kind: 'tbill', label: 'T-bill', group: 'Deposits & bonds', liability: false },
   { kind: 'ssb', label: 'Savings Bond (SSB)', group: 'Deposits & bonds', liability: false },
+  { kind: 'bond', label: 'Bond', group: 'Deposits & bonds', liability: false },
   { kind: 'property', label: 'Property', group: 'Property & other', liability: false },
   { kind: 'vehicle', label: 'Vehicle', group: 'Property & other', liability: false },
   { kind: 'other', label: 'Other asset', group: 'Property & other', liability: false },
@@ -459,11 +471,56 @@ export interface Asset {
   user_id: string
   name: string
   kind: AssetKind
-  balance: number              // always positive; loans = amount owed
+  balance: number              // always positive; loans = amount owed; bonds = current value
   currency: Currency | string
-  interest_rate_pct: number | null
+  interest_rate_pct: number | null   // deposits: yield; bonds: coupon rate; loans: cost
   maturity_date: string | null
   monthly_payment: number | null
+  notes: string | null
+  is_active: boolean
+  // Bond-specific (null for other kinds):
+  face_value?: number | null         // par value redeemed at maturity
+  coupon_frequency?: CouponFrequency | null
+  created_at: string
+  updated_at: string
+}
+
+// ── Insurance policies ──────────────────────────────────────────────────────
+
+export type PolicyType =
+  | 'term' | 'whole' | 'ilp' | 'health' | 'accident' | 'car' | 'home' | 'travel' | 'other'
+
+export type PremiumFrequency = 'monthly' | 'quarterly' | 'yearly' | 'single' | 'none'
+
+export const POLICY_TYPES: { value: PolicyType; label: string }[] = [
+  { value: 'term', label: 'Term life' },
+  { value: 'whole', label: 'Whole life' },
+  { value: 'ilp', label: 'Investment-linked (ILP)' },
+  { value: 'health', label: 'Health / hospitalisation' },
+  { value: 'accident', label: 'Personal accident' },
+  { value: 'car', label: 'Car / motor' },
+  { value: 'home', label: 'Home / contents' },
+  { value: 'travel', label: 'Travel' },
+  { value: 'other', label: 'Other' },
+]
+
+export interface InsurancePolicy {
+  id: string
+  user_id: string
+  name: string
+  insurer: string | null
+  policy_type: PolicyType
+  policy_number: string | null
+  sum_assured: number | null
+  currency: Currency | string
+  premium_amount: number | null
+  premium_frequency: PremiumFrequency
+  next_premium_due: string | null   // YYYY-MM-DD
+  planned_payment_id: string | null
+  cash_value: number | null          // surrender/cash value -> net worth
+  cash_value_asof: string | null
+  start_date: string | null
+  end_date: string | null            // maturity / expiry
   notes: string | null
   is_active: boolean
   created_at: string

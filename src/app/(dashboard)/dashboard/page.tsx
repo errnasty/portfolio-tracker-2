@@ -25,7 +25,7 @@ const PCT = (n: number) => `${n.toFixed(1)}%`
 export default function DashboardPage() {
   const {
     stats, enriched, loading, refreshPrices, settings, targets, holdings, prices,
-    accounts, assets, totalCashBase, accountsNetBase, netWorthBase, netWorthHistory, fxRates,
+    accounts, assets, policies, totalCashBase, accountsNetBase, netWorthBase, netWorthHistory, fxRates,
   } = usePortfolio()
   const {
     spendingStats, bankTransactions, categoryById, budgets, subscriptions, subscriptionSummary,
@@ -124,6 +124,7 @@ export default function DashboardPage() {
     ious,
     accounts,
     budgetPace: { spentMTD: expense, totalBudget: budgets.reduce((s, b) => s + Number(b.amount), 0), dayOfMonth: now.getDate(), daysInMonth },
+    policies,
     toBase,
     formatBase: (n) => formatCurrency(n, base),
   }))

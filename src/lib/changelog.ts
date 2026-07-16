@@ -17,6 +17,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.13',
+    date: '2026-07-15',
+    title: 'Insurance and individual bonds',
+    items: [
+      { title: 'Insurance policies', desc: 'A new Insurance tab (Accounts → Insurance) tracks life, health, and general policies: sum assured, premiums (which show up on Payments), and any cash/surrender value — which counts toward your net worth.', href: '/insurance' },
+      { title: 'Individual bonds', desc: 'Add corporate/SGS/retail bonds under Assets & debts with their coupon rate, coupon frequency, par value, and maturity — and the maturity lands on your Payments timeline. (Bond funds/ETFs go under Holdings; investment-linked plans under Insurance.)', href: '/assets' },
+    ],
+  },
+  {
     version: '2026.07.12',
     date: '2026-07-15',
     title: 'Easier to get around, especially on your phone',

@@ -595,20 +595,41 @@ create table if not exists assets (
   kind              text not null default 'other'
                     check (kind in (
                       'cpf_oa', 'cpf_sa', 'cpf_ma',
-                      'fixed_deposit', 'tbill', 'ssb',
+                      'fixed_deposit', 'tbill', 'ssb', 'bond',
                       'property', 'vehicle', 'other',
                       'loan', 'mortgage'
                     )),
   balance           numeric(20, 2) not null default 0,  -- always positive; loan/mortgage = amount owed
   currency          text not null default 'SGD',
-  interest_rate_pct numeric(8, 4),                      -- p.a.; loans: cost, deposits: yield
-  maturity_date     date,                               -- FDs / T-bills / SSBs
+  interest_rate_pct numeric(8, 4),                      -- p.a.; loans: cost, deposits: yield, bonds: coupon
+  maturity_date     date,                               -- FDs / T-bills / SSBs / bonds
   monthly_payment   numeric(20, 2),                     -- loan installment or recurring contribution
   notes             text,
   is_active         boolean not null default true,
   created_at        timestamptz default now(),
   updated_at        timestamptz default now()
 );
+
+-- Bond-specific fields (added 2026-07): par/face value redeemed at maturity,
+-- and coupon frequency. balance holds current market value; interest_rate_pct
+-- is the coupon rate.
+alter table assets add column if not exists face_value       numeric(20, 2);
+alter table assets add column if not exists coupon_frequency text
+  check (coupon_frequency is null or coupon_frequency in ('annual','semi_annual','quarterly','monthly','zero'));
+
+-- Widen the kind check on existing tables to include 'bond'.
+do $$ begin
+  alter table assets drop constraint if exists assets_kind_check;
+exception when others then null; end $$;
+do $$ begin
+  alter table assets add constraint assets_kind_check check (kind in (
+    'cpf_oa', 'cpf_sa', 'cpf_ma',
+    'fixed_deposit', 'tbill', 'ssb', 'bond',
+    'property', 'vehicle', 'other',
+    'loan', 'mortgage'
+  ));
+exception when duplicate_object then null;
+         when others then null; end $$;
 
 create index if not exists idx_assets_user on assets(user_id);
 
@@ -719,3 +740,42 @@ drop policy if exists "Anyone can update composition cache" on etf_composition_c
 create policy "Anyone can update composition cache"
   on etf_composition_cache for update
   using (true);
+
+-- ============================================================
+-- Insurance policies (added 2026-07). Coverage, premiums (optionally linked
+-- to a planned_payment), and cash/surrender value that nets into net worth.
+-- ============================================================
+create table if not exists insurance_policies (
+  id                 uuid primary key default gen_random_uuid(),
+  user_id            uuid references auth.users not null,
+  name               text not null,
+  insurer            text,
+  policy_type        text not null default 'term'
+    check (policy_type in ('term','whole','ilp','health','accident','car','home','travel','other')),
+  policy_number      text,
+  sum_assured        numeric(20, 2),
+  currency           text not null default 'SGD',
+  premium_amount     numeric(20, 2),
+  premium_frequency  text not null default 'yearly'
+    check (premium_frequency in ('monthly','quarterly','yearly','single','none')),
+  next_premium_due   date,
+  planned_payment_id uuid references planned_payments(id) on delete set null,
+  cash_value         numeric(20, 2),
+  cash_value_asof    date,
+  start_date         date,
+  end_date           date,
+  notes              text,
+  is_active          boolean not null default true,
+  created_at         timestamptz default now(),
+  updated_at         timestamptz default now()
+);
+
+create index if not exists idx_insurance_user on insurance_policies(user_id);
+
+alter table insurance_policies enable row level security;
+
+drop policy if exists "Users manage own insurance" on insurance_policies;
+create policy "Users manage own insurance"
+  on insurance_policies for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);

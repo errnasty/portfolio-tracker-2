@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Wallet, Repeat, Briefcase, TrendingUp, Sliders, Settings,
   PieChart, Activity, Beaker, ListChecks, Coins, Target, FileText, Bell, PiggyBank,
-  Upload, Banknote, CalendarClock, Users, BookOpen, Landmark, Vault,
+  Upload, Banknote, CalendarClock, Users, BookOpen, Landmark, Vault, ShieldCheck,
 } from 'lucide-react'
 
 export interface NavRoute {
@@ -29,6 +29,7 @@ export const NAV_ROUTES: NavRoute[] = [
   // Tabs under Accounts:
   { href: '/cpf', label: 'CPF', icon: PiggyBank, group: 'Money', hidden: true },
   { href: '/assets', label: 'Assets & debts', icon: Vault, group: 'Money', hidden: true },
+  { href: '/insurance', label: 'Insurance', icon: ShieldCheck, group: 'Money', hidden: true },
   { href: '/networth', label: 'Net worth', icon: TrendingUp, group: 'Money', hidden: true },
   { href: '/income', label: 'Income', icon: Banknote, group: 'Money', seq: 'g i' },
   { href: '/budgets', label: 'Budgets', icon: PiggyBank, group: 'Money', seq: 'g b' },
@@ -62,6 +63,7 @@ export const SUB_NAVS = {
     { href: '/accounts', label: 'Accounts' },
     { href: '/cpf', label: 'CPF' },
     { href: '/assets', label: 'Assets & debts' },
+    { href: '/insurance', label: 'Insurance' },
     { href: '/networth', label: 'Net worth' },
   ],
   holdings: [
