@@ -20,7 +20,7 @@ const STEPS: { icon: React.ElementType; title: string; body: React.ReactNode }[]
   {
     icon: Mail,
     title: '2 · Automate transaction capture',
-    body: <>In <TLink href="/settings" className="text-accent hover:underline">Settings</TLink>, set up bank-email forwarding — no domain required. Sign up for a free relay (CloudMailin/Postmark), paste its address into the card, and auto-forward your bank alerts there via a Gmail filter; they&apos;re parsed and logged in seconds. If Gmail asks to verify the address, the confirmation code appears right on that card. Prefer files? Use <TLink href="/import" className="text-accent hover:underline">Import</TLink> for CSV statements, or add entries manually.</>,
+    body: <>In <TLink href="/settings" className="text-accent hover:underline">Settings</TLink>, set up bank-email forwarding — no domain required. Sign up for a free relay (CloudMailin/Postmark), paste its address into the card, and auto-forward your bank alerts there via a Gmail filter; they&apos;re parsed and logged in seconds. If Gmail asks to verify the address, the confirmation code appears right on that card. For anything else, quick-add (press <kbd className="rounded border border-border bg-muted px-1 font-mono text-[11px]">a</kbd>) can paste a bank SMS or scan a receipt photo. Prefer files? Use <TLink href="/import" className="text-accent hover:underline">Import</TLink> for CSV statements, or add entries manually.</>,
   },
   {
     icon: Tags,

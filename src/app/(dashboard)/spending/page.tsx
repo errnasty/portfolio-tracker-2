@@ -18,8 +18,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ReviewQueueCard } from '@/components/spending/ReviewQueueCard'
 import { TransferDialog } from '@/components/spending/TransferDialog'
-import { ArrowLeftRight, Plus, Trash2, Upload } from 'lucide-react'
-import { useQuickAction } from '@/lib/quick-actions'
+import { ArrowLeftRight, Plus, Trash2, Upload, ClipboardType, Camera } from 'lucide-react'
+import { useQuickAction, dispatchQuickAction } from '@/lib/quick-actions'
 import type { BankTransaction, Currency } from '@/types'
 
 const PIE_COLORS = ['#b5732f', '#3f6fb0', '#b07a86', '#C6A96A', '#7a6f9a', '#2f8f5b', '#9a4a3f', '#3f8f86', '#7a6f9a', '#9a8f7a']
@@ -192,6 +192,8 @@ export default function SpendingPage() {
     <span className="flex items-center gap-4">
       <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="h-6 w-[130px] border-0 bg-transparent px-0 text-[11px] text-foreground focus-visible:ring-0" />
       <Link href="/import" className="flex items-center gap-1 hover:text-foreground"><Upload className="h-3.5 w-3.5" /> import</Link>
+      <button onClick={() => dispatchQuickAction('paste-transaction')} className="press flex items-center gap-1 hover:text-foreground"><ClipboardType className="h-3.5 w-3.5" /> paste</button>
+      <button onClick={() => dispatchQuickAction('scan-receipt')} className="press flex items-center gap-1 hover:text-foreground"><Camera className="h-3.5 w-3.5" /> scan</button>
       <button onClick={() => setTransferOpen(true)} className="press flex items-center gap-1 hover:text-foreground"><ArrowLeftRight className="h-3.5 w-3.5" /> transfer</button>
       <button onClick={openAdd} className="press flex items-center gap-1 hover:text-foreground"><Plus className="h-3.5 w-3.5" /> add</button>
     </span>

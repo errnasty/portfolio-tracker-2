@@ -17,6 +17,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.16',
+    date: '2026-07-15',
+    title: 'Scan a receipt, done',
+    items: [
+      { title: 'Receipt scanning', desc: 'Quick-add now has a "Scan" tab — snap a photo of a receipt or a bank notification screenshot and the amount, merchant, and date are read automatically (AI vision), ready to confirm and save. Also on ⌘K and the Spending toolbar. Photos are never stored — read once, then discarded.', href: '/spending' },
+    ],
+  },
+  {
     version: '2026.07.15',
     date: '2026-07-15',
     title: 'The app keeps running while you\'re away',

@@ -13,16 +13,19 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Zap, ClipboardType, Loader2 } from 'lucide-react'
-import type { Currency } from '@/types'
+import { ReceiptCapture } from '@/components/spending/ReceiptCapture'
+import { Zap, ClipboardType, Camera, Loader2 } from 'lucide-react'
+import type { Currency, BankTxnSource } from '@/types'
 
 function today() { return new Date().toISOString().slice(0, 10) }
 
-type Mode = 'type' | 'paste'
+type Mode = 'type' | 'paste' | 'scan'
 
 // Global quick-add. "Type" is the fast one-liner ("14.50 lunch grab"); "Paste"
-// takes a whole bank SMS/email and extracts the transaction (regex + AI).
-// Opens from anywhere via the `a` key, ⌘K, or the mobile + button.
+// takes a whole bank SMS/email and extracts the transaction; "Scan" reads a
+// receipt/screenshot photo — the latter two both land in the same draft
+// confirm-and-save form. Opens from anywhere via the `a` key, ⌘K, or the
+// mobile + button.
 export function QuickAddDialog() {
   const { accounts } = usePortfolio()
   const { addBankTransaction, categorize, categoryById, categories, aiCategorize } = useSpending()
@@ -35,24 +38,20 @@ export function QuickAddDialog() {
   const [categoryOverride, setCategoryOverride] = useState('')
   const [saving, setSaving] = useState(false)
 
-  // Paste-mode state
+  // Paste/Scan draft state (shared confirm form)
   const [pasteText, setPasteText] = useState('')
   const [parsing, setParsing] = useState(false)
   const [draft, setDraft] = useState<TxnDraft | null>(null)
 
-  useQuickAction('add-expense', () => {
-    setMode('type'); setText(''); setDate(today()); setCategoryOverride('')
+  const resetAll = () => {
+    setText(''); setDate(today()); setCategoryOverride('')
     setPasteText(''); setDraft(null)
     setAccountId((prev) => prev || accounts[0]?.id || '')
-    setOpen(true)
-  })
+  }
 
-  useQuickAction('paste-transaction', () => {
-    setMode('paste'); setText(''); setDate(today()); setCategoryOverride('')
-    setPasteText(''); setDraft(null)
-    setAccountId((prev) => prev || accounts[0]?.id || '')
-    setOpen(true)
-  })
+  useQuickAction('add-expense', () => { setMode('type'); resetAll(); setOpen(true) })
+  useQuickAction('paste-transaction', () => { setMode('paste'); resetAll(); setOpen(true) })
+  useQuickAction('scan-receipt', () => { setMode('scan'); resetAll(); setOpen(true) })
 
   const parsed = useMemo(() => parseQuickEntry(text), [text])
   const guessedCategoryId = useMemo(
@@ -109,11 +108,7 @@ export function QuickAddDialog() {
       })
       const data = await res.json()
       if (!res.ok) { toast.error(data?.error ?? 'Could not parse'); return }
-      const d = data.draft as TxnDraft
-      setDraft(d)
-      setDate(d.date ?? today())
-      setCategoryOverride('')
-      setAccountId((prev) => prev || accounts[0]?.id || '')
+      applyDraft(data.draft as TxnDraft)
     } catch (e) {
       toast.error(`Parse failed: ${String(e)}`)
     } finally {
@@ -121,20 +116,31 @@ export function QuickAddDialog() {
     }
   }
 
+  // ── Scan mode: ReceiptCapture does the compress + API call, hands us the draft.
+  const applyDraft = (d: TxnDraft) => {
+    setDraft(d)
+    setDate(d.date ?? today())
+    setCategoryOverride('')
+    setAccountId((prev) => prev || accounts[0]?.id || '')
+  }
+
   const draftCategoryId = useMemo(() => {
     if (!draft) return ''
     return categoryOverride || categorize(draft.description, draft.merchant) || ''
   }, [draft, categoryOverride, categorize])
 
-  const savePaste = async () => {
+  const saveDraft = async () => {
     if (!draft || saving) return
     setSaving(true)
     try {
       const cur = (account?.currency as Currency) ?? draft.currency
-      // Resolve category via rules→AI→keyword if the user didn't override.
       const categoryId = categoryOverride
         || (await aiCategorize(draft.description, draft.merchant, draft.amount, cur))
         || null
+      const source: BankTxnSource = mode === 'scan' ? 'receipt' : 'paste'
+      // Paste dedupes on the exact pasted text; a scanned receipt has no
+      // stable raw text, so dedupe on date+amount+merchant instead.
+      const seed = mode === 'scan' ? (draft.merchant ?? draft.description) : pasteText.trim()
       await addBankTransaction({
         account_id: accountId || null,
         date,
@@ -143,8 +149,8 @@ export function QuickAddDialog() {
         amount: draft.amount,
         currency: draft.currency,
         category_id: categoryId,
-        source: 'paste',
-        external_id: captureExternalId('paste', pasteText.trim(), date, draft.amount),
+        source,
+        external_id: captureExternalId(source, seed, date, draft.amount),
         notes: null,
         payee_key: null,
         needs_review: draft.confidence === 'low',
@@ -158,6 +164,8 @@ export function QuickAddDialog() {
     }
   }
 
+  const showDraftForm = (mode === 'paste' || mode === 'scan') && draft
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-w-[520px] gap-0 overflow-hidden rounded-2xl border border-border p-0 shadow-2xl" aria-describedby={undefined}>
@@ -166,20 +174,26 @@ export function QuickAddDialog() {
         {/* Mode switch */}
         <div className="flex gap-1 border-b border-[var(--hair)] px-3 pt-2">
           <button
-            onClick={() => setMode('type')}
+            onClick={() => { setMode('type'); setDraft(null) }}
             className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition-colors ${mode === 'type' ? 'border-accent text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
           >
             <Zap className="h-3.5 w-3.5" /> Type
           </button>
           <button
-            onClick={() => setMode('paste')}
+            onClick={() => { setMode('paste'); setDraft(null) }}
             className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition-colors ${mode === 'paste' ? 'border-accent text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
           >
-            <ClipboardType className="h-3.5 w-3.5" /> Paste bank alert
+            <ClipboardType className="h-3.5 w-3.5" /> Paste
+          </button>
+          <button
+            onClick={() => { setMode('scan'); setDraft(null) }}
+            className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition-colors ${mode === 'scan' ? 'border-accent text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+          >
+            <Camera className="h-3.5 w-3.5" /> Scan
           </button>
         </div>
 
-        {mode === 'type' ? (
+        {mode === 'type' && (
           <>
             <div className="flex items-center gap-3 border-b border-[var(--hair)] px-5 py-4">
               <Zap className="h-4 w-4 shrink-0 text-accent" />
@@ -235,7 +249,9 @@ export function QuickAddDialog() {
               </p>
             </div>
           </>
-        ) : (
+        )}
+
+        {mode === 'paste' && !draft && (
           <div className="space-y-3 px-5 py-4">
             <textarea
               autoFocus
@@ -245,55 +261,68 @@ export function QuickAddDialog() {
               rows={4}
               className="w-full rounded-md border border-border bg-transparent p-3 text-sm outline-none placeholder:text-faint"
             />
-            {!draft ? (
-              <Button onClick={runParse} disabled={!pasteText.trim() || parsing} className="w-full">
-                {parsing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Parsing…</> : 'Parse transaction'}
+            <Button onClick={runParse} disabled={!pasteText.trim() || parsing} className="w-full">
+              {parsing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Parsing…</> : 'Parse transaction'}
+            </Button>
+          </div>
+        )}
+
+        {mode === 'scan' && !draft && (
+          <div className="space-y-3 px-5 py-6">
+            <p className="text-center text-sm text-muted-foreground">
+              Snap a receipt or a bank notification screenshot — the amount, merchant, and date get read automatically.
+            </p>
+            <div className="flex justify-center">
+              <ReceiptCapture onExtracted={applyDraft} />
+            </div>
+          </div>
+        )}
+
+        {showDraftForm && draft && (
+          <div className="space-y-3 px-5 py-4">
+            <div className="space-y-2 rounded-md border border-border p-3">
+              <div className="flex items-center gap-2 text-sm">
+                <span className={`font-semibold tabular-nums ${draft.amount >= 0 ? 'text-up' : ''}`}>
+                  {draft.amount >= 0 ? '+' : '−'}{formatCurrency(Math.abs(draft.amount), draft.currency)}
+                </span>
+                <span className="text-muted-foreground">·</span>
+                <Input
+                  value={draft.description}
+                  onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+                  className="h-7 flex-1 text-sm"
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <Select value={accountId} onValueChange={setAccountId}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Account" /></SelectTrigger>
+                  <SelectContent>
+                    {accounts.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={categoryOverride} onValueChange={setCategoryOverride}>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder={draftCategoryId && categoryById[draftCategoryId] ? `${categoryById[draftCategoryId].name} (auto)` : 'Category: auto'} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories
+                      .filter((c) => (draft.amount >= 0 ? c.kind !== 'expense' : c.kind !== 'income'))
+                      .map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="h-8 text-xs" />
+              </div>
+              {draft.confidence === 'low' && (
+                <p className="text-[11px] text-warn">Low confidence — double-check the amount and description before saving.</p>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setDraft(null)} className="flex-1">
+                {mode === 'scan' ? 'Retake' : 'Re-parse'}
               </Button>
-            ) : (
-              <>
-                <div className="space-y-2 rounded-md border border-border p-3">
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className={`font-semibold tabular-nums ${draft.amount >= 0 ? 'text-up' : ''}`}>
-                      {draft.amount >= 0 ? '+' : '−'}{formatCurrency(Math.abs(draft.amount), draft.currency)}
-                    </span>
-                    <span className="text-muted-foreground">·</span>
-                    <Input
-                      value={draft.description}
-                      onChange={(e) => setDraft({ ...draft, description: e.target.value })}
-                      className="h-7 flex-1 text-sm"
-                    />
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <Select value={accountId} onValueChange={setAccountId}>
-                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Account" /></SelectTrigger>
-                      <SelectContent>
-                        {accounts.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Select value={categoryOverride} onValueChange={setCategoryOverride}>
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder={draftCategoryId && categoryById[draftCategoryId] ? `${categoryById[draftCategoryId].name} (auto)` : 'Category: auto'} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories
-                          .filter((c) => (draft.amount >= 0 ? c.kind !== 'expense' : c.kind !== 'income'))
-                          .map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="h-8 text-xs" />
-                  </div>
-                  {draft.confidence === 'low' && (
-                    <p className="text-[11px] text-warn">Low confidence — double-check the amount and description before saving.</p>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setDraft(null)} className="flex-1">Re-parse</Button>
-                  <Button onClick={savePaste} disabled={saving} className="flex-1">
-                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save transaction'}
-                  </Button>
-                </div>
-              </>
-            )}
+              <Button onClick={saveDraft} disabled={saving} className="flex-1">
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save transaction'}
+              </Button>
+            </div>
           </div>
         )}
       </DialogContent>
