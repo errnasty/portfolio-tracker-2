@@ -17,6 +17,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.15',
+    date: '2026-07-15',
+    title: 'The app keeps running while you\'re away',
+    items: [
+      { title: 'Everything now runs on a schedule', desc: 'Prices, exchange rates, recurring salary/bills, CPF contributions, and your net-worth snapshot now update daily on a server schedule — not just when you happen to open the app. Miss a few days and it\'s all still current when you come back.', href: '/dashboard' },
+      { title: 'Prices survive a Yahoo outage', desc: 'If live prices fail to load, the app now falls back to yesterday\'s cached price instead of showing $0 — with a note on Home when that happens.', href: '/dashboard' },
+      { title: 'Longer net-worth history', desc: 'The Net worth page\'s "All" range can now show years of history instead of the last 120 days, since snapshots accumulate daily regardless of whether you open the app.', href: '/networth' },
+    ],
+  },
+  {
     version: '2026.07.14',
     date: '2026-07-15',
     title: 'Liquid vs locked, and investment-linked plans',

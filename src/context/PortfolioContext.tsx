@@ -205,8 +205,11 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   const refreshNetWorthHistory = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
+    // Was 120 days; the daily cron now writes a snapshot every day (not just
+    // when the app is opened), so "All" on the Net worth page can go back
+    // years without being full of gaps.
     const cutoff = new Date()
-    cutoff.setDate(cutoff.getDate() - 120)
+    cutoff.setDate(cutoff.getDate() - 1100)
     const { data } = await supabase
       .from('networth_snapshots')
       .select('date, net_worth, currency')
@@ -377,6 +380,21 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
 
     const quotes: Record<string, PriceQuote> = {}
     if (tickers.length > 0) {
+      // Instant paint from the daily cron's cache (kills the "$0 while
+      // loading" flash) — overlaid by the live fetch below when it lands.
+      try {
+        const { data: cached } = await supabase
+          .from('price_cache').select('*').in('ticker', tickers)
+        for (const row of cached ?? []) {
+          quotes[row.ticker] = {
+            ticker: row.ticker, price: Number(row.price), currency: row.currency,
+            change: Number(row.change) || 0, changePercent: Number(row.change_percent) || 0,
+            longName: row.long_name ?? undefined, stale: true, asOf: row.fetched_at,
+          }
+        }
+        if (Object.keys(quotes).length > 0) setPrices((prev) => ({ ...prev, ...quotes }))
+      } catch { /* cache table may not exist yet — live fetch below still runs */ }
+
       try {
         const res = await fetch('/api/prices', {
           method: 'POST',

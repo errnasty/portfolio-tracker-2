@@ -33,12 +33,19 @@ export default function DashboardPage() {
   const base = (settings?.base_currency ?? 'USD') as Currency
 
   // Data-health: holdings priced from Yahoo can silently return nothing. Flag
-  // when we have positions but no quotes, or FX failed entirely.
+  // when we have positions but no quotes, or FX failed entirely. A stale
+  // price (from the daily cron's cache, live fetch failed) is a softer
+  // notice than "unavailable" since a real number is still shown.
   const missingPrices = holdings.filter((h) => !prices[h.ticker]).length
+  const staleQuotes = Object.values(prices).filter((q) => q.stale)
+  const oldestStale = staleQuotes.reduce<string | null>(
+    (min, q) => (q.asOf && (!min || q.asOf < min) ? q.asOf : min), null,
+  )
   const dataHealth = !loading && (
     (holdings.length > 0 && Object.keys(prices).length === 0) ? 'Prices unavailable — market data source may be down. Values shown use cost basis.'
     : (holdings.length > 0 && !fxRates) ? 'Exchange rates unavailable — showing native amounts.'
     : missingPrices > 0 ? `${missingPrices} holding${missingPrices === 1 ? '' : 's'} missing a live price — check the ticker symbol.`
+    : staleQuotes.length > 0 ? `Showing cached prices for ${staleQuotes.length} holding${staleQuotes.length === 1 ? '' : 's'}${oldestStale ? ` (as of ${new Date(oldestStale).toLocaleDateString()})` : ''} — live market data is temporarily unavailable.`
     : null
   )
 

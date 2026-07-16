@@ -1,147 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+import { fetchQuotes } from '@/lib/server/yahoo'
 
-const YF_HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  'Accept': 'application/json',
-  'Accept-Language': 'en-US,en;q=0.9',
-  'Referer': 'https://finance.yahoo.com',
-  'Origin': 'https://finance.yahoo.com',
-}
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
-function sleep(ms: number) {
-  return new Promise((r) => setTimeout(r, ms))
-}
-
-async function fetchJson(url: string, timeoutMs = 9000): Promise<any> {
-  const controller = new AbortController()
-  const t = setTimeout(() => controller.abort(), timeoutMs)
-  try {
-    const res = await fetch(url, { headers: YF_HEADERS, signal: controller.signal })
-    if (res.status === 429) throw Object.assign(new Error('rate-limited'), { code: 429 })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    return res.json()
-  } finally {
-    clearTimeout(t)
-  }
-}
-
-// ── Strategy 1: v8 chart API ──────────────────────────────────────────────
-async function tryChart(ticker: string) {
-  for (const domain of ['query2.finance.yahoo.com', 'query1.finance.yahoo.com']) {
-    try {
-      const url = `https://${domain}/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=5d`
-      const data = await fetchJson(url)
-      const meta = data?.chart?.result?.[0]?.meta
-      if (!meta) continue
-      const price: number =
-        meta.regularMarketPrice ?? meta.chartPreviousClose ?? meta.previousClose ?? 0
-      if (price <= 0) continue
-      const prev: number = meta.chartPreviousClose ?? meta.previousClose ?? price
-      return {
-        price,
-        currency: (meta.currency ?? 'USD') as string,
-        change: price - prev,
-        changePercent: prev > 0 ? ((price - prev) / prev) * 100 : 0,
-        longName: (meta.longName ?? meta.shortName ?? ticker) as string,
-      }
-    } catch (e: any) {
-      if (e.code === 429) await sleep(500)
-    }
-  }
-  return null
-}
-
-// ── Strategy 2: v1 search API (separate endpoint / rate limit) ────────────
-async function trySearch(ticker: string) {
-  try {
-    const url = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(ticker)}&quotesCount=3&newsCount=0`
-    const data = await fetchJson(url)
-    // Find the exact symbol match in results
-    const match = (data?.quotes ?? []).find(
-      (q: any) => q.symbol?.toUpperCase() === ticker.toUpperCase(),
-    )
-    if (!match) return null
-    const price: number = match.regularMarketPrice ?? match.regularMarketPreviousClose ?? 0
-    if (price <= 0) return null
-    const prev: number = match.regularMarketPreviousClose ?? price
-    return {
-      price,
-      currency: (match.currency ?? 'USD') as string,
-      change: price - prev,
-      changePercent: prev > 0 ? ((price - prev) / prev) * 100 : 0,
-      longName: (match.longname ?? match.shortname ?? ticker) as string,
-    }
-  } catch {
-    return null
-  }
-}
-
-// ── Strategy 3: quoteSummary API ──────────────────────────────────────────
-async function tryQuoteSummary(ticker: string) {
-  try {
-    const url = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(ticker)}?modules=price`
-    const data = await fetchJson(url)
-    const p = data?.quoteSummary?.result?.[0]?.price
-    if (!p) return null
-    const price: number = p.regularMarketPrice?.raw ?? 0
-    if (price <= 0) return null
-    const prev: number = p.regularMarketPreviousClose?.raw ?? price
-    return {
-      price,
-      currency: (p.currency ?? 'USD') as string,
-      change: price - prev,
-      changePercent: prev > 0 ? ((price - prev) / prev) * 100 : 0,
-      longName: (p.longName ?? p.shortName ?? ticker) as string,
-    }
-  } catch {
-    return null
-  }
-}
-
-async function fetchYahooQuote(ticker: string) {
-  // Try three independent strategies — each uses a different endpoint
-  const chart = await tryChart(ticker)
-  if (chart) return chart
-
-  await sleep(200)
-  const search = await trySearch(ticker)
-  if (search) return search
-
-  await sleep(200)
-  const summary = await tryQuoteSummary(ticker)
-  if (summary) return summary
-
-  throw new Error(`All strategies failed for ${ticker}`)
-}
-
+// POST /api/prices  Body: { tickers: string[] }  -> { quotes: {...} }
+// Live-fetches from Yahoo; any ticker that comes back at price 0 (rate
+// limited, delisted lookup hiccup, etc.) is backfilled from price_cache —
+// the daily cron's last-known-good snapshot — so a transient Yahoo failure
+// never shows $0 to the user. Cache entries are also warmed opportunistically
+// from live fetches here (best-effort, not required for correctness).
 export async function POST(req: NextRequest) {
   try {
     const { tickers } = (await req.json()) as { tickers: string[] }
     if (!tickers || tickers.length === 0) return NextResponse.json({ quotes: {} })
 
-    const results: Record<string, {
-      ticker: string; price: number; currency: string
-      change: number; changePercent: number; longName?: string
-    }> = {}
+    const quotes = await fetchQuotes(tickers)
 
-    // Process in batches of 3 with a pause between batches
-    const BATCH = 3
-    for (let i = 0; i < tickers.length; i += BATCH) {
-      const batch = tickers.slice(i, i + BATCH)
-      await Promise.allSettled(
-        batch.map(async (ticker) => {
-          try {
-            results[ticker] = { ticker, ...await fetchYahooQuote(ticker) }
-          } catch (err) {
-            console.error(`[prices] ${ticker} failed:`, String(err))
-            results[ticker] = { ticker, price: 0, currency: 'USD', change: 0, changePercent: 0 }
-          }
-        }),
-      )
-      if (i + BATCH < tickers.length) await sleep(500)
+    const failed = tickers.filter((t) => !quotes[t] || quotes[t].price <= 0)
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (serviceKey && process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, serviceKey)
+
+      if (failed.length > 0) {
+        const { data: cached } = await db
+          .from('price_cache').select('*').in('ticker', failed)
+        for (const row of cached ?? []) {
+          quotes[row.ticker] = {
+            ticker: row.ticker,
+            price: Number(row.price),
+            currency: row.currency,
+            change: Number(row.change) || 0,
+            changePercent: Number(row.change_percent) || 0,
+            longName: row.long_name ?? undefined,
+            stale: true,
+            asOf: row.fetched_at,
+          } as any
+        }
+      }
+
+      // Warm the cache with fresh good quotes. Awaited (not fire-and-forget)
+      // so a serverless function doesn't get frozen mid-write.
+      const fresh = tickers.filter((t) => quotes[t]?.price > 0 && !failed.includes(t))
+      if (fresh.length > 0) {
+        const rows = fresh.map((t) => ({
+          ticker: t, price: quotes[t].price, currency: quotes[t].currency,
+          change: quotes[t].change, change_percent: quotes[t].changePercent,
+          long_name: quotes[t].longName ?? null, fetched_at: new Date().toISOString(),
+        }))
+        await db.from('price_cache').upsert(rows, { onConflict: 'ticker' })
+      }
     }
 
-    return NextResponse.json({ quotes: results })
+    return NextResponse.json({ quotes })
   } catch (err) {
     console.error('[prices] route error:', err)
     return NextResponse.json({ error: 'Failed to fetch prices' }, { status: 500 })

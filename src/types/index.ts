@@ -90,6 +90,10 @@ export interface PriceQuote {
   change: number
   changePercent: number
   longName?: string
+  // Set when this quote came from price_cache (a live Yahoo fetch failed) —
+  // asOf is when the cached price was last refreshed, not now.
+  stale?: boolean
+  asOf?: string
 }
 
 export interface FxRates {

@@ -790,3 +790,46 @@ alter table holdings           add column if not exists locked_until date;
 alter table assets             add column if not exists locked_until date;
 alter table insurance_policies add column if not exists locked_until date;
 alter table insurance_policies add column if not exists invested_value numeric(20, 2);
+
+-- ============================================================
+-- Server-side price/FX cache + cron backbone (added 2026-07). The daily
+-- cron warms these so prices/FX, recurring postings, CPF contributions, and
+-- net-worth snapshots keep working on days nobody opens the app. Also used
+-- as a fallback in /api/prices and /api/fx when a live fetch fails.
+-- ============================================================
+create table if not exists price_cache (
+  ticker         text primary key,
+  price          numeric not null,
+  currency       text not null default 'USD',
+  change         numeric default 0,
+  change_percent numeric default 0,
+  long_name      text,
+  fetched_at     timestamptz not null default now()
+);
+
+alter table price_cache enable row level security;
+
+drop policy if exists "Authenticated read price cache" on price_cache;
+create policy "Authenticated read price cache"
+  on price_cache for select
+  using (auth.role() = 'authenticated');
+
+create table if not exists fx_cache (
+  base       text primary key,
+  rates      jsonb not null,
+  fetched_at timestamptz not null default now()
+);
+
+alter table fx_cache enable row level security;
+
+drop policy if exists "Authenticated read fx cache" on fx_cache;
+create policy "Authenticated read fx cache"
+  on fx_cache for select
+  using (auth.role() = 'authenticated');
+
+-- Realtime publication for bank_transactions — lets the app show
+-- webhook-inserted transactions live. Guarded no-op if already added.
+do $$ begin
+  alter publication supabase_realtime add table bank_transactions;
+exception when duplicate_object then null;
+         when others then null; end $$;

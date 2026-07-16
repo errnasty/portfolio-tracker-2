@@ -3,8 +3,8 @@ import { createClient } from '@supabase/supabase-js'
 import { createHash } from 'node:crypto'
 import { parseDbsAlert } from '@/lib/dbs-email-parser'
 import { categorizeWithAI } from '@/lib/ai-categorize'
-import { findFuzzyDuplicate } from '@/lib/txn-dedupe'
 import { normalizeInboundEmail } from '@/lib/inbound-payload'
+import { insertBankTxnServer } from '@/lib/server/insert-transaction'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -194,31 +194,7 @@ export async function POST(req: Request) {
   // Hash the external id for stability
   const externalIdHash = `inbound-${createHash('md5').update(externalId).digest('hex').slice(0, 16)}`
 
-  // Check for existing transaction by external_id
-  const { data: existing } = await dbClient
-    .from('bank_transactions')
-    .select('external_id')
-    .eq('user_id', userId)
-    .eq('external_id', externalIdHash)
-    .maybeSingle()
-
-  if (existing) {
-    return NextResponse.json({ skipped: true, reason: 'duplicate' })
-  }
-
-  // Fuzzy dedup
-  const { data: prior } = await dbClient
-    .from('bank_transactions')
-    .select('id, date, amount, payee_key, description')
-    .eq('user_id', userId)
-    .eq('date', date)
-  const dup = findFuzzyDuplicate(
-    { date, amount: parsed.amount, payee_key: parsed.payeeKey, description: parsed.description },
-    prior ?? [],
-  )
-
-  const row = {
-    user_id: userId,
+  const result = await insertBankTxnServer(dbClient, userId, {
     account_id: defaultAccount,
     date,
     description: parsed.description,
@@ -229,45 +205,14 @@ export async function POST(req: Request) {
     source: 'email',
     external_id: externalIdHash,
     payee_key: parsed.payeeKey,
-    needs_review: parsed.confidence === 'low' || !!dup,
-    notes: dup ? `possible duplicate of ${dup.id ?? 'existing transaction'}` : null,
-  }
+    needs_review: parsed.confidence === 'low',
+  })
 
-  const { data, error } = await dbClient.from('bank_transactions').insert(row).select('id').single()
-  if (error) {
-    // If it's a unique constraint violation on external_id, it's a duplicate
-    // that raced between our check and the insert — treat as a skip, not an error.
-    if (error.code === '23505') {
-      return NextResponse.json({ skipped: true, reason: 'duplicate (race)' })
-    }
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  if (result.status === 'skipped') {
+    return NextResponse.json({ skipped: true, reason: result.reason })
   }
-
-  // Update account balance atomically using a Postgres RPC increment.
-  // Falls back to read-modify-write if the RPC doesn't exist.
-  if (defaultAccount) {
-    try {
-      const { error: rpcErr } = await dbClient.rpc('increment_account_balance', {
-        p_account_id: defaultAccount,
-        p_delta: parsed.amount,
-      })
-      if (rpcErr) {
-        // Fallback: read-modify-write (best-effort; the transaction is already saved).
-        const { data: acc } = await dbClient
-          .from('accounts').select('current_balance').eq('id', defaultAccount).maybeSingle()
-        if (acc) {
-          await dbClient.from('accounts')
-            .update({
-              current_balance: Number(acc.current_balance) + parsed.amount,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', defaultAccount)
-        }
-      }
-    } catch (balErr) {
-      console.warn(`[inbound/email] Balance update failed for account ${defaultAccount}: ${String(balErr)}`)
-      // Transaction is already saved; balance is best-effort.
-    }
+  if (result.status === 'error') {
+    return NextResponse.json({ error: result.message }, { status: 500 })
   }
 
   // Update inbound address stats atomically (last_synced + total_synced).
@@ -299,5 +244,5 @@ export async function POST(req: Request) {
     // Transaction is already saved; stats are best-effort.
   }
 
-  return NextResponse.json({ inserted: 1, transaction_id: data.id, resolved: matchedBy })
+  return NextResponse.json({ inserted: 1, transaction_id: result.id, resolved: matchedBy })
 }
