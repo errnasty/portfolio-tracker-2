@@ -13,6 +13,16 @@ import type { Account, Currency, FxRates } from '@/types'
 
 function thisMonth() { return new Date().toISOString().slice(0, 7) }
 
+// Balance-freshness nudge: current_balance is a single stored number nudged
+// by transactions and edits (not a time series), so "drift" can't be
+// computed exactly — but a balance nobody has touched or verified in a long
+// time is worth flagging. updated_at moves on every edit, including a
+// reconcile, so this doubles as "days since last verified".
+const STALE_DAYS = 45
+function daysSince(iso: string): number {
+  return Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000)
+}
+
 // Per-account drill-down: balance, this month's flows, recent activity.
 export function AccountDetailDialog({ account, base, fxRates, onClose, onTransfer }: {
   account: Account | null
@@ -148,6 +158,16 @@ export function AccountDetailDialog({ account, base, fxRates, onClose, onTransfe
             <div className="mb-1.5 flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
               <Scale className="h-3 w-3" /> Reconcile balance
             </div>
+            {(() => {
+              const days = daysSince(account.updated_at)
+              return days >= STALE_DAYS ? (
+                <p className="mb-2 text-xs text-warn">
+                  Not verified in {days} days — check it still matches your bank before trusting it.
+                </p>
+              ) : (
+                <p className="mb-2 text-[11px] text-muted-foreground">Last updated {days === 0 ? 'today' : `${days}d ago`}.</p>
+              )
+            })()}
             <div className="flex items-center gap-2">
               <Input
                 type="number" step="any"

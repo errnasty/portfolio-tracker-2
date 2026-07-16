@@ -17,6 +17,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.17',
+    date: '2026-07-15',
+    title: 'Faster loading, live transactions, balance nudges',
+    items: [
+      { title: 'Faster first load', desc: 'Holdings, transactions, goals, accounts, assets, insurance, and net-worth history now load in parallel instead of one after another — the app appears noticeably faster on open.', href: '/dashboard' },
+      { title: 'Live transaction updates', desc: 'A bank email forwarded in the background now appears on Spending within seconds — no refresh needed.', href: '/spending' },
+      { title: 'Balance freshness nudge', desc: 'An account you haven\'t verified in 45+ days now says so, right where you reconcile it.', href: '/accounts' },
+    ],
+  },
+  {
     version: '2026.07.16',
     date: '2026-07-15',
     title: 'Scan a receipt, done',

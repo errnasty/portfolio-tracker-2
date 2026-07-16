@@ -436,14 +436,19 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function init() {
       setLoading(true)
-      await fetchSettings()
-      await refreshHoldings()
-      await refreshTransactions()
-      await refreshGoals()
-      await refreshAccounts()
-      await refreshAssets()
-      await refreshPolicies()
-      await refreshNetWorthHistory()
+      // Each fetch is independently keyed by user_id and writes to its own
+      // state slot — no ordering dependency, so run them together instead of
+      // one round trip after another.
+      await Promise.all([
+        fetchSettings(),
+        refreshHoldings(),
+        refreshTransactions(),
+        refreshGoals(),
+        refreshAccounts(),
+        refreshAssets(),
+        refreshPolicies(),
+        refreshNetWorthHistory(),
+      ])
       setLoading(false)
     }
     init()

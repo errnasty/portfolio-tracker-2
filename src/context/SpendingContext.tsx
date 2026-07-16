@@ -261,12 +261,15 @@ export function SpendingProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function init() {
       setLoading(true)
-      await refreshCategories()
-      await refreshBankTransactions()
-      await refreshCategoryRules()
-      await refreshSubscriptionStatuses()
-      await refreshBudgets()
-      await refreshPayeeAliases()
+      // Independent per-table fetches — no ordering dependency between them.
+      await Promise.all([
+        refreshCategories(),
+        refreshBankTransactions(),
+        refreshCategoryRules(),
+        refreshSubscriptionStatuses(),
+        refreshBudgets(),
+        refreshPayeeAliases(),
+      ])
       setLoading(false)
     }
     init()
@@ -290,6 +293,37 @@ export function SpendingProvider({ children }: { children: React.ReactNode }) {
       await refreshBankTransactions()
     })()
     return () => { cancelled = true }
+  }, [loading, refreshBankTransactions])
+
+  // Live updates: a webhook-forwarded bank email lands in the DB from a
+  // server route, not this browser tab, so without a subscription the user
+  // wouldn't see it until their next manual refresh or reload. Debounced so
+  // a burst of inserts (e.g. a CSV-shaped batch) triggers one refetch.
+  // Falls back gracefully to the once-per-session refresh above if Realtime
+  // isn't enabled on the Supabase project.
+  useEffect(() => {
+    if (loading) return
+    let debounce: ReturnType<typeof setTimeout> | undefined
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    ;(async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      channel = supabase
+        .channel(`bank_transactions_live_${user.id}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'bank_transactions', filter: `user_id=eq.${user.id}` },
+          () => {
+            clearTimeout(debounce)
+            debounce = setTimeout(() => { refreshBankTransactions() }, 1500)
+          },
+        )
+        .subscribe()
+    })()
+    return () => {
+      clearTimeout(debounce)
+      if (channel) supabase.removeChannel(channel)
+    }
   }, [loading, refreshBankTransactions])
 
   const addCategory: SpendingContextValue['addCategory'] = async ({ name, kind = 'expense', color = null, icon = null }) => {
