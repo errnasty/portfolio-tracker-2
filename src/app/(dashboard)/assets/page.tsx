@@ -37,12 +37,13 @@ interface AssetForm {
   notes: string
   face_value: string
   coupon_frequency: CouponFrequency | ''
+  locked_until: string
 }
 
 const EMPTY_FORM: AssetForm = {
   name: '', kind: 'fixed_deposit', balance: '', currency: 'SGD',
   interest_rate_pct: '', maturity_date: '', monthly_payment: '', notes: '',
-  face_value: '', coupon_frequency: '',
+  face_value: '', coupon_frequency: '', locked_until: '',
 }
 
 export default function AssetsPage() {
@@ -82,6 +83,7 @@ export default function AssetsPage() {
       notes: a.notes ?? '',
       face_value: a.face_value != null ? String(a.face_value) : '',
       coupon_frequency: a.coupon_frequency ?? '',
+      locked_until: a.locked_until ?? '',
     })
     setOpen(true)
   }
@@ -105,6 +107,7 @@ export default function AssetsPage() {
         // Bond fields only meaningful for kind='bond'; cleared otherwise.
         face_value: isBond && form.face_value ? parseFloat(form.face_value) : null,
         coupon_frequency: isBond && form.coupon_frequency ? form.coupon_frequency : null,
+        locked_until: form.locked_until || null,
       }
       if (editId) await updateAsset(editId, payload)
       else await addAsset(payload)
@@ -333,6 +336,13 @@ export default function AssetsPage() {
                 {isLiabilityKind && (
                   <p className="text-[10px] text-muted-foreground">With a rate + installment, the payoff date and remaining interest are projected automatically.</p>
                 )}
+              </div>
+            )}
+            {!isLiabilityKind && (
+              <div className="space-y-2">
+                <Label>Locked until <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                <Input type="date" value={form.locked_until} onChange={(e) => setForm((f) => ({ ...f, locked_until: e.target.value }))} />
+                <p className="text-[10px] text-muted-foreground">For money you can&apos;t withdraw yet (SRS, locked deposits). Shows as locked on the Net worth page until then. CPF is always treated as locked.</p>
               </div>
             )}
             <div className="space-y-2">

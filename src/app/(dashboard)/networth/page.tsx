@@ -27,6 +27,7 @@ const RANGES: { key: RangeKey; label: string; days: number | null }[] = [
 export default function NetWorthPage() {
   const {
     settings, netWorthBase, totalCashBase, accountsNetBase, assetsBase, liabilitiesBase,
+    policiesCashBase, liquidBase, lockedBase, lockedItems,
     enriched, loading: portfolioLoading,
   } = usePortfolio()
   const base = (settings?.base_currency ?? 'USD') as Currency
@@ -79,6 +80,7 @@ export default function NetWorthPage() {
     { label: 'Bank & cash accounts', value: accountsNetBase },
     { label: 'Investments', value: holdingsValueBase },
     { label: 'Other assets (CPF, deposits, property)', value: assetsBase },
+    { label: 'Insurance & ILP value', value: policiesCashBase },
     { label: 'Debts', value: -liabilitiesBase },
   ].filter((c) => Math.abs(c.value) > 0.005)
   const compositionMax = Math.max(1, ...composition.map((c) => Math.abs(c.value)))
@@ -208,6 +210,45 @@ export default function NetWorthPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Liquid vs locked + unlock timeline */}
+      {lockedBase > 0.005 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Liquid vs locked</CardTitle>
+            <CardDescription>How much you can actually access now, in {base}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <div className="text-xs text-muted-foreground">Accessible now</div>
+                <div className="text-lg font-semibold tabular-nums text-up">{formatCurrency(liquidBase, base)}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Locked</div>
+                <div className="text-lg font-semibold tabular-nums text-warn">{formatCurrency(lockedBase, base)}</div>
+              </div>
+            </div>
+            <div className="flex h-2.5 overflow-hidden rounded-full bg-[var(--hair)]">
+              <div className="h-full bg-up" style={{ width: `${Math.max(0, Math.min(100, (liquidBase / Math.max(1, liquidBase + lockedBase)) * 100))}%` }} />
+              <div className="h-full bg-warn" style={{ width: `${Math.max(0, Math.min(100, (lockedBase / Math.max(1, liquidBase + lockedBase)) * 100))}%` }} />
+            </div>
+
+            <div>
+              <div className="mb-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-faint">Unlocks</div>
+              <div className="divide-y divide-border rounded-md border border-border">
+                {lockedItems.map((it, i) => (
+                  <div key={`${it.name}-${i}`} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                    <span className="min-w-0 flex-1 truncate">{it.name}</span>
+                    <span className="text-xs text-muted-foreground">{it.unlockDate ?? 'retirement'}</span>
+                    <span className="tabular-nums font-medium">{formatCurrency(it.valueBase, base)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
     </PageShell>
   )

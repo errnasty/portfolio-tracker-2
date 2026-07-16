@@ -43,6 +43,7 @@ export interface Holding {
   custom_price_asof: string | null   // YYYY-MM-DD
   price_provider: string | null      // e.g. 'sgfund', 'gold'
   price_provider_ref: string | null  // provider-specific fund identifier
+  locked_until: string | null        // YYYY-MM-DD; can't withdraw until then
   created_at: string
   updated_at: string
 }
@@ -57,6 +58,7 @@ export interface HoldingFormData {
   custom_price: string
   price_provider: string   // '' = none (pure manual)
   price_provider_ref: string
+  locked_until: string     // '' = not locked
 }
 
 // A fund-price provider's answer for one fund. asOf is the NAV date the
@@ -481,6 +483,7 @@ export interface Asset {
   // Bond-specific (null for other kinds):
   face_value?: number | null         // par value redeemed at maturity
   coupon_frequency?: CouponFrequency | null
+  locked_until?: string | null       // can't withdraw until then (SRS, locked deposits)
   created_at: string
   updated_at: string
 }
@@ -519,6 +522,8 @@ export interface InsurancePolicy {
   planned_payment_id: string | null
   cash_value: number | null          // surrender/cash value -> net worth
   cash_value_asof: string | null
+  invested_value: number | null      // ILP current account value (vs surrender)
+  locked_until: string | null        // exit penalty-free from this date (ILP lock-in)
   start_date: string | null
   end_date: string | null            // maturity / expiry
   notes: string | null

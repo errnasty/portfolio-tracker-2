@@ -779,3 +779,14 @@ create policy "Users manage own insurance"
   on insurance_policies for all
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
+
+-- ============================================================
+-- Liquidity / lock-in (added 2026-07). locked_until marks money you can't
+-- withdraw until a date; net worth splits into liquid vs locked and shows an
+-- unlock timeline. ILP invested_value = current account value (vs cash_value
+-- = surrender value).
+-- ============================================================
+alter table holdings           add column if not exists locked_until date;
+alter table assets             add column if not exists locked_until date;
+alter table insurance_policies add column if not exists locked_until date;
+alter table insurance_policies add column if not exists invested_value numeric(20, 2);

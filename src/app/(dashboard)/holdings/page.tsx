@@ -32,7 +32,7 @@ import { FUND_PROVIDER_LIST } from '@/lib/fund-providers'
 const CURRENCIES: Currency[] = CURRENCY_CODES
 const EMPTY_FORM: HoldingFormData = {
   ticker: '', name: '', shares: '', cost_basis_per_share: '', cost_basis_currency: 'USD',
-  price_source: 'auto', custom_price: '', price_provider: '', price_provider_ref: '',
+  price_source: 'auto', custom_price: '', price_provider: '', price_provider_ref: '', locked_until: '',
 }
 
 // Uppercase slug of the fund/item name — becomes the holding's `ticker` when
@@ -210,6 +210,7 @@ export default function HoldingsPage() {
       custom_price: h.custom_price != null ? String(h.custom_price) : '',
       price_provider: h.price_provider ?? '',
       price_provider_ref: h.price_provider_ref ?? '',
+      locked_until: h.locked_until ?? '',
     })
     setEditId(h.id)
     setTestFetchError(null)
@@ -280,6 +281,7 @@ export default function HoldingsPage() {
       custom_price_asof: isCustom && form.custom_price ? new Date().toISOString().slice(0, 10) : null,
       price_provider: isCustom && form.price_provider ? form.price_provider : null,
       price_provider_ref: isCustom && form.price_provider ? form.price_provider_ref.trim() : null,
+      locked_until: form.locked_until || null,
     }
     if (editId) {
       await updateHolding(editId, payload)
@@ -333,6 +335,7 @@ export default function HoldingsPage() {
         custom_price_asof: row.custom_price_asof,
         price_provider: row.price_provider,
         price_provider_ref: row.price_provider_ref,
+        locked_until: row.locked_until,
       }),
     })
   }
@@ -700,6 +703,14 @@ export default function HoldingsPage() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            {/* Lock-in: locked funds you can't redeem until a date. Counts as
+                "locked" on the Net worth page's liquid/locked split. */}
+            <div className="space-y-2">
+              <Label>Locked until <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              <Input type="date" value={form.locked_until} onChange={(e) => setForm({ ...form, locked_until: e.target.value })} />
+              <p className="text-[11px] text-muted-foreground">For funds with a lock-up/redemption restriction. Until this date the value shows as locked (not liquid) in net worth.</p>
             </div>
           </div>
 

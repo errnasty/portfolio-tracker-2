@@ -69,6 +69,7 @@ export function buildPlannerEnriched(
         custom_price_asof: null,
         price_provider: null,
         price_provider_ref: null,
+        locked_until: null,
         created_at: '',
         updated_at: '',
         currentPrice,

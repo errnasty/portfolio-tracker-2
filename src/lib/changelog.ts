@@ -17,6 +17,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.14',
+    date: '2026-07-15',
+    title: 'Liquid vs locked, and investment-linked plans',
+    items: [
+      { title: 'Locked-money timeline', desc: 'Mark holdings, assets (SRS, locked deposits) and policies with a "locked until" date. The Net worth page now splits your wealth into what you can access now vs what\'s locked, with a timeline of when each unlocks. CPF is always treated as locked.', href: '/networth' },
+      { title: 'Investment-linked plans (ILP)', desc: 'The Insurance ILP type now tracks current investment value, surrender value, and the date you can exit penalty-free — the invested value counts toward net worth (and shows as locked until the exit date).', href: '/insurance' },
+    ],
+  },
+  {
     version: '2026.07.13',
     date: '2026-07-15',
     title: 'Insurance and individual bonds',

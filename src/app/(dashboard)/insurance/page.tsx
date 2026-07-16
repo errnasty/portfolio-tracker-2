@@ -46,6 +46,8 @@ interface PolicyForm {
   premium_frequency: PremiumFrequency
   next_premium_due: string
   cash_value: string
+  invested_value: string
+  locked_until: string
   end_date: string
   notes: string
   post_as_transaction: boolean
@@ -54,7 +56,7 @@ interface PolicyForm {
 const EMPTY_FORM: PolicyForm = {
   name: '', insurer: '', policy_type: 'term', policy_number: '', sum_assured: '',
   currency: 'SGD', premium_amount: '', premium_frequency: 'yearly', next_premium_due: '',
-  cash_value: '', end_date: '', notes: '', post_as_transaction: false,
+  cash_value: '', invested_value: '', locked_until: '', end_date: '', notes: '', post_as_transaction: false,
 }
 
 export default function InsurancePage() {
@@ -83,6 +85,8 @@ export default function InsurancePage() {
       premium_frequency: p.premium_frequency,
       next_premium_due: p.next_premium_due ?? '',
       cash_value: p.cash_value != null ? String(p.cash_value) : '',
+      invested_value: p.invested_value != null ? String(p.invested_value) : '',
+      locked_until: p.locked_until ?? '',
       end_date: p.end_date ?? '',
       notes: p.notes ?? '',
       post_as_transaction: false,
@@ -167,6 +171,8 @@ export default function InsurancePage() {
         next_premium_due: form.next_premium_due || null,
         cash_value: form.cash_value ? parseFloat(form.cash_value) : null,
         cash_value_asof: form.cash_value ? new Date().toISOString().slice(0, 10) : null,
+        invested_value: form.invested_value ? parseFloat(form.invested_value) : null,
+        locked_until: form.locked_until || null,
         start_date: null,
         end_date: form.end_date || null,
         notes: form.notes.trim() || null,
@@ -339,6 +345,21 @@ export default function InsurancePage() {
                 </label>
               </div>
             )}
+            {/* Investment-linked plans: current account value + lock-in. */}
+            {form.policy_type === 'ilp' && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Current investment value</Label>
+                  <Input type="number" min="0" step="any" placeholder="e.g. 24000" value={form.invested_value} onChange={(e) => setForm({ ...form, invested_value: e.target.value })} />
+                  <p className="text-[10px] text-muted-foreground">Account value today (used for net worth if no surrender value is set).</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Exit penalty-free from</Label>
+                  <Input type="date" value={form.locked_until} onChange={(e) => setForm({ ...form, locked_until: e.target.value })} />
+                  <p className="text-[10px] text-muted-foreground">Lock-in end — until then this counts as locked in net worth.</p>
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Cash / surrender value</Label>
@@ -349,8 +370,14 @@ export default function InsurancePage() {
                 <Input type="date" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} />
               </div>
             </div>
+            {form.policy_type !== 'ilp' && (
+              <div className="space-y-2">
+                <Label>Locked until (endowment / savings plans)</Label>
+                <Input type="date" value={form.locked_until} onChange={(e) => setForm({ ...form, locked_until: e.target.value })} />
+              </div>
+            )}
             <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
-              Cash/surrender value counts toward your net worth. A recurring premium with a due date shows up on the Payments page automatically.
+              Cash/surrender (or ILP investment) value counts toward your net worth. A &ldquo;locked until&rdquo; date marks it as locked on the Net worth page until then. A recurring premium with a due date shows up on Payments.
             </p>
           </div>
           <DialogFooter>

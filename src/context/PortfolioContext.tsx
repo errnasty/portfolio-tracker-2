@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { enrichHoldings, calcPortfolioStats, convertToBase, convertBetween } from '@/lib/calculations'
 import { deriveAllPositions } from '@/lib/transactions'
 import { FUND_PROVIDER_LIST } from '@/lib/fund-providers'
+import { computeLiquidity, type LockedItem } from '@/lib/liquidity'
 
 // Translate Supabase errors into user-actionable toasts. The most common one
 // new users hit is the "relation does not exist" error when a migration
@@ -81,6 +82,9 @@ interface PortfolioContextValue {
   policies: InsurancePolicy[]
   policiesError: string | null
   policiesCashBase: number     // sum of policy cash/surrender values, in base
+  liquidBase: number           // net worth you can access now, in base
+  lockedBase: number           // net worth locked until a date/retirement, in base
+  lockedItems: LockedItem[]    // locked positions, soonest unlock first
   refreshPolicies: () => Promise<void>
   addPolicy: (data: Omit<InsurancePolicy, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => Promise<InsurancePolicy | null>
   updatePolicy: (id: string, data: Partial<InsurancePolicy>) => Promise<void>
@@ -161,15 +165,42 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
         .reduce((s, a) => s + convertToBase(Number(a.balance) || 0, a.currency, fxRates), 0)
     : 0
 
-  // Insurance cash/surrender value counts as an asset in net worth.
+  // Insurance value in net worth: surrender/cash value, or an ILP's current
+  // invested value when no surrender value is recorded.
+  const policyNetValue = (p: InsurancePolicy) => Number(p.cash_value ?? p.invested_value ?? 0) || 0
   const policiesCashBase = fxRates
     ? policies
-        .filter((p) => p.is_active && p.cash_value)
-        .reduce((s, p) => s + convertToBase(Number(p.cash_value) || 0, p.currency, fxRates), 0)
+        .filter((p) => p.is_active)
+        .reduce((s, p) => s + convertToBase(policyNetValue(p), p.currency, fxRates), 0)
     : 0
 
   const holdingsValueBase = enriched.reduce((s, h) => s + h.currentValueBase, 0)
   const netWorthBase = holdingsValueBase + accountsNetBase + assetsBase + policiesCashBase - liabilitiesBase
+
+  // Liquid vs locked split + unlock timeline (money you can't withdraw yet:
+  // locked funds, endowment/ILP lock-in, CPF/SRS retirement).
+  const liquidityToday = new Date().toISOString().slice(0, 10)
+  const liquidity = fxRates
+    ? computeLiquidity(netWorthBase, liquidityToday, [
+        ...enriched.map((h) => ({
+          name: h.name ?? h.ticker, valueBase: h.currentValueBase,
+          lockedUntil: h.locked_until ?? null, source: 'holding' as const,
+        })),
+        ...assets
+          .filter((a) => a.is_active && !ASSET_KIND_META[a.kind]?.liability)
+          .map((a) => ({
+            name: a.name, valueBase: convertToBase(Number(a.balance) || 0, a.currency, fxRates),
+            lockedUntil: a.locked_until ?? null, alwaysLocked: a.kind.startsWith('cpf_'),
+            source: 'asset' as const,
+          })),
+        ...policies
+          .filter((p) => p.is_active)
+          .map((p) => ({
+            name: p.name, valueBase: convertToBase(policyNetValue(p), p.currency, fxRates),
+            lockedUntil: p.locked_until ?? null, source: 'policy' as const,
+          })),
+      ])
+    : { lockedBase: 0, liquidBase: netWorthBase, items: [] }
 
   const refreshNetWorthHistory = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -731,6 +762,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
       accounts, totalCashBase, accountsNetBase, netWorthBase, netWorthHistory, accountsError,
       assets, assetsError, assetsBase, liabilitiesBase,
       policies, policiesError, policiesCashBase, refreshPolicies, addPolicy, updatePolicy, deletePolicy,
+      liquidBase: liquidity.liquidBase, lockedBase: liquidity.lockedBase, lockedItems: liquidity.items,
       loading, refreshHoldings, refreshPrices, refreshTransactions,
       addHolding, updateHolding, deleteHolding,
       upsertTarget, deleteTarget, updateSettings,
