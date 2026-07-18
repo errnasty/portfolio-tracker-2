@@ -281,7 +281,7 @@ export default function SpendingPage() {
           <CardHeader>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle className="text-base">Transactions</CardTitle>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Select value={accountFilter} onValueChange={setAccountFilter}>
                   <SelectTrigger className="h-8 w-[130px] text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>

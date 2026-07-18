@@ -22,7 +22,7 @@ export function StatusBar({ screen, title, right, className }: {
       </div>
       {right != null && (
         <div
-          className="animate-slide-up flex items-center gap-4 text-[13px] text-muted-foreground"
+          className="animate-slide-up flex min-w-0 max-w-full flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-muted-foreground"
           style={{ animationDelay: '120ms' }}
         >
           {right}
