@@ -82,7 +82,7 @@ export default function LoginPage() {
       </div>
 
       {/* RIGHT · form */}
-      <div className="flex w-full flex-col justify-center bg-secondary px-10 py-14 md:w-[520px] md:border-l md:border-border animate-fade-in">
+      <div className="flex w-full flex-col justify-center bg-secondary px-6 py-12 sm:px-10 md:w-[520px] md:border-l md:border-border animate-fade-in md:py-14">
         <div className="mx-auto w-full max-w-[400px]">
           {/* Segmented toggle */}
           <div className="mb-8 flex gap-1 rounded-[11px] border border-border bg-[var(--hair)] p-[3px]">
@@ -106,7 +106,7 @@ export default function LoginPage() {
             </button>
           </div>
 
-          <h1 className="font-display text-[32px] font-medium leading-tight text-foreground">
+          <h1 className="font-display text-[26px] md:text-[32px] font-medium leading-tight text-foreground">
             {isSignUp ? 'Create your account' : 'Welcome back'}
           </h1>
           <p className="mt-2.5 text-[14.5px] text-muted-foreground">

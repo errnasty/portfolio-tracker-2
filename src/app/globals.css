@@ -104,11 +104,33 @@
   * {
     @apply border-border;
   }
+  html {
+    /* Prevent iOS from auto-inflating text sizes in landscape / standalone mode */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    /* Prevent double-tap-to-zoom delay — allows normal pinch zoom but removes
+       the 300ms click lag. maximum-scale=1 would block accessibility, so we
+       don't set that. */
+    -webkit-tap-highlight-color: transparent;
+  }
   body {
     @apply bg-background text-foreground;
     font-family: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
     font-variant-numeric: tabular-nums;
     -webkit-font-smoothing: antialiased;
+    /* Hard stop against horizontal overflow — the #1 cause of auto-zoom on PWA
+       launch. Any element that *should* be wider needs its own scroll container. */
+    overflow-x: hidden;
+  }
+  /* iOS auto-zooms when an input is focused if the font size is <16px. Force
+     16px on mobile to stop that, keep it larger for touch targets. */
+  input, select, textarea {
+    font-size: 16px;
+  }
+  @media (min-width: 768px) {
+    input, select, textarea {
+      font-size: revert;
+    }
   }
   /* Large figures use the serif display font */
   h1, h2, h3, .font-display {

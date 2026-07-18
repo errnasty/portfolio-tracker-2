@@ -40,13 +40,13 @@ export function HeroMetric({
   }, [value])
 
   return (
-    <div className="animate-scale-in rounded-[var(--radius)] border border-border bg-card p-7 transition-shadow duration-300 hover:shadow-[0_8px_30px_rgba(80,70,45,0.06)]">
+    <div className="animate-scale-in rounded-[var(--radius)] border border-border bg-card p-5 md:p-7 transition-shadow duration-300 hover:shadow-[0_8px_30px_rgba(80,70,45,0.06)]">
       <div className="text-[12px] font-semibold uppercase tracking-[0.08em] text-faint">{label}</div>
       <div
         ref={pulseRef}
         className={cn(
-          'mt-3.5 font-display font-medium leading-none tracking-tight tabular-nums text-foreground',
-          big ? 'text-[clamp(2.5rem,5vw,3.25rem)]' : 'text-[30px]',
+          'mt-3 md:mt-3.5 font-display font-medium leading-none tracking-tight tabular-nums text-foreground',
+          big ? 'text-[clamp(2rem,5vw,3.25rem)]' : 'text-[26px] md:text-[30px]',
         )}
         style={vtName ? ({ viewTransitionName: vtName } as React.CSSProperties) : undefined}
       >

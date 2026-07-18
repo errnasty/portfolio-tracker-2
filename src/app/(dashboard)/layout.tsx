@@ -49,7 +49,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Sidebar />
               <main className="flex-1 pt-12 md:pl-[250px] md:pt-0">
                 {/* Extra bottom padding on mobile clears the fixed tab bar. */}
-                <div key={pathname} className="mx-auto max-w-[1180px] animate-section-in px-6 py-10 pb-[96px] md:px-12 md:py-10 md:pb-10">
+                <div key={pathname} className="mx-auto max-w-[1180px] animate-section-in px-4 py-6 pb-[96px] sm:px-6 md:px-12 md:py-10 md:pb-10">
                   {children}
                 </div>
               </main>
