@@ -17,6 +17,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.15',
+    date: '2026-07-18',
+    title: 'Install Aureus on your phone',
+    items: [
+      { title: 'Add to Home Screen', desc: 'Aureus is now an installable PWA. Open it on your phone, tap your browser menu → "Add to Home Screen", and it launches full-screen like a native app — no address bar, offline fallback, and long-press the icon for shortcuts to Home, Spending, and Net worth.', href: '/guide' },
+    ],
+  },
+  {
     version: '2026.07.14',
     date: '2026-07-15',
     title: 'Liquid vs locked, and investment-linked plans',
