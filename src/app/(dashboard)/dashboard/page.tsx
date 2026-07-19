@@ -405,18 +405,20 @@ export default function DashboardPage() {
           )}
 
           {accounts.length > 0 && (
-            <Panel label="ACCOUNTS" tone="cool" right={formatCurrency(accountsNetBase, base)} href="/spending">
-              <div>
-                {accounts.map((a) => (
-                  <div key={a.id} className="grid grid-cols-[1fr_auto] gap-2 border-b border-border px-3.5 py-2 text-[11px] last:border-0">
-                    <div className="min-w-0"><div className="truncate">{a.name}</div><div className="truncate text-[10px] text-muted-foreground">{a.institution || a.type} · {a.currency}</div></div>
-                    <div className={`self-center whitespace-nowrap font-medium tabular-nums ${a.type === 'credit' && Number(a.current_balance) > 0 ? 'text-down' : ''}`}>
-                      {a.type === 'credit' && Number(a.current_balance) > 0 ? '-' : ''}{formatCurrency(Number(a.current_balance), a.currency)}
+            <div className="order-first md:order-none">
+              <Panel label="ACCOUNTS" tone="cool" right={formatCurrency(accountsNetBase, base)} href="/spending">
+                <div>
+                  {accounts.map((a) => (
+                    <div key={a.id} className="grid grid-cols-[1fr_auto] gap-2 border-b border-border px-3.5 py-2 text-[11px] last:border-0">
+                      <div className="min-w-0"><div className="truncate">{a.name}</div><div className="truncate text-[10px] text-muted-foreground">{a.institution || a.type} · {a.currency}</div></div>
+                      <div className={`self-center whitespace-nowrap font-medium tabular-nums ${a.type === 'credit' && Number(a.current_balance) > 0 ? 'text-down' : ''}`}>
+                        {a.type === 'credit' && Number(a.current_balance) > 0 ? '-' : ''}{formatCurrency(Number(a.current_balance), a.currency)}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            </Panel>
+                  ))}
+                </div>
+              </Panel>
+            </div>
           )}
 
           {allocHoldings.length > 0 && (
