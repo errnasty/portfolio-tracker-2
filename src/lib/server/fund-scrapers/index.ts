@@ -2,6 +2,7 @@ import type { FundProviderMeta, FundQuote } from '@/types'
 import { FUND_PROVIDER_LIST } from '@/lib/fund-providers'
 import { fetchYahooFundQuote } from './yahoo-fund'
 import { fetchGoldQuote, fetchSilverQuote, fetchPlatinumQuote, fetchPalladiumQuote } from './precious-metals'
+import { fetchLionGlobalQuote } from './lionglobal'
 
 export interface FundProvider extends FundProviderMeta {
   fetchQuote(ref: string): Promise<FundQuote>
@@ -9,10 +10,10 @@ export interface FundProvider extends FundProviderMeta {
 
 const IMPLS: Record<string, FundProvider['fetchQuote']> = {
   sgfund: fetchYahooFundQuote,
-  // Back-compat: an early build shipped a 'lionglobal' provider that scraped
-  // the fund house's site (never worked — JS-rendered NAV). Map it to the
-  // Yahoo fetcher so any holding saved with that id still refreshes.
-  lionglobal: fetchYahooFundQuote,
+  // Now backed by LionGlobal's official fundlist endpoint (returns NAV as
+  // XML). Any holding saved with this id — including the old back-compat ones
+  // — refreshes from the real source.
+  lionglobal: fetchLionGlobalQuote,
   gold: fetchGoldQuote,
   silver: fetchSilverQuote,
   platinum: fetchPlatinumQuote,
