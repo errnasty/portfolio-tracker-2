@@ -160,7 +160,10 @@ export function QuickAddDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-w-[520px] gap-0 overflow-hidden rounded-2xl border border-border p-0 shadow-2xl" aria-describedby={undefined}>
+      <DialogContent
+        className="fixed inset-x-0 bottom-0 top-auto left-0 right-0 max-w-none translate-x-0 translate-y-0 gap-0 overflow-hidden rounded-t-2xl rounded-b-none border border-border p-0 shadow-2xl sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:max-w-[520px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl"
+        aria-describedby={undefined}
+      >
         <DialogTitle className="sr-only">Quick add transaction</DialogTitle>
 
         {/* Mode switch */}
