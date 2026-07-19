@@ -34,7 +34,7 @@ function NavItems({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
                   href={href}
                   onClick={onNavigate}
                   className={cn(
-                    'animate-nav-in flex items-center gap-2.5 rounded-[9px] px-3 py-2 text-[13.5px] font-medium leading-none transition-all duration-200',
+                    'animate-nav-in flex min-h-[40px] items-center gap-2.5 rounded-[9px] px-3 py-2.5 text-[13.5px] font-medium leading-none transition-all duration-200',
                     active
                       ? 'bg-[var(--accent-soft)] text-accent font-semibold'
                       : 'text-[var(--ink)] hover:bg-[var(--accent-soft)] hover:translate-x-1',
