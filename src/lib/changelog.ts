@@ -17,6 +17,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.19',
+    date: '2026-07-19',
+    title: 'Easier on mobile + LionGlobal auto-pricing',
+    items: [
+      { title: 'LionGlobal funds auto-price', desc: 'Custom holdings can now use provider "LionGlobal unit trust" and just a fund code (e.g. SST6). The NAV updates daily and on Refresh — MDist classes that aren\'t on Yahoo finally price themselves.', href: '/holdings' },
+      { title: 'Faster on your phone', desc: 'Quick-add now slides up as a bottom sheet, your accounts float to the top of the home screen on mobile, and the menu has bigger tap targets.', href: '/dashboard' },
+    ],
+  },
+  {
     version: '2026.07.15',
     date: '2026-07-18',
     title: 'Install Aureus on your phone',

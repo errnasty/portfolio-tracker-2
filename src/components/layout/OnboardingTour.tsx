@@ -42,10 +42,10 @@ const STEPS: TourStep[] = [
     subtitle: 'Your money and investments, all in one place. This quick tour walks the app behind this card.',
     points: [
       { icon: Wallet, title: 'Home = net worth', desc: 'Bank accounts, cash, and your portfolio roll into one number, snapshotted daily.' },
+      { icon: Keyboard, title: 'Quick add anywhere', desc: 'Press "a" or tap the "+" to log an expense or income in seconds — on mobile it slides up as a bottom sheet.' },
     ],
     chips: [
       { icon: Command, label: '⌘K palette & quick actions' },
-      { icon: Keyboard, label: 'a = add expense' },
       { icon: Smartphone, label: 'Installable app' },
       { icon: Moon, label: 'Dark mode' },
     ],
