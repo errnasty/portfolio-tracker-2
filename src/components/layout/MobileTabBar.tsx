@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { TLink } from '@/components/motion/TLink'
 import { MOBILE_TABS } from '@/lib/nav-registry'
 import { dispatchQuickAction } from '@/lib/quick-actions'
+import { haptic } from '@/lib/haptics'
 
 function tabActive(pathname: string, matches: string[]): boolean {
   return matches.some((m) => (m === '/dashboard' ? pathname === m : pathname.startsWith(m)))
@@ -24,11 +25,26 @@ export function MobileTabBar() {
     return (
       <TLink
         href={href}
+        onClick={() => {
+          haptic('light')
+          // Re-tapping the current tab scrolls back to the top — the native
+          // app convention. The navigation itself is a no-op in that case.
+          if (active) window.scrollTo({ top: 0, behavior: 'smooth' })
+        }}
         className={cn(
-          'flex flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-[10.5px] font-medium transition-colors',
+          'relative flex flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-[10.5px] font-medium transition-colors [touch-action:manipulation]',
           active ? 'text-accent' : 'text-muted-foreground',
         )}
+        aria-current={active ? 'page' : undefined}
       >
+        {/* Active indicator: a short accent bar riding the top border. */}
+        <span
+          className={cn(
+            'absolute inset-x-0 top-0 mx-auto h-0.5 w-8 rounded-full bg-accent transition-opacity duration-200',
+            active ? 'opacity-100' : 'opacity-0',
+          )}
+          aria-hidden
+        />
         <Icon className="h-5 w-5" />
         <span>{label}</span>
       </TLink>
@@ -47,8 +63,8 @@ export function MobileTabBar() {
       <div className="flex w-16 shrink-0 items-start justify-center">
         <button
           aria-label="Quick add transaction"
-          onClick={() => dispatchQuickAction('add-expense')}
-          className="-mt-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform active:scale-95"
+          onClick={() => { haptic('medium'); dispatchQuickAction('add-expense') }}
+          className="-mt-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform [touch-action:manipulation] active:scale-95"
         >
           <Plus className="h-6 w-6" />
         </button>

@@ -121,6 +121,10 @@
     /* Hard stop against horizontal overflow — the #1 cause of auto-zoom on PWA
        launch. Any element that *should* be wider needs its own scroll container. */
     overflow-x: hidden;
+    /* Stop the vertical rubber-band from revealing bare page behind the fixed
+       top bar / bottom tab bar on mobile, and from chaining scroll to the
+       browser chrome in standalone PWA mode. */
+    overscroll-behavior-y: none;
   }
   /* iOS auto-zooms when an input is focused if the font size is <16px. Force
      16px on mobile to stop that, keep it larger for touch targets. */

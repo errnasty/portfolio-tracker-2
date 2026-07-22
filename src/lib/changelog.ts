@@ -19,9 +19,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '2026.07.22',
     date: '2026-07-22',
-    title: 'Sharper surfaces on mobile',
+    title: 'A more native feel on mobile',
     items: [
       { title: 'Solid bottom tab bar', desc: 'The mobile navigation bar (and every card, menu, and dialog) now renders on a proper solid surface instead of showing the page bleeding through — content no longer peeks behind the bottom tabs as you scroll.', href: '/dashboard' },
+      { title: 'Tabs that feel native', desc: 'The active tab now shows an accent marker, taps give a subtle haptic buzz where supported, and tapping the tab you\'re already on scrolls you back to the top.', href: '/dashboard' },
+      { title: 'Respects your notch', desc: 'Installed as an app, Aureus now keeps its header, drawer, and sheets clear of the status bar and home-indicator, and the browser status-bar tint follows your light/dark theme.', href: '/dashboard' },
+      { title: 'Swipe-friendly quick-add', desc: 'The quick-add sheet gains a grab handle and sits above the home-indicator, so it\'s easier to reach and dismiss one-handed.', href: '/dashboard' },
     ],
   },
   {

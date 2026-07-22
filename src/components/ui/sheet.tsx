@@ -30,7 +30,13 @@ export function Sheet({ open, onClose, title, subtitle, children }: {
         onClick={onClose}
       />
       {/* Panel */}
-      <div className="fixed right-0 top-0 z-[71] h-full w-[380px] max-w-[88vw] overflow-y-auto border-l border-border bg-card p-7 shadow-2xl animate-drawer-in">
+      <div
+        className="fixed right-0 top-0 z-[71] h-full w-[380px] max-w-[88vw] overflow-y-auto border-l border-border bg-card p-7 shadow-2xl animate-drawer-in"
+        style={{
+          paddingTop: 'max(1.75rem, env(safe-area-inset-top))',
+          paddingBottom: 'max(1.75rem, env(safe-area-inset-bottom))',
+        }}
+      >
         <div className="mb-2 flex items-center justify-between">
           <h2 className="font-display text-2xl font-medium text-foreground">{title}</h2>
           <button

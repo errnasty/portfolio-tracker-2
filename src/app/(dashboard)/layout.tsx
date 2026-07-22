@@ -34,8 +34,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (checking) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin-custom rounded-full border-2 border-primary border-t-transparent" />
+      <div className="flex min-h-screen flex-col items-center justify-center gap-5 bg-background">
+        <div className="flex flex-col items-center gap-1 animate-fade-in">
+          <span className="font-display text-3xl text-foreground">Aureus</span>
+          <span className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-faint">Private wealth</span>
+        </div>
+        <div className="h-6 w-6 animate-spin-custom rounded-full border-2 border-primary border-t-transparent" />
       </div>
     )
   }
@@ -47,7 +51,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <KeyboardProvider>
             <div className="flex min-h-screen bg-background">
               <Sidebar />
-              <main className="min-w-0 flex-1 overflow-x-clip pt-12 md:pl-[250px] md:pt-0">
+              <main className="min-w-0 flex-1 overflow-x-clip pt-[calc(3rem_+_env(safe-area-inset-top))] md:pl-[250px] md:pt-0">
                 {/* Extra bottom padding on mobile clears the fixed tab bar. */}
                 <div key={pathname} className="mx-auto max-w-[1180px] animate-section-in px-4 py-6 pb-[96px] sm:px-6 md:px-12 md:py-10 md:pb-10">
                   {children}

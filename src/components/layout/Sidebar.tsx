@@ -124,6 +124,14 @@ export function Sidebar() {
     return () => { document.body.style.overflow = '' }
   }, [mobileOpen])
 
+  // Close the mobile drawer on Escape (hardware keyboard / accessibility).
+  useEffect(() => {
+    if (!mobileOpen) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMobileOpen(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [mobileOpen])
+
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     router.push('/login')
@@ -135,16 +143,21 @@ export function Sidebar() {
 
   return (
     <>
-      {/* Mobile top bar */}
-      <div className="fixed left-0 right-0 top-0 z-40 flex h-12 items-center justify-between border-b border-border bg-card px-3 md:hidden">
-        <button aria-label="Open menu" onClick={() => setMobileOpen(true)} className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent">
-          <Menu className="h-5 w-5" />
-        </button>
-        <div className="flex items-center gap-2">
-          <Image src={theme === 'dark' ? '/aureus/face-gold.png' : '/aureus/face-ink.png'} alt="Aureus" width={28} height={28} />
-          <span className="font-display text-base">Aureus</span>
+      {/* Mobile top bar — padded past the notch/status bar via safe-area inset. */}
+      <div
+        className="fixed left-0 right-0 top-0 z-40 border-b border-border bg-card md:hidden"
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
+      >
+        <div className="flex h-12 items-center justify-between px-3">
+          <button aria-label="Open menu" onClick={() => setMobileOpen(true)} className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent">
+            <Menu className="h-5 w-5" />
+          </button>
+          <div className="flex items-center gap-2">
+            <Image src={theme === 'dark' ? '/aureus/face-gold.png' : '/aureus/face-ink.png'} alt="Aureus" width={28} height={28} />
+            <span className="font-display text-base">Aureus</span>
+          </div>
+          <div className="w-9" />
         </div>
-        <div className="w-9" />
       </div>
 
       {mobileOpen && (
@@ -175,9 +188,10 @@ export function Sidebar() {
       {/* Mobile drawer */}
       <aside
         className={cn(
-          'fixed left-0 top-0 z-50 flex h-full w-64 flex-col border-r border-border bg-secondary px-3.5 py-5 transition-transform duration-200 md:hidden',
+          'fixed left-0 top-0 z-50 flex h-full w-64 flex-col border-r border-border bg-secondary px-3.5 pb-5 transition-transform duration-200 md:hidden',
           mobileOpen ? 'translate-x-0' : '-translate-x-full',
         )}
+        style={{ paddingTop: 'calc(1.25rem + env(safe-area-inset-top))' }}
       >
         <div className="mb-4 flex items-center justify-between px-2.5">
           <SidebarLogo theme={theme} />
