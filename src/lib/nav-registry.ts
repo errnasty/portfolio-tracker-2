@@ -2,6 +2,7 @@ import {
   LayoutDashboard, Wallet, Repeat, Briefcase, TrendingUp, Sliders, Settings,
   PieChart, Activity, Beaker, ListChecks, Coins, Target, FileText, Bell, PiggyBank,
   Upload, Banknote, CalendarClock, Users, BookOpen, Landmark, Vault, ShieldCheck,
+  Receipt,
 } from 'lucide-react'
 
 export interface NavRoute {
@@ -54,6 +55,7 @@ export const NAV_ROUTES: NavRoute[] = [
   { href: '/report', label: 'Report', icon: FileText, group: 'Invest', hidden: true },
 
   { href: '/goals', label: 'Goals', icon: Target, group: 'Plan', seq: 'g g' },
+  { href: '/tax', label: 'Tax estimator', icon: Receipt, group: 'Plan', seq: 'g t' },
   { href: '/settings', label: 'Settings', icon: Settings, group: 'Plan' },
 ]
 

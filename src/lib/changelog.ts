@@ -17,6 +17,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.23',
+    date: '2026-07-22',
+    title: 'Tax estimator, exports & share-to-add',
+    items: [
+      { title: 'Singapore tax estimator', desc: 'A new Plan → Tax page estimates your income tax on YA2024+ resident rates, shows your effective and marginal rate, and models how much an SRS or CPF cash top-up would save you this year.', href: '/tax' },
+      { title: 'Export any list to CSV', desc: 'Holdings and Transactions now have an Export CSV button (exports respect your current filters) — on top of the existing Report exports.', href: '/transactions' },
+      { title: 'Share a bank SMS straight in', desc: 'Installed on your phone, Aureus now appears in the share sheet: share a bank SMS or email to it and quick-add opens with the text ready to parse.', href: '/spending' },
+      { title: 'Pull to refresh', desc: 'Pull down at the top of any page on mobile to re-fetch prices, balances and transactions.', href: '/dashboard' },
+    ],
+  },
+  {
     version: '2026.07.22',
     date: '2026-07-22',
     title: 'A more native feel on mobile',

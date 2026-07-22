@@ -14,6 +14,7 @@ import { QuickAddDialog } from '@/components/layout/QuickAddDialog'
 import { RecurringPoster } from '@/components/layout/RecurringPoster'
 import { CpfPoster } from '@/components/layout/CpfPoster'
 import { MobileTabBar } from '@/components/layout/MobileTabBar'
+import { PullToRefresh } from '@/components/layout/PullToRefresh'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -51,12 +52,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <KeyboardProvider>
             <div className="flex min-h-screen bg-background">
               <Sidebar />
-              <main className="min-w-0 flex-1 overflow-x-clip pt-[calc(3rem_+_env(safe-area-inset-top))] md:pl-[250px] md:pt-0">
-                {/* Extra bottom padding on mobile clears the fixed tab bar. */}
-                <div key={pathname} className="mx-auto max-w-[1180px] animate-section-in px-4 py-6 pb-[96px] sm:px-6 md:px-12 md:py-10 md:pb-10">
-                  {children}
-                </div>
-              </main>
+              <PullToRefresh>
+                <main className="min-w-0 flex-1 overflow-x-clip pt-[calc(3rem_+_env(safe-area-inset-top))] md:pl-[250px] md:pt-0">
+                  {/* Extra bottom padding on mobile clears the fixed tab bar. */}
+                  <div key={pathname} className="mx-auto max-w-[1180px] animate-section-in px-4 py-6 pb-[96px] sm:px-6 md:px-12 md:py-10 md:pb-10">
+                    {children}
+                  </div>
+                </main>
+              </PullToRefresh>
               <WhatsNewDialog />
               <OnboardingTour />
               <QuickAddDialog />

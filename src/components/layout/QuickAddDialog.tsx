@@ -1,13 +1,13 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { usePortfolio } from '@/context/PortfolioContext'
 import { useSpending } from '@/context/SpendingContext'
 import { parseQuickEntry } from '@/lib/quick-parse'
 import { captureExternalId, type TxnDraft } from '@/lib/extract'
-import { useQuickAction } from '@/lib/quick-actions'
+import { useQuickAction, consumeSharedText, onShareCheck } from '@/lib/quick-actions'
 import { formatCurrency } from '@/lib/utils'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -53,6 +53,21 @@ export function QuickAddDialog() {
     setAccountId((prev) => prev || accounts[0]?.id || '')
     setOpen(true)
   })
+
+  // PWA share target: open paste mode pre-filled with text shared from another
+  // app. Checked on mount (cold launch) and on the share-check event (warm).
+  useEffect(() => {
+    const openIfShared = () => {
+      const shared = consumeSharedText()
+      if (!shared) return
+      setMode('paste'); setText(''); setDate(today()); setCategoryOverride('')
+      setPasteText(shared); setDraft(null)
+      setAccountId((prev) => prev || accounts[0]?.id || '')
+      setOpen(true)
+    }
+    openIfShared()
+    return onShareCheck(openIfShared)
+  }, [accounts])
 
   const parsed = useMemo(() => parseQuickEntry(text), [text])
   const guessedCategoryId = useMemo(
