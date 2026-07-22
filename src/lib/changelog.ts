@@ -17,6 +17,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.22',
+    date: '2026-07-22',
+    title: 'Sharper surfaces on mobile',
+    items: [
+      { title: 'Solid bottom tab bar', desc: 'The mobile navigation bar (and every card, menu, and dialog) now renders on a proper solid surface instead of showing the page bleeding through — content no longer peeks behind the bottom tabs as you scroll.', href: '/dashboard' },
+    ],
+  },
+  {
     version: '2026.07.19',
     date: '2026-07-19',
     title: 'Easier on mobile + LionGlobal auto-pricing',
