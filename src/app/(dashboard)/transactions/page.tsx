@@ -14,9 +14,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Plus, Pencil, Trash2, Loader2, Upload, ArrowDownCircle, ArrowUpCircle, Coins, Split } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, Upload, Download, ArrowDownCircle, ArrowUpCircle, Coins, Split } from 'lucide-react'
 import { TableScroll } from '@/components/ui/table-scroll'
 import { deleteWithUndo } from '@/lib/toast-undo'
+import { exportCsv } from '@/lib/export'
 import { formatCurrency, formatShares } from '@/lib/utils'
 import type { Currency, Transaction, TransactionFormData, TransactionType } from '@/types'
 
@@ -62,6 +63,14 @@ export default function TransactionsPage() {
       return true
     })
   }, [transactions, filterTicker, filterType])
+
+  const exportFiltered = () => {
+    const rows: (string | number)[][] = [['Date', 'Ticker', 'Type', 'Shares', 'Price', 'Amount', 'Currency', 'Fees', 'Notes']]
+    for (const t of [...filtered].sort((a, b) => (a.date < b.date ? 1 : -1))) {
+      rows.push([t.date, t.ticker, t.type, t.shares ?? '', t.price_per_share ?? '', t.amount ?? '', t.currency, t.fees ?? 0, t.notes ?? ''])
+    }
+    exportCsv('transactions', rows)
+  }
 
   const openAdd = () => { setForm(EMPTY_FORM); setEditId(null); setOpen(true) }
   const openEdit = (t: Transaction) => {
@@ -167,6 +176,12 @@ export default function TransactionsPage() {
         <div className="text-xs text-muted-foreground self-center">
           {filtered.length} of {transactions.length} transaction{transactions.length === 1 ? '' : 's'}
         </div>
+        <Button
+          variant="outline" size="sm" className="ml-auto self-center"
+          onClick={exportFiltered} disabled={filtered.length === 0}
+        >
+          <Download className="mr-1.5 h-3.5 w-3.5" /> Export CSV
+        </Button>
       </div>
 
       <Card>

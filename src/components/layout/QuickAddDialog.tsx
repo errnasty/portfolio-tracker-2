@@ -1,13 +1,13 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { usePortfolio } from '@/context/PortfolioContext'
 import { useSpending } from '@/context/SpendingContext'
 import { parseQuickEntry } from '@/lib/quick-parse'
 import { captureExternalId, type TxnDraft } from '@/lib/extract'
-import { useQuickAction } from '@/lib/quick-actions'
+import { useQuickAction, consumeSharedText, onShareCheck } from '@/lib/quick-actions'
 import { formatCurrency } from '@/lib/utils'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -53,6 +53,21 @@ export function QuickAddDialog() {
     setAccountId((prev) => prev || accounts[0]?.id || '')
     setOpen(true)
   })
+
+  // PWA share target: open paste mode pre-filled with text shared from another
+  // app. Checked on mount (cold launch) and on the share-check event (warm).
+  useEffect(() => {
+    const openIfShared = () => {
+      const shared = consumeSharedText()
+      if (!shared) return
+      setMode('paste'); setText(''); setDate(today()); setCategoryOverride('')
+      setPasteText(shared); setDraft(null)
+      setAccountId((prev) => prev || accounts[0]?.id || '')
+      setOpen(true)
+    }
+    openIfShared()
+    return onShareCheck(openIfShared)
+  }, [accounts])
 
   const parsed = useMemo(() => parseQuickEntry(text), [text])
   const guessedCategoryId = useMemo(
@@ -162,9 +177,13 @@ export function QuickAddDialog() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent
         className="fixed inset-x-0 bottom-0 top-auto left-0 right-0 max-h-[90dvh] max-w-none translate-x-0 translate-y-0 gap-0 overflow-y-auto rounded-t-2xl rounded-b-none border border-border p-0 shadow-2xl sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:max-h-none sm:max-w-[520px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:overflow-hidden sm:rounded-2xl"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
         aria-describedby={undefined}
       >
         <DialogTitle className="sr-only">Quick add transaction</DialogTitle>
+
+        {/* Grab handle — signals the sheet is swipeable on phones. */}
+        <div className="mx-auto mt-2 h-1 w-9 shrink-0 rounded-full bg-border sm:hidden" aria-hidden />
 
         {/* Mode switch */}
         <div className="flex gap-1 border-b border-[var(--hair)] px-3 pt-2">

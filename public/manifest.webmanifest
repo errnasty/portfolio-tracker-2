@@ -20,5 +20,10 @@
     { "name": "Home", "url": "/dashboard", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
     { "name": "Spending", "url": "/spending", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
     { "name": "Net worth", "url": "/networth", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
-  ]
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "GET",
+    "params": { "title": "title", "text": "text", "url": "url" }
+  }
 }

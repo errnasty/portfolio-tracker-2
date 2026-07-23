@@ -17,24 +17,11 @@ import {
 import { monteCarlo } from '@/lib/projection'
 import { trailingMonthlyNetSavings, trailingAnnualExpenses, fiTarget, yearsToTarget } from '@/lib/fi'
 import { formatCurrency, formatPercent, gainLossColor } from '@/lib/utils'
+import { toCsv, downloadCsv } from '@/lib/export'
 import type { TickerAnalytics } from '@/app/api/analytics/route'
 import type { Currency } from '@/types'
 
 function thisMonth() { return new Date().toISOString().slice(0, 7) }
-
-function toCsv(rows: (string | number)[][]): string {
-  return rows.map((r) => r.map((c) => {
-    const s = String(c ?? '')
-    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
-  }).join(',')).join('\n')
-}
-function download(filename: string, content: string) {
-  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url; a.download = filename; a.click()
-  URL.revokeObjectURL(url)
-}
 
 export default function ReportPage() {
   const { enriched, stats, settings, transactions, netWorthBase, accountsNetBase } = usePortfolio()
@@ -102,14 +89,14 @@ export default function ReportPage() {
     for (const t of monthTxns) {
       rows.push([t.date, t.description, t.category_id ? (categoryById[t.category_id]?.name ?? '') : 'Uncategorized', Number(t.amount), t.currency])
     }
-    download(`spending-${month}.csv`, toCsv(rows))
+    downloadCsv(`spending-${month}.csv`, toCsv(rows))
   }
   const exportHoldingsCsv = () => {
     const rows: (string | number)[][] = [['Ticker', 'Name', 'Shares', 'CostBasis', 'Price', `Value(${base})`, 'Gain', 'Gain%']]
     for (const h of [...enriched].sort((a, b) => b.currentValueBase - a.currentValueBase)) {
       rows.push([h.ticker, h.name ?? '', h.shares, h.cost_basis_per_share, h.currentPrice, h.currentValueBase.toFixed(2), h.gainLoss.toFixed(2), h.gainLossPct.toFixed(2)])
     }
-    download('holdings.csv', toCsv(rows))
+    downloadCsv('holdings.csv', toCsv(rows))
   }
 
   if (!hasHoldings && bankTransactions.length === 0) {

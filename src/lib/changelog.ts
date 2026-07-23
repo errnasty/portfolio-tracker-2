@@ -17,6 +17,28 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.23',
+    date: '2026-07-22',
+    title: 'Tax estimator, exports & share-to-add',
+    items: [
+      { title: 'Singapore tax estimator', desc: 'A new Plan → Tax page estimates your income tax on YA2024+ resident rates, shows your effective and marginal rate, and models how much an SRS or CPF cash top-up would save you this year.', href: '/tax' },
+      { title: 'Export any list to CSV', desc: 'Holdings and Transactions now have an Export CSV button (exports respect your current filters) — on top of the existing Report exports.', href: '/transactions' },
+      { title: 'Share a bank SMS straight in', desc: 'Installed on your phone, Aureus now appears in the share sheet: share a bank SMS or email to it and quick-add opens with the text ready to parse.', href: '/spending' },
+      { title: 'Pull to refresh', desc: 'Pull down at the top of any page on mobile to re-fetch prices, balances and transactions.', href: '/dashboard' },
+    ],
+  },
+  {
+    version: '2026.07.22',
+    date: '2026-07-22',
+    title: 'A more native feel on mobile',
+    items: [
+      { title: 'Solid bottom tab bar', desc: 'The mobile navigation bar (and every card, menu, and dialog) now renders on a proper solid surface instead of showing the page bleeding through — content no longer peeks behind the bottom tabs as you scroll.', href: '/dashboard' },
+      { title: 'Tabs that feel native', desc: 'The active tab now shows an accent marker, taps give a subtle haptic buzz where supported, and tapping the tab you\'re already on scrolls you back to the top.', href: '/dashboard' },
+      { title: 'Respects your notch', desc: 'Installed as an app, Aureus now keeps its header, drawer, and sheets clear of the status bar and home-indicator, and the browser status-bar tint follows your light/dark theme.', href: '/dashboard' },
+      { title: 'Swipe-friendly quick-add', desc: 'The quick-add sheet gains a grab handle and sits above the home-indicator, so it\'s easier to reach and dismiss one-handed.', href: '/dashboard' },
+    ],
+  },
+  {
     version: '2026.07.19',
     date: '2026-07-19',
     title: 'Easier on mobile + LionGlobal auto-pricing',

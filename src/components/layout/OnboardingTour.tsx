@@ -92,6 +92,7 @@ const STEPS: TourStep[] = [
     points: [
       { icon: Banknote, title: 'Salary & sources', desc: 'Incoming PayNow, GIRO salary, and interest are detected and bucketed automatically.' },
       { icon: HandHeart, title: 'Tithing pool', desc: 'Sets aside a % of your salary (adjustable); Giving-category spending clears it.' },
+      { icon: PiggyBank, title: 'Tax estimator', desc: 'Plan → Tax estimates your Singapore income tax and shows how much an SRS or CPF top-up would save you.' },
     ],
   },
   {

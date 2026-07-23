@@ -10,7 +10,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Plus, Pencil, Trash2, Search, Loader2, RefreshCw } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, Loader2, RefreshCw, Download } from 'lucide-react'
+import { exportCsv } from '@/lib/export'
 import { PageShell } from '@/components/ui/page-shell'
 import { TLink } from '@/components/motion/TLink'
 import { SubNav } from '@/components/ui/sub-nav'
@@ -355,9 +356,22 @@ export default function HoldingsPage() {
   const totalRetPct = costBasis > 0 ? (unrealised / costBasis) * 100 : 0
   const signed = (n: number) => `${n >= 0 ? '+' : ''}${formatCurrency(n, base)}`
 
+  const exportHoldings = () => {
+    const rows: (string | number)[][] = [['Ticker', 'Name', 'Shares', 'CostBasis', 'Price', `Value(${base})`, 'Gain', 'Gain%']]
+    for (const h of [...enriched].sort((a, b) => b.currentValueBase - a.currentValueBase)) {
+      rows.push([h.ticker, h.name ?? '', h.shares, h.cost_basis_per_share, h.currentPrice, h.currentValueBase.toFixed(2), h.gainLoss.toFixed(2), h.gainLossPct.toFixed(2)])
+    }
+    exportCsv('holdings', rows)
+  }
+
   const statusRight = (
     <span className="flex items-center gap-4">
       <span>positions <span className="text-foreground">{enriched.length}</span></span>
+      {enriched.length > 0 && (
+        <button onClick={exportHoldings} className="press flex items-center gap-1 hover:text-foreground">
+          <Download className="h-3.5 w-3.5" /> export
+        </button>
+      )}
       <button onClick={openAdd} className="press flex items-center gap-1 hover:text-foreground">
         <Plus className="h-3.5 w-3.5" /> add
       </button>

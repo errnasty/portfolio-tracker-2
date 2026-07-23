@@ -19,6 +19,33 @@ export type QuickActionKind =
 
 const EVENT = 'aureus:quick-action'
 const PENDING_KEY = 'aureus_pending_quick_action'
+const SHARED_TEXT_KEY = 'aureus_shared_text'
+const SHARE_CHECK_EVENT = 'aureus:share-check'
+
+// PWA share-target plumbing. The /share route receives text shared from another
+// app (e.g. a bank SMS) and stashes it here; the globally-mounted QuickAddDialog
+// picks it up — on its own mount (cold PWA launch) or on the share-check event
+// (app already open). The text is removed once consumed so it never re-opens.
+export function stashSharedForPaste(text: string) {
+  try { if (text) window.sessionStorage.setItem(SHARED_TEXT_KEY, text) } catch { /* ignore */ }
+}
+
+export function consumeSharedText(): string {
+  try {
+    const v = window.sessionStorage.getItem(SHARED_TEXT_KEY)
+    if (v) window.sessionStorage.removeItem(SHARED_TEXT_KEY)
+    return v ?? ''
+  } catch { return '' }
+}
+
+export function dispatchShareCheck() {
+  window.dispatchEvent(new Event(SHARE_CHECK_EVENT))
+}
+
+export function onShareCheck(handler: () => void): () => void {
+  window.addEventListener(SHARE_CHECK_EVENT, handler)
+  return () => window.removeEventListener(SHARE_CHECK_EVENT, handler)
+}
 
 // For actions handled by globally-mounted components (e.g. the quick-add
 // dialog): fire the event directly, no navigation needed.
